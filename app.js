@@ -222,8 +222,8 @@ function setupEventListeners() {
         fetchCodeBtn.style.display = 'none';
 
         try {
-            // El backend estará corriendo en la nube pronto, por ahora en localhost
-            const serverUrl = "http://localhost:3000/api/get-code";
+            // El backend está corriendo en la nube (Render)
+            const serverUrl = "https://streaming-backend-ce1u.onrender.com/api/get-code";
 
             const response = await fetch(serverUrl, {
                 method: 'POST',
