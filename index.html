@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Streaming DPC - Premium Screens</title>
+    <meta name="description" content="Venta de pantallas y combos de streaming: Netflix, Disney+, HBO Max y más.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <!-- Background Animated Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <span class="dpc">STREAMING</span>
+                <span class="brand">DPC</span>
+            </div>
+            <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+                <button id="open-code-btn" class="get-code-btn">
+                    <i class="fa-solid fa-key"></i> <span class="hide-mobile">Obtener Código</span>
+                </button>
+                <div class="cart-icon" id="open-cart">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search & Filter -->
+        <div class="hero">
+            <h1>Tus pantallas favoritas en un solo lugar</h1>
+            <p>Disfruta del mejor contenido premium con los mejores precios.</p>
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="all">Todos</button>
+            <button class="tab-btn" data-tab="individual">Individual</button>
+            <button class="tab-btn" data-tab="combos2">Combos 2</button>
+            <button class="tab-btn" data-tab="combos3">Combos 3</button>
+            <button class="tab-btn" data-tab="combos4">Combos 4</button>
+            <button class="tab-btn" data-tab="combos5">Combos 5</button>
+            <button class="tab-btn" data-tab="promociones">Promociones del Mes</button>
+        </div>
+
+        <!-- Products Grid -->
+        <main id="products-grid" class="products-grid">
+            <!-- Products will be injected by JavaScript -->
+        </main>
+
+        <!-- Payment Info Section -->
+        <section class="payment-methods">
+            <h3>Métodos de Pago</h3>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <img src="https://img.icons8.com/color/48/bank-app.png" alt="Nequi">
+                    <span>Nequi / Daviplata</span>
+                </div>
+                <div class="method-card">
+                    <img src="https://img.icons8.com/color/48/bank-cards.png" alt="Card">
+                    <span>Nu / Be</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>&copy; 2026 Streaming DPC. Todos los derechos reservados.</p>
+        </footer>
+    </div>
+
+    <!-- Cart Sidebar/Modal -->
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tu Pedido</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div id="cart-items" class="cart-items">
+                <!-- Cart items will be injected here -->
+            </div>
+            <div class="cart-footer">
+                <div class="total-row">
+                    <span>Total:</span>
+                    <span id="cart-total">$0</span>
+                </div>
+                <button id="checkout-btn" class="checkout-btn">
+                    <i class="fa-brands fa-whatsapp"></i> Realizar Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Get Access Code Modal -->
+    <div id="code-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-unlock-keyhole" style="color: var(--accent-primary)"></i> Acceso Pantalla</h2>
+                <span class="close-modal code-close">&times;</span>
+            </div>
+            <div class="code-body" style="padding: 1.5rem;">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                    Si te pide actualizar tu hogar (Netflix) o un código de acceso (Disney), selecciona la plataforma y
+                    digita el <strong>correo de la cuenta</strong> y lo buscaremos automáticamente por ti.
+                </p>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Plataforma:</label>
+                    <select id="code-platform" class="input-modern">
+                        <option value="netflix">Netflix (Actualizar Hogar)</option>
+                        <option value="disney">Disney+ (Código de Acceso)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Correo Electrónico de la
+                        cuenta:</label>
+                    <input type="email" id="code-email" class="input-modern" placeholder="Ej: cuenta@gmail.com">
+                </div>
+
+                <button id="fetch-code-btn" class="checkout-btn"
+                    style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));">
+                    <i class="fa-solid fa-satellite-dish"></i> Buscar mi Código
+                </button>
+
+                <!-- Loading State -->
+                <div id="code-loading" style="display: none; text-align: center; margin-top: 1.5rem;">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--accent-primary)"></i>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Buscando en la
+                        bandeja de entrada... esto puede tardar unos 10-30 seg.</p>
+                </div>
+
+                <!-- Result Code Box -->
+                <div id="code-result"
+                    style="display: none; margin-top: 1.5rem; background: var(--glass); border: 1px solid var(--accent-primary); border-radius: 16px; padding: 1.5rem; text-align: center;">
+                    <h3 style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">Tu código de
+                        acceso es:</h3>
+                    <div id="the-magic-code"
+                        style="font-size: 2.5rem; font-weight: 900; letter-spacing: 5px; color: white;">----</div>
+                    <p id="code-time" style="font-size: 0.8rem; color: #4cd137; margin-top: 0.5rem;">Extraído hace unos
+                        segundos</p>
+                </div>
+
+                <!-- Error Box -->
+                <div id="code-error"
+                    style="display: none; margin-top: 1.5rem; background: rgba(255, 77, 77, 0.1); border: 1px solid #ff4d4d; border-radius: 16px; padding: 1rem; text-align: center;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #ff4d4d; margin-bottom: 0.5rem;"></i>
+                    <p id="error-msg" style="color: #ff4d4d; font-size: 0.9rem;">No pudimos encontrar ningún código
+                        reciente para este correo. Intenta enviarlo nuevamente desde tu TV.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
