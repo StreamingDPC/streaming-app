@@ -198,6 +198,9 @@
             gap: 1rem;
         }
     </style>
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
@@ -390,21 +393,52 @@
             window.location.href = 'login.html';
         }
 
-        // Cargar productos
-        let dynamicProducts = JSON.parse(localStorage.getItem('products')) || [];
         let editIndex = -1;
-
-        // Cargar Configuración
-        let storeConfig = JSON.parse(localStorage.getItem('storeConfig')) || {
+        let dynamicProducts = [];
+        let storeConfig = {
             whatsappNumber: "573155182545",
             paymentInfo: "*Medios de pago:*\n💳 Nequi o Daviplata: 3155182545\n🔑 Llave Nequi @NEQUICEC36\n🔑 Llave Daviplata @PLATA3155182545\n🔑 Llave Nu @CMA736\n🔑 Llave Be @BE346516",
             discountEnabled: true,
             discountAmount: 1000,
             netflixEnabled: true,
             disneyEnabled: true,
-            sellerPassword: "admin",
+            sellers: [],
             estrenos: []
         };
+        let adminInitialized = false;
+
+        // Firebase Initialization
+        const firebaseConfig = {
+            apiKey: "AIzaSyBscP8FT1dcnHlSFMXc3DlfXSgRO9ET9s4",
+            authDomain: "streamingdpc-7e7fa.firebaseapp.com",
+            databaseURL: "https://streamingdpc-7e7fa-default-rtdb.firebaseio.com",
+            projectId: "streamingdpc-7e7fa",
+            storageBucket: "streamingdpc-7e7fa.firebasestorage.app",
+            messagingSenderId: "831116907849",
+            appId: "1:831116907849:web:ee8e744db342970fd0b698"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        db.ref('/').on('value', (snap) => {
+            const data = snap.val();
+            if (data) {
+                dynamicProducts = data.products || [];
+                storeConfig = data.storeConfig || storeConfig;
+
+                if (!adminInitialized) {
+                    adminInitialized = true;
+                    init();
+                } else {
+                    renderAdminList();
+                    renderEstrenosList();
+                    renderSellersList();
+                }
+            }
+        });
 
         function init() {
             renderAdminList();
@@ -593,7 +627,7 @@
         }
 
         function saveProductsToStorage() {
-            localStorage.setItem('products', JSON.stringify(dynamicProducts));
+            db.ref('products').set(dynamicProducts);
         }
 
         function saveConfig() {
@@ -605,8 +639,9 @@
             storeConfig.netflixEnabled = document.getElementById('conf-netflixEnabled').value === 'true';
             storeConfig.disneyEnabled = document.getElementById('conf-disneyEnabled').value === 'true';
 
-            localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
-            alert('¡Configuración guardada exitosamente!');
+            db.ref('storeConfig').set(storeConfig).then(() => {
+                alert('¡Configuración guardada exitosamente!');
+            });
         }
 
         function renderEstrenosList() {
@@ -640,7 +675,7 @@
 
             if (!storeConfig.estrenos) storeConfig.estrenos = [];
             storeConfig.estrenos.unshift({ title, url });
-            localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
+            db.ref('storeConfig').set(storeConfig);
 
             document.getElementById('new-estreno-title').value = '';
             document.getElementById('new-estreno-url').value = '';
@@ -650,7 +685,7 @@
         function deleteEstreno(index) {
             if (confirm('¿Eliminar película?')) {
                 storeConfig.estrenos.splice(index, 1);
-                localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
+                db.ref('storeConfig').set(storeConfig);
                 renderEstrenosList();
             }
         }
@@ -687,18 +722,19 @@
 
             if (!storeConfig.sellers) storeConfig.sellers = [];
             storeConfig.sellers.push({ name, password });
-            localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
 
-            document.getElementById('new-seller-name').value = '';
-            document.getElementById('new-seller-pass').value = '';
-            renderSellersList();
-            alert('Vendedor añadido con éxito.');
+            db.ref('storeConfig').set(storeConfig).then(() => {
+                document.getElementById('new-seller-name').value = '';
+                document.getElementById('new-seller-pass').value = '';
+                renderSellersList();
+                alert('Vendedor añadido con éxito en la Nube.');
+            });
         }
 
         function deleteSeller(index) {
             if (confirm('¿Eliminar este vendedor? Perderá su acceso.')) {
                 storeConfig.sellers.splice(index, 1);
-                localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
+                db.ref('storeConfig').set(storeConfig);
                 renderSellersList();
             }
         }
@@ -708,7 +744,7 @@
             window.location.href = 'login.html';
         }
 
-        init();
+        // No manually calling init() here anymore, it's called by Firebase observer.
     </script>
 </body>
 

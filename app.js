@@ -1,58 +1,21 @@
-let storeConfig = JSON.parse(localStorage.getItem('storeConfig')) || {
-    whatsappNumber: "573155182545",
-    paymentInfo: `*Medios de pago:*\n💳 Nequi o Daviplata: 3155182545\n🔑 Llave Nequi @NEQUICEC36\n🔑 Llave Daviplata @PLATA3155182545\n🔑 Llave Nu @CMA736\n🔑 Llave Be @BE346516`,
-    discountEnabled: true,
-    discountAmount: 1000
+// Inicializar Firebase (Compat Version)
+const firebaseConfig = {
+    apiKey: "AIzaSyBscP8FT1dcnHlSFMXc3DlfXSgRO9ET9s4",
+    authDomain: "streamingdpc-7e7fa.firebaseapp.com",
+    databaseURL: "https://streamingdpc-7e7fa-default-rtdb.firebaseio.com",
+    projectId: "streamingdpc-7e7fa",
+    storageBucket: "streamingdpc-7e7fa.firebasestorage.app",
+    messagingSenderId: "831116907849",
+    appId: "1:831116907849:web:ee8e744db342970fd0b698"
 };
 
-// Cargar de localStorage si existe, si no usar los por defecto
-let products = JSON.parse(localStorage.getItem('products'));
-if (!products || products.length === 0) {
-    products = [
-        // INDIVIDUALES
-        { id: 1, name: "Netflix Premium 1️⃣ Pantalla", price: 16000, category: "individual", brand: "Netflix", image: "assets/netflix.png" },
-        { id: 2, name: "Netflix Privada 1️⃣ Pantalla", price: 17000, category: "individual", brand: "Netflix", image: "assets/netflix.png" },
-        { id: 3, name: "Prime Video Premium 1️⃣ Pantalla", price: 9000, category: "individual", brand: "Prime Video", image: "assets/prime.png" },
-        { id: 4, name: "Disney Original Premium 1️⃣ Pantalla", price: 13000, category: "individual", brand: "Disney+", image: "assets/disney.svg" },
-        { id: 5, name: "Max Premium 1️⃣ Pantalla", price: 13000, category: "individual", brand: "Max", image: "assets/max.svg" },
-        { id: 6, name: "Paramount Premium 1️⃣ Pantalla", price: 9000, category: "individual", brand: "Paramount", image: "assets/paramount.svg" },
-        { id: 7, name: "IPTV 1️⃣ Pantalla", price: 18000, category: "individual", brand: "IPTV", image: "assets/iptv.png" },
-        { id: 8, name: "Vix Premium 1️⃣ Pantalla", price: 9000, category: "individual", brand: "Vix", image: "assets/vix.png" },
-        { id: 9, name: "Crunchyroll Premium 1️⃣ Pantalla", price: 12000, category: "individual", brand: "Crunchyroll", image: "assets/crunchyroll.png" },
-        { id: 10, name: "Apple Tv Premium 1️⃣ Pantalla", price: 18000, category: "individual", brand: "Apple TV", image: "assets/appletv.png" },
-
-        // COMBOS (Incluyo algunos representativos, el admin puede agregar más)
-        { id: 11, name: "Netflix Premium + Disney Premium", price: 27000, category: "combos2", brand: "Combo", image: "assets/logo_combo.jpg" },
-        { id: 12, name: "Netflix Privada + Disney Premium", price: 28000, category: "combos2", brand: "Combo", image: "assets/logo_combo.jpg" },
-        { id: 39, name: "NF Prem + Disney + HBO Max", price: 39000, category: "combos3", brand: "Combo", image: "assets/logo_combo.jpg" },
-        { id: 49, name: "NF Prem + Disney + HBO + Prime", price: 47000, category: "combos4", brand: "Combo", image: "assets/logo_combo.jpg" },
-        { id: 54, name: "NF Prem + Dis + HBO + Par + Prime", price: 55000, category: "combos5", brand: "Combo", image: "assets/logo_combo.jpg" }
-    ];
-    localStorage.setItem('products', JSON.stringify(products));
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
 }
+const db = firebase.database();
 
-// Migración: Si el usuario ya tiene productos en localStorage, actualizar logos
-products = products.map(p => {
-    // Si ya tiene un path local 'assets/' saltamos esto general, a menos que queramos forzarlo:
-    if (p.brand === 'Netflix') p.image = 'assets/netflix.png';
-    if (p.brand === 'Prime Video') p.image = 'assets/prime.png';
-    if (p.brand === 'Disney+') p.image = 'assets/disney.svg';
-    if (p.brand === 'HBO Max' || p.brand === 'Max') {
-        p.brand = 'Max';
-        p.name = p.name.replace('Hbo Max', 'Max');
-        p.image = 'assets/max.svg';
-    }
-    if (p.brand === 'Paramount') p.image = 'assets/paramount.svg';
-    if (p.brand === 'IPTV') p.image = 'assets/iptv.png';
-    if (p.brand === 'Vix') p.image = 'assets/vix.png';
-    if (p.brand === 'Crunchyroll') p.image = 'assets/crunchyroll.png';
-    if (p.brand === 'Apple TV') p.image = 'assets/appletv.png';
-    if (p.brand === 'Combo') p.image = 'assets/logo_combo.jpg';
-
-    return p;
-});
-localStorage.setItem('products', JSON.stringify(products));
-
+let storeConfig = {};
+let products = [];
 let cart = [];
 
 // DOM Elements
@@ -459,4 +422,56 @@ function setupEventListeners() {
     });
 }
 
-init();
+// Firebase Initialization and Loading Logic
+db.ref('/').once('value').then(snap => {
+    let data = snap.val();
+    if (!data) {
+        console.log("Database vacia, migrando de localstorage...");
+        // Migrar LocalStorage a Firebase la primera vez
+        let oldConfig = JSON.parse(localStorage.getItem('storeConfig'));
+        let oldProducts = JSON.parse(localStorage.getItem('products'));
+
+        if (!oldConfig) {
+            oldConfig = {
+                whatsappNumber: "573155182545",
+                paymentInfo: "*Medios de pago:*\n💳 Nequi o Daviplata: 3155182545\n🔑 Llave Nequi @NEQUICEC36\n🔑 Llave Daviplata @PLATA3155182545\n🔑 Llave Nu @CMA736\n🔑 Llave Be @BE346516",
+                discountEnabled: true,
+                discountAmount: 1000,
+                netflixEnabled: true,
+                disneyEnabled: true,
+                sellers: [],
+                estrenos: []
+            };
+        }
+        if (!oldProducts || oldProducts.length === 0) {
+            oldProducts = [
+                { id: 1, name: "Netflix Premium 1️⃣ Pantalla", price: 16000, category: "individual", brand: "Netflix", image: "assets/netflix.png" },
+                { id: 11, name: "Netflix Premium + Disney Premium", price: 27000, category: "combos2", brand: "Combo", image: "assets/logo_combo.jpg" }
+            ];
+        }
+
+        data = { storeConfig: oldConfig, products: oldProducts };
+        db.ref('/').set(data);
+    }
+
+    // Configurar observador en vivo (Live sync)
+    db.ref('/').on('value', (snapshot) => {
+        let val = snapshot.val();
+        if (val) {
+            storeConfig = val.storeConfig || {};
+            products = val.products || [];
+
+            if (!window.appInitialized) {
+                window.appInitialized = true;
+                init(); // Iniciar UI y Listeners por primera y unica vez
+            } else {
+                // Actualizar UI en vivo si hubo algun cambio desde el admin backend
+                setupConfigUI();
+                const activeTabBtn = document.querySelector('.tab-btn.active');
+                if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
+                updateCartUI();
+                renderCartItems();
+            }
+        }
+    });
+});
