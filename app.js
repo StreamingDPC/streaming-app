@@ -73,7 +73,12 @@ const closeCodeBtn = document.querySelector('.code-close');
 const codePlatformSelect = document.getElementById('code-platform');
 const openVendedoresBtn = document.getElementById('open-vendedores-btn');
 
+const sellerModal = document.getElementById('seller-modal');
+const closeSellerBtn = document.querySelector('.seller-close');
+const loginSellerBtn = document.getElementById('login-seller-btn');
+
 let isSellerMode = localStorage.getItem('isSellerMode') === 'true';
+let currentSellerName = localStorage.getItem('sellerName') || '';
 
 function init() {
     renderProducts('individual');
@@ -98,7 +103,7 @@ function setupConfigUI() {
 
     // Toggle Reseller colors
     if (isSellerMode) {
-        openVendedoresBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> <span class="hide-mobile">Modo Vendedor</span>`;
+        openVendedoresBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> <span class="hide-mobile">👋 Hola, ${currentSellerName}</span>`;
         openVendedoresBtn.style.background = '#27ae60';
         openVendedoresBtn.style.color = 'white';
         openVendedoresBtn.style.borderColor = '#2ecc71';
@@ -280,22 +285,39 @@ function setupEventListeners() {
 
     openVendedoresBtn.addEventListener('click', () => {
         if (isSellerMode) {
-            if (confirm('¿Deseas salir del Modo Vendedor y volver a los precios de cliente regular?')) {
+            if (confirm(`¿Deseas cerrar la sesión del vendedor "${currentSellerName}" y volver a los precios de cliente regular?`)) {
                 localStorage.removeItem('isSellerMode');
+                localStorage.removeItem('sellerName');
                 window.location.reload();
             }
             return;
         }
 
-        let givenPass = prompt('Por favor, ingresa la clave de Vendedores Autorizados:');
-        if (givenPass) {
-            if (storeConfig.sellerPassword && givenPass === storeConfig.sellerPassword) {
-                localStorage.setItem('isSellerMode', 'true');
-                alert('¡Contraseña correcta! El catálogo cambió a los precios mayoristas/vendedor.');
-                window.location.reload();
-            } else {
-                alert('Contraseña incorrecta.');
-            }
+        document.getElementById('seller-username').value = '';
+        document.getElementById('seller-password').value = '';
+        sellerModal.style.display = 'block';
+    });
+
+    closeSellerBtn.addEventListener('click', () => {
+        sellerModal.style.display = 'none';
+    });
+
+    loginSellerBtn.addEventListener('click', () => {
+        const uName = document.getElementById('seller-username').value.trim();
+        const uPass = document.getElementById('seller-password').value.trim();
+
+        if (!uName || !uPass) return alert('Por favor, ingresa un nombre y contraseña.');
+
+        const sellers = storeConfig.sellers || [];
+        const found = sellers.find(s => s.name.toLowerCase() === uName.toLowerCase() && s.password === uPass);
+
+        if (found) {
+            localStorage.setItem('isSellerMode', 'true');
+            localStorage.setItem('sellerName', found.name);
+            alert(`¡Bienvenido ${found.name}! Ahora cuentas con acceso a los precios mayoristas.`);
+            window.location.reload();
+        } else {
+            alert('❌ Nombre o contraseña incorrectos.');
         }
     });
 
@@ -324,6 +346,7 @@ function setupEventListeners() {
     window.addEventListener('click', (e) => {
         if (e.target === cartModal) cartModal.style.display = 'none';
         if (e.target === codeModal) codeModal.style.display = 'none';
+        if (e.target === sellerModal) sellerModal.style.display = 'none';
     });
 
     // Code Fetch Logic (To be connected to Backend later)
@@ -405,7 +428,9 @@ function setupEventListeners() {
             message += `--------------------\n`;
         }
 
-        if (isSellerMode) message += `🔥 *Orden de Vendedor/Mayorista*\n`;
+        if (isSellerMode) {
+            message += `🔥 *Orden levantada por Vendedor:* ${currentSellerName}\n`;
+        }
 
         message += `\nHola, me gustaría adquirir las siguientes pantallas:\n\n`;
 

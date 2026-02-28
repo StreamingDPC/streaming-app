@@ -210,6 +210,7 @@
         <div class="admin-tabs">
             <button class="admin-tab active" onclick="switchTab('productos', this)">📦 Productos</button>
             <button class="admin-tab" onclick="switchTab('estrenos', this)">🎬 Estrenos</button>
+            <button class="admin-tab" onclick="switchTab('vendedores', this)">👔 Vendedores</button>
             <button class="admin-tab" onclick="switchTab('configuracion', this)">⚙️ Configuración</button>
         </div>
 
@@ -302,6 +303,28 @@
             </div>
         </div>
 
+        <!-- TAB VENDEDORES -->
+        <div id="tab-vendedores" class="tab-content">
+            <div class="admin-form">
+                <h3>Agregar Nuevo Vendedor</h3>
+                <div class="form-grid">
+                    <div class="form-col" style="margin-bottom: 1rem;">
+                        <label>Nombre o Usuario</label>
+                        <input type="text" id="new-seller-name" placeholder="Ej: Carlos">
+                    </div>
+                    <div class="form-col" style="margin-bottom: 1rem;">
+                        <label>Contraseña</label>
+                        <input type="text" id="new-seller-pass" placeholder="Ej: pWd123">
+                    </div>
+                </div>
+                <button class="save-btn" onclick="saveSeller()">Añadir Vendedor</button>
+            </div>
+            <div class="admin-form">
+                <h3>Vendedores Autorizados</h3>
+                <div id="admin-list-sellers" class="admin-list"></div>
+            </div>
+        </div>
+
         <!-- TAB CONFIGURACIÓN -->
         <div id="tab-configuracion" class="tab-content">
             <div class="admin-form">
@@ -386,6 +409,7 @@
         function init() {
             renderAdminList();
             renderEstrenosList();
+            renderSellersList();
 
             // Llenar config
             document.getElementById('conf-whatsapp').value = storeConfig.whatsappNumber;
@@ -580,7 +604,6 @@
 
             storeConfig.netflixEnabled = document.getElementById('conf-netflixEnabled').value === 'true';
             storeConfig.disneyEnabled = document.getElementById('conf-disneyEnabled').value === 'true';
-            storeConfig.sellerPassword = document.getElementById('conf-sellerPassword').value;
 
             localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
             alert('¡Configuración guardada exitosamente!');
@@ -629,6 +652,54 @@
                 storeConfig.estrenos.splice(index, 1);
                 localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
                 renderEstrenosList();
+            }
+        }
+
+        // --- SECTION VENDEDORES ---
+        function renderSellersList() {
+            const listDiv = document.getElementById('admin-list-sellers');
+            listDiv.innerHTML = '';
+            const sellers = storeConfig.sellers || [];
+
+            sellers.forEach((s, index) => {
+                const div = document.createElement('div');
+                div.className = 'admin-item';
+                div.innerHTML = `
+                    <div><i class="fa-solid fa-user-tie" style="color:#c48dfc; font-size:1.5rem"></i></div>
+                    <div>
+                        <strong style="color: white; font-size:1.1rem">${s.name}</strong><br>
+                        <span style="font-size: 0.8rem; color: #a0a0a0;">Contraseña: ${s.password}</span>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn-icon btn-delete" onclick="deleteSeller(${index})" title="Eliminar Vendedor">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                listDiv.appendChild(div);
+            });
+        }
+
+        function saveSeller() {
+            const name = document.getElementById('new-seller-name').value.trim();
+            const password = document.getElementById('new-seller-pass').value.trim();
+            if (!name || !password) return alert('Completa nombre y contraseña.');
+
+            if (!storeConfig.sellers) storeConfig.sellers = [];
+            storeConfig.sellers.push({ name, password });
+            localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
+
+            document.getElementById('new-seller-name').value = '';
+            document.getElementById('new-seller-pass').value = '';
+            renderSellersList();
+            alert('Vendedor añadido con éxito.');
+        }
+
+        function deleteSeller(index) {
+            if (confirm('¿Eliminar este vendedor? Perderá su acceso.')) {
+                storeConfig.sellers.splice(index, 1);
+                localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
+                renderSellersList();
             }
         }
 

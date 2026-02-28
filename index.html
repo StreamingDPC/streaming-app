@@ -199,6 +199,36 @@
         </div>
     </div>
 
+    <!-- Seller Login Modal -->
+    <div id="seller-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-color: #c48dfc;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-user-tie" style="color: #c48dfc;"></i> Acceso Vendedores</h2>
+                <span class="close-modal seller-close">&times;</span>
+            </div>
+            <div class="code-body" style="padding: 1.5rem;">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                    Ingresa tus credenciales de vendedor para acceder a los precios mayoristas.
+                </p>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Usuario / Nombre:</label>
+                    <input type="text" id="seller-username" class="input-modern" placeholder="Ej: carlos123">
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Contraseña:</label>
+                    <input type="password" id="seller-password" class="input-modern" placeholder="••••••••">
+                </div>
+
+                <button id="login-seller-btn" class="checkout-btn"
+                    style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">
+                    <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 
