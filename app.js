@@ -308,7 +308,10 @@ function setupEventListeners() {
 
         if (!uName || !uPass) return alert('Por favor, ingresa un nombre y contraseña.');
 
-        const sellers = storeConfig.sellers || [];
+        // Re-leer la configuración fresca en caso de que acaben de crearlo en admin.html en otra pestaña
+        const freshConfig = JSON.parse(localStorage.getItem('storeConfig')) || {};
+        const sellers = freshConfig.sellers || storeConfig.sellers || [];
+
         const found = sellers.find(s => s.name.toLowerCase() === uName.toLowerCase() && s.password === uPass);
 
         if (found) {
