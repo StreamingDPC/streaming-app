@@ -177,8 +177,8 @@ function updateCartUI() {
 
     cart.forEach(item => {
         let itemPrice = getPrice(item);
-        // Aplicar descuento por pantalla si está habilitado en configuración Y es individual Y hay más de una en el carrito
-        if (storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
+        // Aplicar descuento por pantalla si está habilitado en configuración Y es individual Y hay más de una en el carrito Y NO es modo vendedor
+        if (!isSellerMode && storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
             itemPrice -= storeConfig.discountAmount;
         }
         total += itemPrice;
@@ -195,7 +195,7 @@ function renderCartItems() {
         let finalPrice = getPrice(item);
         let discountNote = "";
 
-        if (storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
+        if (!isSellerMode && storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
             finalPrice -= storeConfig.discountAmount;
             discountNote = `<span style="color:#4cd137; font-size:0.7rem">(-$${storeConfig.discountAmount.toLocaleString()} Combo Propio)</span>`;
         }
@@ -402,14 +402,14 @@ function setupEventListeners() {
 
         cart.forEach((item, i) => {
             let finalPrice = getPrice(item);
-            if (storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
+            if (!isSellerMode && storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
                 finalPrice -= storeConfig.discountAmount;
             }
             total += finalPrice;
             message += `${i + 1}. *${item.name}* - $${finalPrice.toLocaleString()}\n`;
         });
 
-        if (storeConfig.discountEnabled && individualCount >= 2) {
+        if (!isSellerMode && storeConfig.discountEnabled && individualCount >= 2) {
             message += `\n✨ _Descuento de $${(individualCount * storeConfig.discountAmount).toLocaleString()} aplicado por combo personalizado._\n`;
         }
 
