@@ -209,6 +209,7 @@
 
         <div class="admin-tabs">
             <button class="admin-tab active" onclick="switchTab('productos', this)">📦 Productos</button>
+            <button class="admin-tab" onclick="switchTab('estrenos', this)">🎬 Estrenos</button>
             <button class="admin-tab" onclick="switchTab('configuracion', this)">⚙️ Configuración</button>
         </div>
 
@@ -226,6 +227,10 @@
                         <input type="number" id="new-price" placeholder="Ej: 16000">
                     </div>
                     <div class="form-col">
+                        <label>Precio Mayorista/Vendedor ($)</label>
+                        <input type="number" id="new-seller-price" placeholder="Ej: 14000 (Opcional)">
+                    </div>
+                    <div class="form-col">
                         <label>Categoría</label>
                         <select id="new-category">
                             <option value="individual">Individual</option>
@@ -233,6 +238,7 @@
                             <option value="combos3">Combo 3</option>
                             <option value="combos4">Combo 4</option>
                             <option value="combos5">Combo 5</option>
+                            <option value="promociones_finde">Promoción fin de semana</option>
                             <option value="promociones">Promociones del mes</option>
                         </select>
                     </div>
@@ -266,12 +272,33 @@
                         <option value="combos3">Combos 3</option>
                         <option value="combos4">Combos 4</option>
                         <option value="combos5">Combos 5</option>
-                        <option value="promociones">Promociones</option>
+                        <option value="promociones_finde">Promociones fin de semana</option>
+                        <option value="promociones">Promociones del mes</option>
                     </select>
                 </div>
                 <div id="admin-list" class="admin-list">
                     <!-- Se llenará con JS -->
                 </div>
+            </div>
+        </div>
+
+        <!-- TAB ESTRENOS -->
+        <div id="tab-estrenos" class="tab-content">
+            <div class="admin-form">
+                <h3>Agregar Película / Estreno</h3>
+                <div class="form-col" style="margin-bottom: 1rem;">
+                    <label>Título de la Película</label>
+                    <input type="text" id="new-estreno-title" placeholder="Ej: Deadpool 3">
+                </div>
+                <div class="form-col" style="margin-bottom: 1rem;">
+                    <label>Enlace del Tráiler (YouTube URL embed o link de video Mp4)</label>
+                    <input type="text" id="new-estreno-url" placeholder="Ej: https://www.youtube.com/embed/... ">
+                </div>
+                <button class="save-btn" onclick="saveEstreno()">Guardar Estreno</button>
+            </div>
+            <div class="admin-form">
+                <h3>Estrenos Actuales</h3>
+                <div id="admin-list-estrenos" class="admin-list"></div>
             </div>
         </div>
 
@@ -303,6 +330,31 @@
                     </div>
                 </div>
 
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                    <div class="form-col">
+                        <label>Botón Obtener Código Netflix</label>
+                        <select id="conf-netflixEnabled">
+                            <option value="true">Mostrar Visible</option>
+                            <option value="false">Ocultar</option>
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label>Botón Obtener Código Disney</label>
+                        <select id="conf-disneyEnabled">
+                            <option value="true">Mostrar Visible</option>
+                            <option value="false">Ocultar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-col" style="margin-bottom: 1rem;">
+                    <label>Contraseña Acceso Vendedores</label>
+                    <input type="text" id="conf-sellerPassword" placeholder="Ej: misvendedores123">
+                    <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en la
+                        tienda verá los Precios de Vendedor.</p>
+                </div>
+
                 <button class="save-btn" onclick="saveConfig()">Guardar Configuración</button>
             </div>
         </div>
@@ -324,17 +376,27 @@
             whatsappNumber: "573155182545",
             paymentInfo: "*Medios de pago:*\n💳 Nequi o Daviplata: 3155182545\n🔑 Llave Nequi @NEQUICEC36\n🔑 Llave Daviplata @PLATA3155182545\n🔑 Llave Nu @CMA736\n🔑 Llave Be @BE346516",
             discountEnabled: true,
-            discountAmount: 1000
+            discountAmount: 1000,
+            netflixEnabled: true,
+            disneyEnabled: true,
+            sellerPassword: "admin",
+            estrenos: []
         };
 
         function init() {
             renderAdminList();
+            renderEstrenosList();
 
             // Llenar config
             document.getElementById('conf-whatsapp').value = storeConfig.whatsappNumber;
             document.getElementById('conf-paymentInfo').value = storeConfig.paymentInfo;
             document.getElementById('conf-discountEnabled').value = storeConfig.discountEnabled.toString();
             document.getElementById('conf-discountAmount').value = storeConfig.discountAmount;
+
+            // New config variables
+            if (document.getElementById('conf-netflixEnabled')) document.getElementById('conf-netflixEnabled').value = storeConfig.netflixEnabled !== false ? 'true' : 'false';
+            if (document.getElementById('conf-disneyEnabled')) document.getElementById('conf-disneyEnabled').value = storeConfig.disneyEnabled !== false ? 'true' : 'false';
+            if (document.getElementById('conf-sellerPassword')) document.getElementById('conf-sellerPassword').value = storeConfig.sellerPassword || 'admin';
         }
 
         function switchTab(tabId, btn) {
@@ -420,6 +482,7 @@
             const p = dynamicProducts[index];
             document.getElementById('new-name').value = p.name;
             document.getElementById('new-price').value = p.price;
+            document.getElementById('new-seller-price').value = p.sellerPrice || p.price;
             document.getElementById('new-category').value = p.category;
             document.getElementById('new-brand').value = p.brand;
             document.getElementById('new-image').value = p.image || '';
@@ -435,6 +498,7 @@
             editIndex = -1;
             document.getElementById('new-name').value = '';
             document.getElementById('new-price').value = '';
+            document.getElementById('new-seller-price').value = '';
             document.getElementById('new-brand').value = '';
             document.getElementById('new-image').value = '';
 
@@ -446,6 +510,7 @@
         function saveProduct() {
             const name = document.getElementById('new-name').value;
             const price = parseInt(document.getElementById('new-price').value);
+            const sellerPrice = parseInt(document.getElementById('new-seller-price').value) || price;
             const category = document.getElementById('new-category').value;
             const brand = document.getElementById('new-brand').value;
             let image = document.getElementById('new-image').value;
@@ -471,6 +536,7 @@
                     id: Date.now(),
                     name,
                     price,
+                    sellerPrice,
                     category,
                     brand,
                     image,
@@ -480,6 +546,7 @@
             } else {
                 dynamicProducts[editIndex].name = name;
                 dynamicProducts[editIndex].price = price;
+                dynamicProducts[editIndex].sellerPrice = sellerPrice;
                 dynamicProducts[editIndex].category = category;
                 dynamicProducts[editIndex].brand = brand;
                 dynamicProducts[editIndex].image = image;
@@ -505,15 +572,64 @@
             localStorage.setItem('products', JSON.stringify(dynamicProducts));
         }
 
-        // --- CONFIGURACIÓN ---
         function saveConfig() {
             storeConfig.whatsappNumber = document.getElementById('conf-whatsapp').value;
             storeConfig.paymentInfo = document.getElementById('conf-paymentInfo').value;
             storeConfig.discountEnabled = document.getElementById('conf-discountEnabled').value === 'true';
             storeConfig.discountAmount = parseInt(document.getElementById('conf-discountAmount').value) || 0;
 
+            storeConfig.netflixEnabled = document.getElementById('conf-netflixEnabled').value === 'true';
+            storeConfig.disneyEnabled = document.getElementById('conf-disneyEnabled').value === 'true';
+            storeConfig.sellerPassword = document.getElementById('conf-sellerPassword').value;
+
             localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
             alert('¡Configuración guardada exitosamente!');
+        }
+
+        function renderEstrenosList() {
+            const listDiv = document.getElementById('admin-list-estrenos');
+            listDiv.innerHTML = '';
+            const estrenos = storeConfig.estrenos || [];
+
+            estrenos.forEach((e, index) => {
+                const div = document.createElement('div');
+                div.className = 'admin-item';
+                div.innerHTML = `
+                    <div></div>
+                    <div>
+                        <strong style="color: white">${e.title}</strong><br>
+                        <span style="font-size: 0.8rem; color: #a0a0a0; word-break: break-all;">${e.url}</span>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn-icon btn-delete" onclick="deleteEstreno(${index})" title="Eliminar">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                listDiv.appendChild(div);
+            });
+        }
+
+        function saveEstreno() {
+            const title = document.getElementById('new-estreno-title').value;
+            const url = document.getElementById('new-estreno-url').value;
+            if (!title || !url) return alert('Completa título y enlace.');
+
+            if (!storeConfig.estrenos) storeConfig.estrenos = [];
+            storeConfig.estrenos.unshift({ title, url });
+            localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
+
+            document.getElementById('new-estreno-title').value = '';
+            document.getElementById('new-estreno-url').value = '';
+            renderEstrenosList();
+        }
+
+        function deleteEstreno(index) {
+            if (confirm('¿Eliminar película?')) {
+                storeConfig.estrenos.splice(index, 1);
+                localStorage.setItem('storeConfig', JSON.stringify(storeConfig));
+                renderEstrenosList();
+            }
         }
 
         function logout() {

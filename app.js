@@ -70,13 +70,83 @@ const openCodeBtn = document.getElementById('open-code-btn');
 const codeModal = document.getElementById('code-modal');
 const fetchCodeBtn = document.getElementById('fetch-code-btn');
 const closeCodeBtn = document.querySelector('.code-close');
+const codePlatformSelect = document.getElementById('code-platform');
+const openVendedoresBtn = document.getElementById('open-vendedores-btn');
+
+let isSellerMode = localStorage.getItem('isSellerMode') === 'true';
+
 function init() {
-    renderProducts('all');
+    renderProducts('individual');
     setupEventListeners();
+    setupConfigUI();
+}
+
+function setupConfigUI() {
+    // Hide or process Code Modal options
+    if (storeConfig.netflixEnabled === false) {
+        let opt = codePlatformSelect.querySelector('option[value="netflix"]');
+        if (opt) opt.remove();
+    }
+    if (storeConfig.disneyEnabled === false) {
+        let opt = codePlatformSelect.querySelector('option[value="disney"]');
+        if (opt) opt.remove();
+    }
+
+    if (storeConfig.netflixEnabled === false && storeConfig.disneyEnabled === false) {
+        openCodeBtn.style.display = 'none';
+    }
+
+    // Toggle Reseller colors
+    if (isSellerMode) {
+        openVendedoresBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> <span class="hide-mobile">Modo Vendedor</span>`;
+        openVendedoresBtn.style.background = '#27ae60';
+        openVendedoresBtn.style.color = 'white';
+        openVendedoresBtn.style.borderColor = '#2ecc71';
+    }
+}
+
+function getPrice(product) {
+    if (isSellerMode && product.sellerPrice) {
+        return product.sellerPrice;
+    }
+    return product.price;
 }
 
 function renderProducts(category) {
     productsGrid.innerHTML = '';
+
+    // CASO ESPECIAL TAB ESTRENOS
+    if (category === 'estrenos') {
+        const estrenos = storeConfig.estrenos || [];
+        if (estrenos.length === 0) {
+            productsGrid.innerHTML = `<p style="color:var(--text-secondary); grid-column:1/-1; text-align:center;">Próximamente agregaremos los nuevos estrenos.</p>`;
+            return;
+        }
+
+        estrenos.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+
+            // If it is a youtube direct URL, convert to embed. Otherwise try to use original URL or fallback
+            let iframeSrc = item.url;
+            if (item.url.includes('youtube.com/watch?v=')) {
+                iframeSrc = item.url.replace('watch?v=', 'embed/');
+            } else if (item.url.includes('youtu.be/')) {
+                iframeSrc = item.url.replace('youtu.be/', 'youtube.com/embed/');
+            }
+            // For safety and layout, keep simple structure
+            card.innerHTML = `
+                <div style="border-radius:12px; overflow:hidden; margin-bottom:1rem;">
+                    <iframe width="100%" height="200" src="${iframeSrc}" frameborder="0" allowfullscreen></iframe>
+                </div>
+                <h3 class="product-title" style="margin-top:auto;">${item.title}</h3>
+                <p class="product-desc" style="margin-bottom:0;">🍿 Tráiler Oficial</p>
+            `;
+            productsGrid.appendChild(card);
+        });
+        return;
+    }
+
     const filtered = category === 'all'
         ? products.filter(p => p.active !== false)
         : products.filter(p => p.category === category && p.active !== false);
@@ -86,15 +156,20 @@ function renderProducts(category) {
         card.className = 'product-card';
         // Usar imagen por defecto si no tiene
         const imgUrl = product.image || 'https://img.icons8.com/color/96/movie.png';
+        const displayPrice = getPrice(product);
+
+        let sellerBadge = isSellerMode ? `<span style="background:#27ae60; color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:0.5rem">Precio Vendedor</span>` : '';
+
         card.innerHTML = `
             <div style="text-align:center; margin-bottom:1rem">
                 <img src="${imgUrl}" alt="${product.brand}" style="width:100%; max-width:100px; height:60px; object-fit:contain">
             </div>
             <span class="brand-badge">${product.brand}</span>
             <h3 class="product-title">${product.name}</h3>
-            <p class="product-desc">Pantalla original premium con garantía.</p>
-            <div class="price-row">
-                <span class="price">$${product.price.toLocaleString()}</span>
+            <p class="product-desc" style="margin-bottom: 0.5rem">Pantalla original premium con garantía.</p>
+            ${sellerBadge}
+            <div class="price-row" style="margin-top:1rem">
+                <span class="price">$${displayPrice.toLocaleString()}</span>
                 <button class="btn-add" onclick="addToCart(${product.id})">Agregar</button>
             </div>
         `;
@@ -133,7 +208,7 @@ function updateCartUI() {
     let individualCount = cart.filter(p => p.category === 'individual').length;
 
     cart.forEach(item => {
-        let itemPrice = item.price;
+        let itemPrice = getPrice(item);
         // Aplicar descuento por pantalla si está habilitado en configuración Y es individual Y hay más de una en el carrito
         if (storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
             itemPrice -= storeConfig.discountAmount;
@@ -149,7 +224,7 @@ function renderCartItems() {
     let individualCount = cart.filter(p => p.category === 'individual').length;
 
     cart.forEach((item, index) => {
-        let finalPrice = item.price;
+        let finalPrice = getPrice(item);
         let discountNote = "";
 
         if (storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
@@ -201,6 +276,49 @@ function setupEventListeners() {
 
     closeCodeBtn.addEventListener('click', () => {
         codeModal.style.display = 'none';
+    });
+
+    openVendedoresBtn.addEventListener('click', () => {
+        if (isSellerMode) {
+            if (confirm('¿Deseas salir del Modo Vendedor y volver a los precios de cliente regular?')) {
+                localStorage.removeItem('isSellerMode');
+                window.location.reload();
+            }
+            return;
+        }
+
+        let givenPass = prompt('Por favor, ingresa la clave de Vendedores Autorizados:');
+        if (givenPass) {
+            if (storeConfig.sellerPassword && givenPass === storeConfig.sellerPassword) {
+                localStorage.setItem('isSellerMode', 'true');
+                alert('¡Contraseña correcta! El catálogo cambió a los precios mayoristas/vendedor.');
+                window.location.reload();
+            } else {
+                alert('Contraseña incorrecta.');
+            }
+        }
+    });
+
+    const recurrentClientCheck = document.getElementById('recurrent-client');
+    const newClientForm = document.getElementById('new-client-form');
+    recurrentClientCheck.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            newClientForm.style.display = 'none';
+        } else {
+            newClientForm.style.display = 'block';
+        }
+    });
+
+    // Device constraint check (maximum 2)
+    const deviceChecks = document.querySelectorAll('#client-devices input[type="checkbox"]');
+    deviceChecks.forEach(chk => {
+        chk.addEventListener('change', () => {
+            const checkedCount = document.querySelectorAll('#client-devices input[type="checkbox"]:checked').length;
+            if (checkedCount > 2) {
+                chk.checked = false;
+                alert('Solo puedes seleccionar un máximo de 2 opciones de dispositivos.');
+            }
+        });
     });
 
     window.addEventListener('click', (e) => {
@@ -256,13 +374,43 @@ function setupEventListeners() {
     checkoutBtn.addEventListener('click', () => {
         if (cart.length === 0) return alert('Tu carrito está vacío');
 
+        let isRecurrent = document.getElementById('recurrent-client').checked;
+        let cName = "";
+        let cCity = "";
+        let cDevices = [];
+
+        if (!isRecurrent) {
+            cName = document.getElementById('client-name').value.trim();
+            cCity = document.getElementById('client-city').value.trim();
+            const checkedDev = document.querySelectorAll('#client-devices input[type="checkbox"]:checked');
+            checkedDev.forEach(c => cDevices.push(c.value));
+
+            if (!cName || !cCity) {
+                return alert('Por favor, si eres cliente nuevo, llena tu Nombre y Ciudad como mínimo.');
+            }
+        }
+
         let total = 0;
         let individualCount = cart.filter(p => p.category === 'individual').length;
         let message = `🚀 *Nuevo Pedido - Streaming DPC*\n\n`;
-        message += `Hola, me gustaría adquirir las siguientes pantallas:\n\n`;
+
+        if (!isRecurrent) {
+            message += `*DATOS DEL CLIENTE NUEVO*\n`;
+            message += `👤 Nombre: ${cName}\n`;
+            message += `🏙️ Ciudad: ${cCity}\n`;
+            if (cDevices.length > 0) message += `📱 Dispositivos: ${cDevices.join(', ')}\n`;
+            message += `--------------------\n`;
+        } else {
+            message += `✅ *Soy Cliente Registrado*\n`;
+            message += `--------------------\n`;
+        }
+
+        if (isSellerMode) message += `🔥 *Orden de Vendedor/Mayorista*\n`;
+
+        message += `\nHola, me gustaría adquirir las siguientes pantallas:\n\n`;
 
         cart.forEach((item, i) => {
-            let finalPrice = item.price;
+            let finalPrice = getPrice(item);
             if (storeConfig.discountEnabled && item.category === 'individual' && individualCount >= 2) {
                 finalPrice -= storeConfig.discountAmount;
             }

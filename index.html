@@ -24,6 +24,10 @@
                 <span class="brand">DPC</span>
             </div>
             <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+                <button id="open-vendedores-btn" class="get-code-btn"
+                    style="background: rgba(138,43,226,0.15); border-color: rgba(138,43,226,0.3); color: #c48dfc;">
+                    <i class="fa-solid fa-user-tie"></i> <span class="hide-mobile">Vendedores</span>
+                </button>
                 <button id="open-code-btn" class="get-code-btn">
                     <i class="fa-solid fa-key"></i> <span class="hide-mobile">Obtener Código</span>
                 </button>
@@ -42,13 +46,15 @@
 
         <!-- Tabs Section -->
         <div class="tabs">
-            <button class="tab-btn active" data-tab="all">Todos</button>
-            <button class="tab-btn" data-tab="individual">Individual</button>
+            <button class="tab-btn active" data-tab="individual">Individual</button>
             <button class="tab-btn" data-tab="combos2">Combos 2</button>
             <button class="tab-btn" data-tab="combos3">Combos 3</button>
             <button class="tab-btn" data-tab="combos4">Combos 4</button>
             <button class="tab-btn" data-tab="combos5">Combos 5</button>
+            <button class="tab-btn" data-tab="promociones_finde">Promoción fin de semana</button>
             <button class="tab-btn" data-tab="promociones">Promociones del Mes</button>
+            <button class="tab-btn" data-tab="estrenos">🍿 Estrenos del mes</button>
+            <button class="tab-btn" data-tab="all">Todos</button>
         </div>
 
         <!-- Products Grid -->
@@ -74,6 +80,10 @@
         <!-- Footer -->
         <footer>
             <p>&copy; 2026 Streaming DPC. Todos los derechos reservados.</p>
+            <div style="margin-top: 1rem;">
+                <img src="https://api.visitorbadge.io/api/visitors?path=streaming-dpc-store&countColor=%23ff4d00&labelColor=%230a0a0c&label=Visitas"
+                    alt="Contador de Visitas">
+            </div>
         </footer>
     </div>
 
@@ -87,6 +97,35 @@
             <div id="cart-items" class="cart-items">
                 <!-- Cart items will be injected here -->
             </div>
+
+            <!-- Checkout forms for new customers -->
+            <div class="cart-client-info" style="padding: 1rem; border-top: 1px solid var(--glass-border);">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer;">
+                    <input type="checkbox" id="recurrent-client" style="width: auto;">
+                    <span>Soy cliente ya registrado (Omitir datos)</span>
+                </label>
+
+                <div id="new-client-form">
+                    <div style="margin-bottom: 0.8rem;">
+                        <input type="text" id="client-name" class="input-modern" placeholder="* Tu Nombre o Apodo">
+                    </div>
+                    <div style="margin-bottom: 0.8rem;">
+                        <input type="text" id="client-city" class="input-modern" placeholder="* Ciudad">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label
+                            style="font-size: 0.9rem; color: var(--text-secondary); display: block; margin-bottom:0.5rem;">Dispositivo
+                            donde lo usarás (Máx. 2):</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="client-devices">
+                            <label><input type="checkbox" value="TV"> Smart TV</label>
+                            <label><input type="checkbox" value="Celular"> Celular</label>
+                            <label><input type="checkbox" value="PC"> PC / Laptop</label>
+                            <label><input type="checkbox" value="Tablet"> Tablet</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="cart-footer">
                 <div class="total-row">
                     <span>Total:</span>
