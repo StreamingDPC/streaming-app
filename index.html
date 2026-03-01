@@ -24,6 +24,10 @@
                 <span class="brand">DPC</span>
             </div>
             <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+                <button id="open-client-btn" class="get-code-btn"
+                    style="background: rgba(46, 204, 113, 0.15); border-color: rgba(46, 204, 113, 0.3); color: #2ecc71;">
+                    <i class="fa-solid fa-address-card"></i> <span class="hide-mobile">Mis Compras</span>
+                </button>
                 <button id="open-vendedores-btn" class="get-code-btn"
                     style="background: rgba(138,43,226,0.15); border-color: rgba(138,43,226,0.3); color: #c48dfc;">
                     <i class="fa-solid fa-user-tie"></i> <span class="hide-mobile">Vendedores</span>
@@ -308,6 +312,59 @@
                     style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
                     <i class="fa-solid fa-paper-plane"></i> Enviar y Guardar Contacto
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Login Modal -->
+    <div id="client-login-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-color: #2ecc71;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-address-card" style="color: #2ecc71;"></i> Mis Compras</h2>
+                <span class="close-modal client-login-close">&times;</span>
+            </div>
+            <div class="code-body" style="padding: 1.5rem;">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                    Ingresa tu número de celular para ver tu historial de pantallas y fechas de vencimiento.
+                </p>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Número de Celular:</label>
+                    <input type="text" id="client-login-phone" class="input-modern" placeholder="Ej: 3001234567">
+                </div>
+
+                <button id="login-client-btn" class="checkout-btn"
+                    style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                    <i class="fa-solid fa-right-to-bracket"></i> Entrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Dashboard Modal -->
+    <div id="client-dashboard-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px; border-color: #2ecc71;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-box-open" style="color: #2ecc71;"></i> Mi Historial de Pantallas</h2>
+                <span class="close-modal client-dash-close">&times;</span>
+            </div>
+            <div class="code-body" style="padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <p style="color: var(--text-secondary); margin: 0;">Aquí puedes ver tus compras y fechas de corte
+                        (30 días de vigencia).</p>
+                    <button id="logout-client-btn"
+                        style="background: rgba(255, 77, 77, 0.2); border: 1px solid #ff4d4d; color: #ff4d4d; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: bold;">
+                        <i class="fa-solid fa-right-from-bracket"></i> Salir
+                    </button>
+                </div>
+
+                <div
+                    style="background: var(--glass); border-radius: 12px; border: 1px solid var(--glass-border); max-height: 400px; overflow-y: auto;">
+                    <div id="client-sales-list"
+                        style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem;">
+                        <!-- JS renders sales here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
