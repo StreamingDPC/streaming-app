@@ -95,6 +95,9 @@ function setupConfigUI() {
         openVendedoresBtn.style.background = '#27ae60';
         openVendedoresBtn.style.color = 'white';
         openVendedoresBtn.style.borderColor = '#2ecc71';
+
+        // Hide "Mis Compras" button for sellers
+        if (openClientBtn) openClientBtn.style.display = 'none';
     }
 }
 
