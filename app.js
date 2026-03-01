@@ -505,8 +505,13 @@ function renderSellerDashboard() {
                         ${daysLeft >= 0 ? `Vence en ${daysLeft} días` : 'Vencida'}
                     </span>
                 </div>
-                <div style="display:flex; justify-content:space-between; color:#ccc; font-size:0.85rem; margin-bottom:0.3rem;">
-                    <span>📱 ${sale.clientPhone || 'No registrado'}</span>
+                <!-- Fechas de Inicio y Fin -->
+                <div style="display:flex; justify-content:space-between; color:#a0a0a0; font-size:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.2); padding: 5px; border-radius:6px;">
+                    <span><i class="fa-regular fa-calendar-check" style="color:#4cd137;"></i> Inicio: ${new Date(sale.date).toLocaleDateString()}</span>
+                    <span><i class="fa-regular fa-calendar-xmark" style="color:#ff4d4d;"></i> Fin: ${new Date(sale.expirationDate).toLocaleDateString()}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; color:#ccc; font-size:0.85rem; margin-bottom:0.5rem;">
+                    <span><i class="fa-solid fa-mobile-screen"></i> ${sale.clientPhone || 'No registrado'}</span>
                     <span>📍 ${sale.clientCity || 'Ciudad N/A'}</span>
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:1rem;">📺 ${itemsStr}</p>
