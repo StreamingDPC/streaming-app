@@ -100,14 +100,28 @@
 
             <!-- Checkout forms for new customers -->
             <div class="cart-client-info" style="padding: 1rem; border-top: 1px solid var(--glass-border);">
-                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer;">
-                    <input type="checkbox" id="recurrent-client" style="width: auto;">
-                    <span>Soy cliente ya registrado (Omitir datos)</span>
+                <!-- Es renovación -->
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" id="is-renewal" style="width: auto;">
+                    <span style="color: #4cd137; font-weight: 600;">🔄 Es una Renovación</span>
                 </label>
+
+                <div id="recurrent-client-container">
+                    <label
+                        style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="recurrent-client" style="width: auto;">
+                        <span>Soy cliente ya registrado (Omitir datos)</span>
+                    </label>
+                </div>
 
                 <div id="new-client-form">
                     <div style="margin-bottom: 0.8rem;">
-                        <input type="text" id="client-name" class="input-modern" placeholder="* Tu Nombre o Apodo">
+                        <input type="text" id="client-name" class="input-modern"
+                            placeholder="* Nombre del Cliente o Apodo">
+                    </div>
+                    <div style="margin-bottom: 0.8rem;">
+                        <input type="text" id="client-phone" class="input-modern"
+                            placeholder="📱 Celular del Cliente (Opcional)">
                     </div>
                     <div style="margin-bottom: 0.8rem;">
                         <input type="text" id="client-city" class="input-modern" placeholder="* Ciudad">
@@ -225,6 +239,34 @@
                     style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">
                     <i class="fa-solid fa-right-to-bracket"></i> Ingresar
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seller Dashboard Modal -->
+    <div id="seller-dashboard-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px; border-color: #c48dfc;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-chart-line" style="color: #c48dfc;"></i> Mi Panel de Ventas</h2>
+                <span class="close-modal dash-close">&times;</span>
+            </div>
+            <div class="code-body" style="padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <p style="color: var(--text-secondary); margin: 0;">Registro de tus clientes y fechas de vencimiento
+                        (30 días de vigencia).</p>
+                    <button id="logout-seller-btn"
+                        style="background: rgba(255, 77, 77, 0.2); border: 1px solid #ff4d4d; color: #ff4d4d; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: bold;">
+                        <i class="fa-solid fa-right-from-bracket"></i> Salir
+                    </button>
+                </div>
+
+                <div
+                    style="background: var(--glass); border-radius: 12px; border: 1px solid var(--glass-border); max-height: 400px; overflow-y: auto;">
+                    <div id="seller-sales-list"
+                        style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem;">
+                        <!-- JS renders sales here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>

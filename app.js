@@ -40,6 +40,11 @@ const sellerModal = document.getElementById('seller-modal');
 const closeSellerBtn = document.querySelector('.seller-close');
 const loginSellerBtn = document.getElementById('login-seller-btn');
 
+const sellerDashboardModal = document.getElementById('seller-dashboard-modal');
+const closeSellerDashBtn = document.querySelector('.dash-close');
+const logoutSellerBtn = document.getElementById('logout-seller-btn');
+const sellerSalesList = document.getElementById('seller-sales-list');
+
 let isSellerMode = localStorage.getItem('isSellerMode') === 'true';
 let currentSellerName = localStorage.getItem('sellerName') || '';
 
@@ -130,7 +135,7 @@ function renderProducts(category) {
 
         card.innerHTML = `
             <div style="text-align:center; margin-bottom:1rem">
-                <img src="${imgUrl}" alt="${product.brand}" style="width:100%; max-width:100px; height:60px; object-fit:contain">
+                <img src="${imgUrl}" alt="${product.brand}" style="width:100%; max-width:140px; height:85px; object-fit:contain">
             </div>
             <span class="brand-badge">${product.brand}</span>
             <h3 class="product-title">${product.name}</h3>
@@ -228,6 +233,11 @@ function setupEventListeners() {
     // Modal
     openCartBtn.addEventListener('click', () => {
         renderCartItems();
+        if (isSellerMode) {
+            document.getElementById('recurrent-client-container').style.display = 'none';
+            document.getElementById('recurrent-client').checked = false;
+            document.getElementById('new-client-form').style.display = 'block';
+        }
         cartModal.style.display = 'block';
     });
 
@@ -248,11 +258,8 @@ function setupEventListeners() {
 
     openVendedoresBtn.addEventListener('click', () => {
         if (isSellerMode) {
-            if (confirm(`¿Deseas cerrar la sesión del vendedor "${currentSellerName}" y volver a los precios de cliente regular?`)) {
-                localStorage.removeItem('isSellerMode');
-                localStorage.removeItem('sellerName');
-                window.location.reload();
-            }
+            renderSellerDashboard();
+            sellerDashboardModal.style.display = 'block';
             return;
         }
 
@@ -264,6 +271,22 @@ function setupEventListeners() {
     closeSellerBtn.addEventListener('click', () => {
         sellerModal.style.display = 'none';
     });
+
+    if (closeSellerDashBtn) {
+        closeSellerDashBtn.addEventListener('click', () => {
+            sellerDashboardModal.style.display = 'none';
+        });
+    }
+
+    if (logoutSellerBtn) {
+        logoutSellerBtn.addEventListener('click', () => {
+            if (confirm(`¿Deseas cerrar la sesión del vendedor "${currentSellerName}" y volver a los precios de cliente regular?`)) {
+                localStorage.removeItem('isSellerMode');
+                localStorage.removeItem('sellerName');
+                window.location.reload();
+            }
+        });
+    }
 
     loginSellerBtn.addEventListener('click', () => {
         const uName = document.getElementById('seller-username').value.trim();
@@ -313,6 +336,7 @@ function setupEventListeners() {
         if (e.target === cartModal) cartModal.style.display = 'none';
         if (e.target === codeModal) codeModal.style.display = 'none';
         if (e.target === sellerModal) sellerModal.style.display = 'none';
+        if (sellerDashboardModal && e.target === sellerDashboardModal) sellerDashboardModal.style.display = 'none';
     });
 
     // Code Fetch Logic (To be connected to Backend later)
@@ -364,18 +388,21 @@ function setupEventListeners() {
         if (cart.length === 0) return alert('Tu carrito está vacío');
 
         let isRecurrent = document.getElementById('recurrent-client').checked;
+        let isRenewal = document.getElementById('is-renewal').checked;
         let cName = "";
         let cCity = "";
+        let cPhone = "";
         let cDevices = [];
 
         if (!isRecurrent) {
             cName = document.getElementById('client-name').value.trim();
             cCity = document.getElementById('client-city').value.trim();
+            cPhone = document.getElementById('client-phone').value.trim();
             const checkedDev = document.querySelectorAll('#client-devices input[type="checkbox"]:checked');
             checkedDev.forEach(c => cDevices.push(c.value));
 
-            if (!cName || !cCity) {
-                return alert('Por favor, si eres cliente nuevo, llena tu Nombre y Ciudad como mínimo.');
+            if (!cName) {
+                return alert('Por favor, indica el nombre del cliente.');
             }
         }
 
@@ -383,14 +410,19 @@ function setupEventListeners() {
         let individualCount = cart.filter(p => p.category === 'individual').length;
         let message = `🚀 *Nuevo Pedido - Streaming DPC*\n\n`;
 
+        if (isRenewal) {
+            message += `🔄 *ESTE PEDIDO ES UNA RENOVACIÓN*\n\n`;
+        }
+
         if (!isRecurrent) {
-            message += `*DATOS DEL CLIENTE NUEVO*\n`;
+            message += `*DATOS DEL CLIENTE*\n`;
             message += `👤 Nombre: ${cName}\n`;
-            message += `🏙️ Ciudad: ${cCity}\n`;
-            if (cDevices.length > 0) message += `📱 Dispositivos: ${cDevices.join(', ')}\n`;
+            if (cPhone) message += `📱 Celular: ${cPhone}\n`;
+            if (cCity) message += `🏙️ Ciudad: ${cCity}\n`;
+            if (cDevices.length > 0) message += `💻 Dispositivos: ${cDevices.join(', ')}\n`;
             message += `--------------------\n`;
         } else {
-            message += `✅ *Soy Cliente Registrado*\n`;
+            message += `✅ *Soy Cliente Registrado (Omitió datos)*\n`;
             message += `--------------------\n`;
         }
 
@@ -417,9 +449,116 @@ function setupEventListeners() {
         message += `${storeConfig.paymentInfo}\n\n`;
         message += `Quedo atento a la activación de mis pantallas.`;
 
+        // Guardar venta para dashboard de vendedores
+        if (isSellerMode && !isRecurrent) {
+            const saleData = {
+                clientName: cName,
+                clientCity: cCity,
+                clientPhone: cPhone,
+                date: Date.now(),
+                expirationDate: Date.now() + (30 * 24 * 60 * 60 * 1000), // +30 days
+                items: cart.map(item => ({ id: item.id, name: item.name }))
+            };
+            db.ref(`sellerSales/${currentSellerName}`).push(saleData);
+        }
+
         const encoded = encodeURIComponent(message);
         window.open(`https://wa.me/${storeConfig.whatsappNumber}?text=${encoded}`, '_blank');
     });
+}
+
+function renderSellerDashboard() {
+    if (!sellerSalesList) return;
+    sellerSalesList.innerHTML = '<p style="text-align:center; color:#ccc;">Cargando tus ventas...</p>';
+
+    db.ref(`sellerSales/${currentSellerName}`).once('value').then(snap => {
+        const sales = snap.val();
+        sellerSalesList.innerHTML = '';
+        if (!sales) {
+            sellerSalesList.innerHTML = '<p style="text-align:center; color:#ccc; margin-top:2rem;">Aún no tienes ventas registradas.</p>';
+            return;
+        }
+
+        // Convert to array and sort by latest date first
+        const salesArray = Object.keys(sales).map(k => ({ id: k, ...sales[k] })).sort((a, b) => b.date - a.date);
+
+        salesArray.forEach(sale => {
+            const now = Date.now();
+            const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
+
+            let statusColor = '#4cd137'; // Active
+            if (daysLeft <= 3 && daysLeft >= 0) statusColor = '#f39c12'; // Ending soon
+            if (daysLeft < 0) statusColor = '#ff4d4d'; // Expired
+
+            const div = document.createElement('div');
+            div.style.background = 'rgba(255,255,255,0.05)';
+            div.style.border = `1px solid ${statusColor}`;
+            div.style.padding = '1rem';
+            div.style.borderRadius = '8px';
+
+            const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
+
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
+                    <strong style="color:white; font-size:1.1rem;">${sale.clientName}</strong>
+                    <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
+                        ${daysLeft >= 0 ? `Vence en ${daysLeft} días` : 'Vencida'}
+                    </span>
+                </div>
+                <div style="display:flex; justify-content:space-between; color:#ccc; font-size:0.85rem; margin-bottom:0.3rem;">
+                    <span>📱 ${sale.clientPhone || 'No registrado'}</span>
+                    <span>📍 ${sale.clientCity || 'Ciudad N/A'}</span>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:1rem;">📺 ${itemsStr}</p>
+                <div style="display:flex; gap: 0.5rem;">
+                    <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}')" 
+                        style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
+                        <i class="fa-solid fa-redo"></i> Renovar este Pedido
+                    </button>
+                </div>
+            `;
+            sellerSalesList.appendChild(div);
+        });
+    });
+}
+
+window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded) {
+    try {
+        const itemsToRenew = JSON.parse(decodeURIComponent(itemsJsonEncoded));
+
+        cart = [];
+        itemsToRenew.forEach(i => {
+            const found = products.find(p => p.name === i.name || p.id === i.id);
+            if (found) cart.push(found);
+        });
+
+        if (cart.length === 0) {
+            alert("No se pudieron encontrar las pantallas en el catálogo actual para renovar.");
+            return;
+        }
+
+        updateCartUI();
+
+        // Open Cart, pre-fill
+        document.getElementById('is-renewal').checked = true;
+        document.getElementById('client-name').value = cName !== 'undefined' ? cName : '';
+        document.getElementById('client-phone').value = cPhone !== 'undefined' ? cPhone : '';
+        document.getElementById('client-city').value = cCity !== 'undefined' ? cCity : '';
+
+        if (sellerDashboardModal) sellerDashboardModal.style.display = 'none';
+
+        renderCartItems();
+        if (isSellerMode) {
+            document.getElementById('recurrent-client-container').style.display = 'none';
+            document.getElementById('new-client-form').style.display = 'block';
+            document.getElementById('recurrent-client').checked = false;
+        }
+        cartModal.style.display = 'block';
+
+    } catch (e) {
+        alert('Error al armar el carrito de renovación.');
+        console.error(e);
+    }
 }
 
 // Firebase Initialization and Loading Logic
