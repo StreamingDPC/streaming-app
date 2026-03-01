@@ -769,8 +769,8 @@ function setupEventListeners() {
 
         // Inject Seller Payment Info if defined and active
         let currentPaymentInfo = storeConfig.paymentInfo;
-        if (publicSellerStoreData && publicSellerStoreData.paymentInfo) {
-            currentPaymentInfo = publicSellerStoreData.paymentInfo;
+        if (publicSellerStoreData) {
+            currentPaymentInfo = publicSellerStoreData.paymentInfo || '💳 *Por favor contáctame para indicarte mis métodos de pago...*';
         }
         message += `${currentPaymentInfo}\n\n`;
 
