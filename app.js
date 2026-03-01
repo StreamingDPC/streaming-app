@@ -52,6 +52,9 @@ const remindMsgInput = document.getElementById('remind-msg');
 const remindSaleIdInput = document.getElementById('remind-sale-id');
 const sendReminderWhatsappBtn = document.getElementById('send-reminder-whatsapp-btn');
 
+const sellerClientSelector = document.getElementById('seller-client-selector');
+const sellerClientsDropdown = document.getElementById('seller-clients-dropdown');
+
 let isSellerMode = localStorage.getItem('isSellerMode') === 'true';
 let currentSellerName = localStorage.getItem('sellerName') || '';
 
@@ -244,9 +247,52 @@ function setupEventListeners() {
             document.getElementById('recurrent-client-container').style.display = 'none';
             document.getElementById('recurrent-client').checked = false;
             document.getElementById('new-client-form').style.display = 'block';
+
+            // Populate Dropdown
+            if (sellerClientSelector && sellerClientsDropdown) {
+                sellerClientSelector.style.display = 'block';
+                db.ref(`sellerSales/${currentSellerName}`).once('value').then(snap => {
+                    const sales = snap.val();
+                    sellerClientsDropdown.innerHTML = '<option value="">-- Nuevo Cliente / Escribir Manual --</option>';
+                    if (sales) {
+                        // Get unique clients
+                        const uniqueClients = {};
+                        Object.keys(sales).forEach(key => {
+                            const cName = sales[key].clientName;
+                            if (cName && !uniqueClients[cName]) {
+                                uniqueClients[cName] = sales[key];
+                            }
+                        });
+
+                        Object.values(uniqueClients).forEach(c => {
+                            const opt = document.createElement('option');
+                            // Store json in value to parse on select
+                            opt.value = encodeURIComponent(JSON.stringify({ name: c.clientName, phone: c.clientPhone || '', city: c.clientCity || '' }));
+                            opt.text = c.clientName;
+                            sellerClientsDropdown.appendChild(opt);
+                        });
+                    }
+                });
+            }
         }
         cartModal.style.display = 'block';
     });
+
+    if (sellerClientsDropdown) {
+        sellerClientsDropdown.addEventListener('change', (e) => {
+            if (!e.target.value) {
+                // Clear fields if returning to empty
+                document.getElementById('client-name').value = '';
+                document.getElementById('client-phone').value = '';
+                document.getElementById('client-city').value = '';
+                return;
+            }
+            const data = JSON.parse(decodeURIComponent(e.target.value));
+            document.getElementById('client-name').value = data.name;
+            document.getElementById('client-phone').value = data.phone;
+            document.getElementById('client-city').value = data.city;
+        });
+    }
 
     closeModalBtn.addEventListener('click', () => {
         cartModal.style.display = 'none';

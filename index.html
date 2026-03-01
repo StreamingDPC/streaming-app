@@ -115,6 +115,15 @@
                 </div>
 
                 <div id="new-client-form">
+                    <div id="seller-client-selector" style="display: none; margin-bottom: 1rem;">
+                        <label
+                            style="font-size: 0.85rem; color: var(--accent-primary); display: block; margin-bottom:0.3rem;"><i
+                                class="fa-solid fa-address-book"></i> Autocompletar con Cliente Guardado:</label>
+                        <select id="seller-clients-dropdown" class="input-modern" style="padding-right: 2rem;">
+                            <option value="">-- Nuevo Cliente / Escribir Manual --</option>
+                        </select>
+                    </div>
+
                     <div style="margin-bottom: 0.8rem;">
                         <input type="text" id="client-name" class="input-modern"
                             placeholder="* Nombre del Cliente o Apodo">
