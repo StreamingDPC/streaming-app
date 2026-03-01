@@ -767,15 +767,6 @@ function setupEventListeners() {
 
         message += `\n💰 *Total a pagar:* $${total.toLocaleString()}\n\n`;
 
-        // Inject Seller Payment Info if defined and active
-        let currentPaymentInfo = storeConfig.paymentInfo;
-        if (publicSellerStoreData) {
-            currentPaymentInfo = publicSellerStoreData.paymentInfo || '💳 *Por favor contáctame para indicarte mis métodos de pago...*';
-        }
-        message += `${currentPaymentInfo}\n\n`;
-
-        message += `Quedo atento a la activación de mis pantallas.`;
-
         // Guardar venta en base de datos
         if (!isRecurrent) {
             const saleData = {
@@ -803,13 +794,29 @@ function setupEventListeners() {
             }
         }
 
-        let checkoutWhatsappNumber = storeConfig.whatsappNumber;
-        if (publicSellerStoreData && publicSellerStoreData.whatsapp) {
-            checkoutWhatsappNumber = publicSellerStoreData.whatsapp;
-        }
+        const finalizeCheckout = (sellerStoreData) => {
+            let checkoutWhatsappNumber = storeConfig.whatsappNumber;
+            let currentPaymentInfo = storeConfig.paymentInfo;
 
-        const encoded = encodeURIComponent(message);
-        window.open(`https://wa.me/${checkoutWhatsappNumber}?text=${encoded}`, '_blank');
+            if (sellerStoreData) {
+                if (sellerStoreData.whatsapp) checkoutWhatsappNumber = sellerStoreData.whatsapp;
+                currentPaymentInfo = sellerStoreData.paymentInfo || '💳 *Por favor contáctame para indicarte mis métodos de pago...*';
+            }
+
+            message += `${currentPaymentInfo}\n\n`;
+            message += `Quedo atento a la activación de mis pantallas.`;
+
+            const encoded = encodeURIComponent(message);
+            window.open(`https://wa.me/${checkoutWhatsappNumber}?text=${encoded}`, '_blank');
+        };
+
+        if (publicSellerRef) {
+            db.ref(`sellerStores/${publicSellerRef}`).once('value').then(snap => {
+                finalizeCheckout(snap.val());
+            }).catch(() => finalizeCheckout(null));
+        } else {
+            finalizeCheckout(null);
+        }
     });
 }
 
