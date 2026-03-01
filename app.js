@@ -90,6 +90,7 @@ const closeSellerStoreBtn = document.querySelector('.seller-store-close');
 const openSellerStoreBtn = document.getElementById('open-seller-store-btn');
 const storeLinkInput = document.getElementById('store-link-input');
 const storeWhatsappInput = document.getElementById('store-whatsapp');
+const storePaymentInfoInput = document.getElementById('store-payment-info');
 const storePricesList = document.getElementById('store-prices-list');
 const saveStoreBtn = document.getElementById('save-store-btn');
 
@@ -588,6 +589,7 @@ function setupEventListeners() {
             const data = snap.val() || {};
 
             storeWhatsappInput.value = data.whatsapp || '';
+            if (storePaymentInfoInput) storePaymentInfoInput.value = data.paymentInfo || '';
             const existingPrices = data.prices || {};
 
             // Render products inputs
@@ -634,10 +636,16 @@ function setupEventListeners() {
                 if (pval) customPrices[pid] = parseInt(pval);
             });
 
-            db.ref(`sellerStores/${currentSellerName}`).set({
+            let storeDbObj = {
                 whatsapp: wpp,
                 prices: customPrices
-            }).then(() => {
+            };
+
+            if (storePaymentInfoInput && storePaymentInfoInput.value.trim() !== '') {
+                storeDbObj.paymentInfo = storePaymentInfoInput.value.trim();
+            }
+
+            db.ref(`sellerStores/${currentSellerName}`).set(storeDbObj).then(() => {
                 alert('Tienda virtual guardada con éxito. Ya puedes compartir tu enlace.');
                 sellerStoreModal.style.display = 'none';
             }).catch(e => {
@@ -758,7 +766,14 @@ function setupEventListeners() {
         }
 
         message += `\n💰 *Total a pagar:* $${total.toLocaleString()}\n\n`;
-        message += `${storeConfig.paymentInfo}\n\n`;
+
+        // Inject Seller Payment Info if defined and active
+        let currentPaymentInfo = storeConfig.paymentInfo;
+        if (publicSellerStoreData && publicSellerStoreData.paymentInfo) {
+            currentPaymentInfo = publicSellerStoreData.paymentInfo;
+        }
+        message += `${currentPaymentInfo}\n\n`;
+
         message += `Quedo atento a la activación de mis pantallas.`;
 
         // Guardar venta en base de datos
