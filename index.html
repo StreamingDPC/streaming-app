@@ -324,19 +324,43 @@
                 <span class="close-modal client-login-close">&times;</span>
             </div>
             <div class="code-body" style="padding: 1.5rem;">
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
-                    Ingresa tu número de celular para ver tu historial de pantallas y fechas de vencimiento.
-                </p>
-
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Número de Celular:</label>
-                    <input type="text" id="client-login-phone" class="input-modern" placeholder="Ej: 3001234567">
+                <div id="client-login-step1">
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                        Ingresa tu número de celular para ver tu historial de pantallas y fechas de vencimiento.
+                    </p>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Número de
+                            Celular:</label>
+                        <input type="text" id="client-login-phone" class="input-modern" placeholder="Ej: 3001234567">
+                    </div>
+                    <button id="btn-client-next" class="checkout-btn"
+                        style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                        Siguiente <i class="fa-solid fa-arrow-right"></i>
+                    </button>
                 </div>
 
-                <button id="login-client-btn" class="checkout-btn"
-                    style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
-                    <i class="fa-solid fa-right-to-bracket"></i> Entrar
-                </button>
+                <div id="client-login-step2" style="display: none;">
+                    <p id="pin-message"
+                        style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                        Ingresa tu PIN de seguridad (4 dígitos).
+                    </p>
+                    <div style="margin-bottom: 1.5rem;">
+                        <input type="password" id="client-login-pin" class="input-modern" placeholder="****"
+                            maxlength="4" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+                    </div>
+                    <button id="login-client-btn" class="checkout-btn"
+                        style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-bottom: 1rem;">
+                        <i class="fa-solid fa-right-to-bracket"></i> Entrar
+                    </button>
+                    <button id="forgot-pin-btn"
+                        style="width: 100%; background: none; border: none; color: #a0a0a0; text-decoration: underline; cursor: pointer;">
+                        Olvidé mi PIN
+                    </button>
+                    <button id="back-to-step1-btn"
+                        style="width: 100%; background: none; border: none; color: #2ecc71; margin-top: 0.5rem; cursor: pointer;">
+                        <i class="fa-solid fa-arrow-left"></i> Cambiar número
+                    </button>
+                </div>
             </div>
         </div>
     </div>

@@ -64,6 +64,17 @@ const loginClientBtn = document.getElementById('login-client-btn');
 const logoutClientBtn = document.getElementById('logout-client-btn');
 const clientSalesList = document.getElementById('client-sales-list');
 
+const clientLoginStep1 = document.getElementById('client-login-step1');
+const clientLoginStep2 = document.getElementById('client-login-step2');
+const btnClientNext = document.getElementById('btn-client-next');
+const clientLoginPin = document.getElementById('client-login-pin');
+const pinMessage = document.getElementById('pin-message');
+const forgotPinBtn = document.getElementById('forgot-pin-btn');
+const backToStep1Btn = document.getElementById('back-to-step1-btn');
+
+let windowTempClientPhone = '';
+let windowTempClientPin = null;
+
 let isSellerMode = localStorage.getItem('isSellerMode') === 'true';
 let currentSellerName = localStorage.getItem('sellerName') || '';
 let clientPhoneLoggedIn = localStorage.getItem('clientPhone') || '';
@@ -340,6 +351,10 @@ function setupEventListeners() {
                 renderClientDashboard();
                 clientDashboardModal.style.display = 'block';
             } else {
+                clientLoginStep1.style.display = 'block';
+                clientLoginStep2.style.display = 'none';
+                document.getElementById('client-login-phone').value = '';
+                clientLoginPin.value = '';
                 clientLoginModal.style.display = 'block';
             }
         });
@@ -402,15 +417,73 @@ function setupEventListeners() {
         closeClientDashBtn.addEventListener('click', () => clientDashboardModal.style.display = 'none');
     }
 
-    if (loginClientBtn) {
-        loginClientBtn.addEventListener('click', () => {
+    if (btnClientNext) {
+        btnClientNext.addEventListener('click', async () => {
             const phone = document.getElementById('client-login-phone').value.replace(/\D/g, '');
             if (!phone || phone.length < 5) return alert('Ingresa un número válido de celular sin espacios.');
             if (storeConfig.blockedClients && storeConfig.blockedClients.includes(phone)) {
                 return alert('⚠️ Este número de celular ha sido bloqueado por el administrador. Contacta con soporte.');
             }
-            localStorage.setItem('clientPhone', phone);
-            clientPhoneLoggedIn = phone;
+
+            // Revisa perfil de PIN
+            try {
+                const snap = await db.ref(`clientProfiles/${phone}/pin`).once('value');
+                const existingPin = snap.val();
+                windowTempClientPhone = phone;
+
+                if (existingPin) {
+                    windowTempClientPin = existingPin.toString();
+                    pinMessage.innerHTML = 'Ingresa tu PIN de seguridad (4 dígitos).';
+                    forgotPinBtn.style.display = 'block';
+                } else {
+                    windowTempClientPin = null;
+                    pinMessage.innerHTML = 'Crea un PIN de 4 números para proteger tus compras a partir de ahora.';
+                    forgotPinBtn.style.display = 'none';
+                }
+
+                clientLoginStep1.style.display = 'none';
+                clientLoginStep2.style.display = 'block';
+            } catch (err) {
+                alert('Error al validar tu número');
+                console.error(err);
+            }
+        });
+    }
+
+    if (backToStep1Btn) {
+        backToStep1Btn.addEventListener('click', () => {
+            clientLoginStep2.style.display = 'none';
+            clientLoginStep1.style.display = 'block';
+            clientLoginPin.value = '';
+        });
+    }
+
+    if (forgotPinBtn) {
+        forgotPinBtn.addEventListener('click', () => {
+            const adminWa = storeConfig.whatsappNumber || '573155182545';
+            const text = encodeURIComponent(`Hola, olvidé el PIN de mi cuenta en Streaming DPC. Mi número registrado es ${windowTempClientPhone}. Solicito un reseteo por favor.`);
+            window.open(`https://wa.me/${adminWa}?text=${text}`, '_blank');
+        });
+    }
+
+    if (loginClientBtn) {
+        loginClientBtn.addEventListener('click', () => {
+            const typedPin = clientLoginPin.value.trim();
+            if (!typedPin || typedPin.length !== 4) return alert('El PIN debe tener 4 dígitos.');
+
+            if (windowTempClientPin) {
+                // Login against existing PIN
+                if (typedPin !== windowTempClientPin) {
+                    return alert('❌ PIN Incorrecto. Intenta de nuevo.');
+                }
+            } else {
+                // Register new PIN
+                db.ref(`clientProfiles/${windowTempClientPhone}/pin`).set(typedPin);
+            }
+
+            // Success Access
+            localStorage.setItem('clientPhone', windowTempClientPhone);
+            clientPhoneLoggedIn = windowTempClientPhone;
             clientLoginModal.style.display = 'none';
             renderClientDashboard();
             clientDashboardModal.style.display = 'block';

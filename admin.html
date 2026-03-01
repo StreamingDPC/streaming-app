@@ -356,6 +356,10 @@
                             <label>Ciudad Guardada:</label>
                             <input type="text" id="edit-client-city">
                         </div>
+                        <div class="form-col" style="margin-bottom: 1rem;">
+                            <label>PIN de Acceso (4 dígitos):</label>
+                            <input type="text" id="edit-client-pin" placeholder="No asignado aún">
+                        </div>
                     </div>
                     <div style="display:flex; gap:1rem; flex-wrap:wrap;">
                         <button class="save-btn" style="background:#4cd137; flex:1;" onclick="saveClientEdits()"><i
@@ -848,6 +852,10 @@
                 document.getElementById('edit-client-name').value = latestSale.clientName || '';
                 document.getElementById('edit-client-city').value = latestSale.clientCity || '';
 
+                // Fetch PIN if any
+                const pinSnap = await db.ref(`clientProfiles/${phone}/pin`).once('value');
+                document.getElementById('edit-client-pin').value = pinSnap.val() || '';
+
                 currentEditingClientPhone = phone;
                 document.getElementById('client-edit-area').style.display = 'block';
 
@@ -888,6 +896,15 @@
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientCity`] = newCity;
                     });
                     await db.ref('/').update(updates);
+
+                    // Update PIN
+                    const newPin = document.getElementById('edit-client-pin').value.trim();
+                    if (newPin) {
+                        await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).set(newPin);
+                    } else {
+                        await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).remove();
+                    }
+
                     alert('Datos de cliente actualizados correctamente en su historial.');
                 }
             } catch (err) {
