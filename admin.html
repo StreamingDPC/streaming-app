@@ -214,6 +214,7 @@
             <button class="admin-tab active" onclick="switchTab('productos', this)">📦 Productos</button>
             <button class="admin-tab" onclick="switchTab('estrenos', this)">🎬 Estrenos</button>
             <button class="admin-tab" onclick="switchTab('vendedores', this)">👔 Vendedores</button>
+            <button class="admin-tab" onclick="switchTab('clientes', this)">👥 Clientes</button>
             <button class="admin-tab" onclick="switchTab('configuracion', this)">⚙️ Configuración</button>
         </div>
 
@@ -325,6 +326,48 @@
             <div class="admin-form">
                 <h3>Vendedores Autorizados</h3>
                 <div id="admin-list-sellers" class="admin-list"></div>
+            </div>
+        </div>
+
+        <!-- TAB CLIENTES -->
+        <div id="tab-clientes" class="tab-content">
+            <div class="admin-form">
+                <h3>Buscar y Editar Cliente</h3>
+                <div class="form-grid">
+                    <div class="form-col" style="margin-bottom: 1rem;">
+                        <label>Número de Teléfono del Cliente</label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input type="text" id="search-client-phone" placeholder="Ej: 3001234567" style="flex:1;">
+                            <button class="save-btn" onclick="searchClient()"
+                                style="margin:0; width:auto; padding:0 20px;"><i
+                                    class="fa-solid fa-magnifying-glass"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="client-edit-area"
+                    style="display:none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border);">
+                    <div class="form-grid">
+                        <div class="form-col" style="margin-bottom: 1rem;">
+                            <label>Nombre o Apodo Guardado:</label>
+                            <input type="text" id="edit-client-name">
+                        </div>
+                        <div class="form-col" style="margin-bottom: 1rem;">
+                            <label>Ciudad Guardada:</label>
+                            <input type="text" id="edit-client-city">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                        <button class="save-btn" style="background:#4cd137; flex:1;" onclick="saveClientEdits()"><i
+                                class="fa-solid fa-floppy-disk"></i> Guardar Cambios Locales</button>
+                        <button class="save-btn" style="background:#ff4d4d; flex:1;" id="btn-block-client"
+                            onclick="toggleBlockClient()"><i class="fa-solid fa-ban"></i> Bloquear este Celular</button>
+                    </div>
+                </div>
+            </div>
+            <div class="admin-form">
+                <h3>Lista de Celulares Bloqueados</h3>
+                <div id="admin-list-blocked" class="admin-list"></div>
             </div>
         </div>
 
@@ -445,14 +488,15 @@
                     renderAdminList();
                     renderEstrenosList();
                     renderSellersList();
+                    renderBlockedClients();
                 }
             }
         });
-
         function init() {
             renderAdminList();
             renderEstrenosList();
             renderSellersList();
+            renderBlockedClients();
 
             // Llenar config
             document.getElementById('conf-whatsapp').value = storeConfig.whatsappNumber;
@@ -749,11 +793,133 @@
         }
 
         function deleteSeller(index) {
-            if (confirm('¿Eliminar este vendedor? Perderá su acceso.')) {
+            if (confirm('¿Eliminar/Bloquear este vendedor? Perderá su acceso.')) {
                 storeConfig.sellers.splice(index, 1);
                 db.ref('storeConfig').set(storeConfig);
                 renderSellersList();
             }
+        }
+
+        // --- SECTION CLIENTS ---
+        let currentEditingClientPhone = null;
+
+        function renderBlockedClients() {
+            const listDiv = document.getElementById('admin-list-blocked');
+            listDiv.innerHTML = '';
+            const blocked = storeConfig.blockedClients || [];
+
+            if (blocked.length === 0) {
+                listDiv.innerHTML = '<p style="color:#a0a0a0; padding:1rem;">Nadie está bloqueado actualmente.</p>';
+            }
+
+            blocked.forEach((phone, index) => {
+                const div = document.createElement('div');
+                div.className = 'admin-item';
+                div.innerHTML = `
+                    <div><i class="fa-solid fa-ban" style="color:#ff4d4d; font-size:1.5rem"></i></div>
+                    <div>
+                        <strong style="color: white; font-size:1.1rem">${phone}</strong>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn-icon" style="color:#4cd137;" onclick="unblockClient(${index})" title="Desbloquear Cliente">
+                            Desbloquear
+                        </button>
+                    </div>
+                `;
+                listDiv.appendChild(div);
+            });
+        }
+
+        async function searchClient() {
+            const phone = document.getElementById('search-client-phone').value.replace(/\D/g, '');
+            if (!phone || phone.length < 5) return alert('Ingresa un número de teléfono válido.');
+
+            try {
+                const snap = await db.ref(`clientSales/${phone}`).once('value');
+                const sales = snap.val();
+                if (!sales) {
+                    alert('No se encontraron compras en el historial para ese número de teléfono.');
+                    document.getElementById('client-edit-area').style.display = 'none';
+                    return;
+                }
+
+                // Get the most recent details
+                let latestSale = Object.values(sales).sort((a, b) => b.date - a.date)[0];
+                document.getElementById('edit-client-name').value = latestSale.clientName || '';
+                document.getElementById('edit-client-city').value = latestSale.clientCity || '';
+
+                currentEditingClientPhone = phone;
+                document.getElementById('client-edit-area').style.display = 'block';
+
+                // Check block status
+                const blocked = storeConfig.blockedClients || [];
+                const blockBtn = document.getElementById('btn-block-client');
+                if (blocked.includes(phone)) {
+                    blockBtn.innerHTML = '<i class="fa-solid fa-unlock"></i> Desbloquear Celular';
+                    blockBtn.style.background = '#4cd137';
+                } else {
+                    blockBtn.innerHTML = '<i class="fa-solid fa-ban"></i> Bloquear Celular';
+                    blockBtn.style.background = '#ff4d4d';
+                }
+
+            } catch (err) {
+                alert('Error buscando en la base de datos.');
+                console.error(err);
+            }
+        }
+
+        async function saveClientEdits() {
+            if (!currentEditingClientPhone) return;
+            const newName = document.getElementById('edit-client-name').value.trim();
+            const newCity = document.getElementById('edit-client-city').value.trim();
+
+            if (!newName) return alert('El nombre no puede estar vacío.');
+
+            if (!confirm(`¿Actualizar todos los registros de compras para ${currentEditingClientPhone} con este nuevo nombre y ciudad?`)) return;
+
+            try {
+                // Update in Client Sales
+                const snap = await db.ref(`clientSales/${currentEditingClientPhone}`).once('value');
+                const sales = snap.val();
+                if (sales) {
+                    const updates = {};
+                    Object.keys(sales).forEach(saleKey => {
+                        updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientName`] = newName;
+                        updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientCity`] = newCity;
+                    });
+                    await db.ref('/').update(updates);
+                    alert('Datos de cliente actualizados correctamente en su historial.');
+                }
+            } catch (err) {
+                alert('Error conectando a la base de datos');
+                console.error(err);
+            }
+        }
+
+        function toggleBlockClient() {
+            if (!currentEditingClientPhone) return;
+            if (!storeConfig.blockedClients) storeConfig.blockedClients = [];
+
+            const idx = storeConfig.blockedClients.indexOf(currentEditingClientPhone);
+            if (idx === -1) {
+                if (confirm('¿Seguro que deseas bloquear este cliente? No podrá renovar ni solicitar más pantallas por su cuenta.')) {
+                    storeConfig.blockedClients.push(currentEditingClientPhone);
+                }
+            } else {
+                storeConfig.blockedClients.splice(idx, 1);
+                alert('Cliente desbloqueado.');
+            }
+
+            db.ref('storeConfig').set(storeConfig);
+            searchClient(); // Refresh the UI
+            renderBlockedClients();
+        }
+
+        function unblockClient(index) {
+            if (!storeConfig.blockedClients) return;
+            storeConfig.blockedClients.splice(index, 1);
+            db.ref('storeConfig').set(storeConfig);
+            renderBlockedClients();
         }
 
         function logout() {

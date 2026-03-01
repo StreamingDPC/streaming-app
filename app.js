@@ -403,6 +403,9 @@ function setupEventListeners() {
         loginClientBtn.addEventListener('click', () => {
             const phone = document.getElementById('client-login-phone').value.replace(/\D/g, '');
             if (!phone || phone.length < 5) return alert('Ingresa un número válido de celular sin espacios.');
+            if (storeConfig.blockedClients && storeConfig.blockedClients.includes(phone)) {
+                return alert('⚠️ Este número de celular ha sido bloqueado por el administrador. Contacta con soporte.');
+            }
             localStorage.setItem('clientPhone', phone);
             clientPhoneLoggedIn = phone;
             clientLoginModal.style.display = 'none';
@@ -536,6 +539,11 @@ function setupEventListeners() {
 
             if (!cName) {
                 return alert('Por favor, indica el nombre del cliente.');
+            }
+
+            const cleanPhone = cPhone ? cPhone.replace(/\D/g, '') : '';
+            if (cleanPhone && storeConfig.blockedClients && storeConfig.blockedClients.includes(cleanPhone)) {
+                return alert('⚠️ Este número de celular ha sido bloqueado por el administrador. Contacta con soporte.');
             }
         }
 
