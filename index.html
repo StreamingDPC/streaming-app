@@ -271,6 +271,38 @@
         </div>
     </div>
 
+    <!-- Reminder Editor Modal -->
+    <div id="reminder-editor-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; border-color: #4cd137;">
+            <div class="modal-header">
+                <h2><i class="fa-brands fa-whatsapp" style="color: #4cd137;"></i> Enviar Recordatorio</h2>
+                <span class="close-modal reminder-close">&times;</span>
+            </div>
+            <div class="code-body" style="padding: 1.5rem;">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                    Revisa y edita el número y mensaje antes de enviarlo. El teléfono editado se guardará en tu lista.
+                </p>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Teléfono del Cliente (Sin
+                        espacios ni signos):</label>
+                    <input type="text" id="remind-phone" class="input-modern" placeholder="Ej: 573001234567">
+                </div>
+                <!-- We will store the saleId here silently to update Firebase -->
+                <input type="hidden" id="remind-sale-id">
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Mensaje:</label>
+                    <textarea id="remind-msg"
+                        style="width: 100%; height: 260px; padding: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border); border-radius: 8px; font-family: sans-serif; resize: vertical;"></textarea>
+                </div>
+                <button id="send-reminder-whatsapp-btn" class="checkout-btn"
+                    style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                    <i class="fa-solid fa-paper-plane"></i> Enviar y Guardar Contacto
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>

@@ -45,6 +45,13 @@ const closeSellerDashBtn = document.querySelector('.dash-close');
 const logoutSellerBtn = document.getElementById('logout-seller-btn');
 const sellerSalesList = document.getElementById('seller-sales-list');
 
+const reminderEditorModal = document.getElementById('reminder-editor-modal');
+const closeReminderBtn = document.querySelector('.reminder-close');
+const remindPhoneInput = document.getElementById('remind-phone');
+const remindMsgInput = document.getElementById('remind-msg');
+const remindSaleIdInput = document.getElementById('remind-sale-id');
+const sendReminderWhatsappBtn = document.getElementById('send-reminder-whatsapp-btn');
+
 let isSellerMode = localStorage.getItem('isSellerMode') === 'true';
 let currentSellerName = localStorage.getItem('sellerName') || '';
 
@@ -278,6 +285,12 @@ function setupEventListeners() {
         });
     }
 
+    if (closeReminderBtn) {
+        closeReminderBtn.addEventListener('click', () => {
+            reminderEditorModal.style.display = 'none';
+        });
+    }
+
     if (logoutSellerBtn) {
         logoutSellerBtn.addEventListener('click', () => {
             if (confirm(`¿Deseas cerrar la sesión del vendedor "${currentSellerName}" y volver a los precios de cliente regular?`)) {
@@ -288,15 +301,37 @@ function setupEventListeners() {
         });
     }
 
+    if (sendReminderWhatsappBtn) {
+        sendReminderWhatsappBtn.addEventListener('click', () => {
+            const saleId = remindSaleIdInput.value;
+            const newPhone = remindPhoneInput.value.replace(/\D/g, '');
+            const rawMsg = remindMsgInput.value;
+
+            if (saleId && newPhone && isSellerMode) {
+                // Update specific phone field in Firebase for this sale if changed
+                db.ref(`sellerSales/${currentSellerName}/${saleId}/clientPhone`).set(newPhone);
+            }
+
+            const phoneSegment = newPhone.length > 8 ? newPhone : '';
+            const encoded = encodeURIComponent(rawMsg);
+
+            if (phoneSegment) {
+                window.open(`https://wa.me/${phoneSegment}?text=${encoded}`, '_blank');
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+            }
+
+            reminderEditorModal.style.display = 'none';
+        });
+    }
+
     loginSellerBtn.addEventListener('click', () => {
         const uName = document.getElementById('seller-username').value.trim();
         const uPass = document.getElementById('seller-password').value.trim();
 
         if (!uName || !uPass) return alert('Por favor, ingresa un nombre y contraseña.');
 
-        // Re-leer la configuración fresca en caso de que acaben de crearlo en admin.html en otra pestaña
-        const freshConfig = JSON.parse(localStorage.getItem('storeConfig')) || {};
-        const sellers = freshConfig.sellers || storeConfig.sellers || [];
+        const sellers = storeConfig.sellers || [];
 
         const found = sellers.find(s => s.name.toLowerCase() === uName.toLowerCase() && s.password === uPass);
 
@@ -337,6 +372,7 @@ function setupEventListeners() {
         if (e.target === codeModal) codeModal.style.display = 'none';
         if (e.target === sellerModal) sellerModal.style.display = 'none';
         if (sellerDashboardModal && e.target === sellerDashboardModal) sellerDashboardModal.style.display = 'none';
+        if (reminderEditorModal && e.target === reminderEditorModal) reminderEditorModal.style.display = 'none';
     });
 
     // Code Fetch Logic (To be connected to Backend later)
@@ -520,7 +556,7 @@ function renderSellerDashboard() {
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                         <i class="fa-solid fa-redo"></i> Renovar
                     </button>
-                    <button onclick="sendReminderFromDash('${sale.clientName}', '${sale.clientPhone}', '${encodeURIComponent(itemsStr)}')" 
+                    <button onclick="sendReminderFromDash('${sale.id}', '${sale.clientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}')" 
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
                         <i class="fa-brands fa-whatsapp"></i> Recordar
                     </button>
@@ -570,24 +606,20 @@ window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded) {
     }
 }
 
-window.sendReminderFromDash = function (cName, cPhone, itemsEncoded) {
+window.sendReminderFromDash = function (saleId, cName, cPhone, itemsEncoded) {
+    if (!reminderEditorModal) return;
+
     const items = decodeURIComponent(itemsEncoded);
     let template = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*";
 
     // Replace variables
     let msg = template.replace(/{cliente}/g, cName).replace(/{pantallas}/g, items);
 
-    // Check if phone exists and is somewhat valid
-    const cleanPhone = cPhone ? cPhone.replace(/\D/g, '') : '';
-    const phoneSegment = cleanPhone.length > 8 ? cleanPhone : ''; // Basic validation for link creation
+    remindSaleIdInput.value = saleId;
+    remindPhoneInput.value = cPhone || '';
+    remindMsgInput.value = msg;
 
-    const encoded = encodeURIComponent(msg);
-    if (phoneSegment) {
-        window.open(`https://wa.me/${phoneSegment}?text=${encoded}`, '_blank');
-    } else {
-        // Fallback open whatsapp generic if no phone
-        window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
-    }
+    reminderEditorModal.style.display = 'block';
 }
 
 // Firebase Initialization and Loading Logic
