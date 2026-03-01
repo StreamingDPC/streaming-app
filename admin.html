@@ -374,6 +374,14 @@
                     </div>
                 </div>
 
+                <div class="form-col" style="margin-bottom: 2rem;">
+                    <label>Mensaje Recordatorio Renovación (Usa {cliente} y {pantallas} para autocompletar)</label>
+                    <textarea id="conf-reminderTemplate" style="height: 250px; padding: 10px;"></textarea>
+                    <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Este mensaje se mandará por
+                        WhatsApp cuando tú o los vendedores den clic en "Enviar Recordatorio" desde el Menú de Ventas.
+                    </p>
+                </div>
+
                 <div class="form-col" style="margin-bottom: 1rem;">
                     <label>Contraseña Acceso Vendedores</label>
                     <input type="text" id="conf-sellerPassword" placeholder="Ej: misvendedores123">
@@ -403,7 +411,8 @@
             netflixEnabled: true,
             disneyEnabled: true,
             sellers: [],
-            estrenos: []
+            estrenos: [],
+            reminderTemplate: "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*"
         };
         let adminInitialized = false;
 
@@ -450,6 +459,10 @@
             document.getElementById('conf-paymentInfo').value = storeConfig.paymentInfo;
             document.getElementById('conf-discountEnabled').value = storeConfig.discountEnabled.toString();
             document.getElementById('conf-discountAmount').value = storeConfig.discountAmount;
+
+            if (document.getElementById('conf-reminderTemplate')) {
+                document.getElementById('conf-reminderTemplate').value = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*";
+            }
 
             // New config variables
             if (document.getElementById('conf-netflixEnabled')) document.getElementById('conf-netflixEnabled').value = storeConfig.netflixEnabled !== false ? 'true' : 'false';
@@ -638,6 +651,10 @@
 
             storeConfig.netflixEnabled = document.getElementById('conf-netflixEnabled').value === 'true';
             storeConfig.disneyEnabled = document.getElementById('conf-disneyEnabled').value === 'true';
+
+            if (document.getElementById('conf-reminderTemplate')) {
+                storeConfig.reminderTemplate = document.getElementById('conf-reminderTemplate').value;
+            }
 
             db.ref('storeConfig').set(storeConfig).then(() => {
                 alert('¡Configuración guardada exitosamente!');

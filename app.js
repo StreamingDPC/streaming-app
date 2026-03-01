@@ -515,10 +515,14 @@ function renderSellerDashboard() {
                     <span>📍 ${sale.clientCity || 'Ciudad N/A'}</span>
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:1rem;">📺 ${itemsStr}</p>
-                <div style="display:flex; gap: 0.5rem;">
+                <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
                     <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}')" 
-                        style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
-                        <i class="fa-solid fa-redo"></i> Renovar este Pedido
+                        style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
+                        <i class="fa-solid fa-redo"></i> Renovar
+                    </button>
+                    <button onclick="sendReminderFromDash('${sale.clientName}', '${sale.clientPhone}', '${encodeURIComponent(itemsStr)}')" 
+                        style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
+                        <i class="fa-brands fa-whatsapp"></i> Recordar
                     </button>
                 </div>
             `;
@@ -563,6 +567,26 @@ window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded) {
     } catch (e) {
         alert('Error al armar el carrito de renovación.');
         console.error(e);
+    }
+}
+
+window.sendReminderFromDash = function (cName, cPhone, itemsEncoded) {
+    const items = decodeURIComponent(itemsEncoded);
+    let template = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*";
+
+    // Replace variables
+    let msg = template.replace(/{cliente}/g, cName).replace(/{pantallas}/g, items);
+
+    // Check if phone exists and is somewhat valid
+    const cleanPhone = cPhone ? cPhone.replace(/\D/g, '') : '';
+    const phoneSegment = cleanPhone.length > 8 ? cleanPhone : ''; // Basic validation for link creation
+
+    const encoded = encodeURIComponent(msg);
+    if (phoneSegment) {
+        window.open(`https://wa.me/${phoneSegment}?text=${encoded}`, '_blank');
+    } else {
+        // Fallback open whatsapp generic if no phone
+        window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
     }
 }
 
