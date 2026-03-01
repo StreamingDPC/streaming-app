@@ -782,6 +782,7 @@ window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded) {
         document.getElementById('client-city').value = cCity !== 'undefined' ? cCity : '';
 
         if (sellerDashboardModal) sellerDashboardModal.style.display = 'none';
+        if (clientDashboardModal) clientDashboardModal.style.display = 'none';
 
         renderCartItems();
         if (isSellerMode) {
