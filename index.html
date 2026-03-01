@@ -265,8 +265,10 @@
             </div>
             <div class="code-body" style="padding: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <p style="color: var(--text-secondary); margin: 0;">Registro de tus clientes y fechas de vencimiento
-                        (30 días de vigencia).</p>
+                    <button id="open-seller-store-btn"
+                        style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border: none; color: black; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: bold;">
+                        <i class="fa-solid fa-store"></i> Configurar Mi Tienda
+                    </button>
                     <button id="logout-seller-btn"
                         style="background: rgba(255, 77, 77, 0.2); border: 1px solid #ff4d4d; color: #ff4d4d; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: bold;">
                         <i class="fa-solid fa-right-from-bracket"></i> Salir
@@ -311,6 +313,48 @@
                 <button id="send-reminder-whatsapp-btn" class="checkout-btn"
                     style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
                     <i class="fa-solid fa-paper-plane"></i> Enviar y Guardar Contacto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seller Custom Store Modal -->
+    <div id="seller-store-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; border-color: var(--accent-primary);">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-store" style="color: var(--accent-primary);"></i> Mi Tienda Virtual</h2>
+                <span class="close-modal seller-store-close">&times;</span>
+            </div>
+            <div class="code-body" style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                    Configura tu número de WhatsApp para recibir pedidos con tu link público. Ajusta el precio de venta
+                    de cada pantalla (este es el precio que verán tus clientes).
+                </p>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Mi Enlace Personal:</label>
+                    <input type="text" id="store-link-input" class="input-modern" readonly
+                        style="background: rgba(0,0,0,0.5); cursor: pointer; color: #4cd137;">
+                    <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Tócalo para copiarlo y enviarlo a
+                        tus clientes.</p>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Mi WhatsApp de
+                        Ventas:</label>
+                    <input type="text" id="store-whatsapp" class="input-modern" placeholder="Ej: 573001234567">
+                </div>
+
+                <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">
+                    Ajustar Mis Precios</h3>
+
+                <div id="store-prices-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- JS renders prices here -->
+                </div>
+
+                <button id="save-store-btn" class="checkout-btn"
+                    style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); margin-top: 1rem;">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Tienda
                 </button>
             </div>
         </div>

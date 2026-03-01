@@ -79,6 +79,20 @@ let isSellerMode = localStorage.getItem('isSellerMode') === 'true';
 let currentSellerName = localStorage.getItem('sellerName') || '';
 let clientPhoneLoggedIn = localStorage.getItem('clientPhone') || '';
 
+// Public Seller Store Variables
+const urlParams = new URLSearchParams(window.location.search);
+const publicSellerRef = urlParams.get('ref');
+let publicSellerStoreData = null;
+
+// Seller Store DOM
+const sellerStoreModal = document.getElementById('seller-store-modal');
+const closeSellerStoreBtn = document.querySelector('.seller-store-close');
+const openSellerStoreBtn = document.getElementById('open-seller-store-btn');
+const storeLinkInput = document.getElementById('store-link-input');
+const storeWhatsappInput = document.getElementById('store-whatsapp');
+const storePricesList = document.getElementById('store-prices-list');
+const saveStoreBtn = document.getElementById('save-store-btn');
+
 function init() {
     renderProducts('individual');
     setupEventListeners();
@@ -110,9 +124,17 @@ function setupConfigUI() {
         // Hide "Mis Compras" button for sellers
         if (openClientBtn) openClientBtn.style.display = 'none';
     }
+
+    if (publicSellerRef) {
+        openVendedoresBtn.style.display = 'none';
+        if (openClientBtn) openClientBtn.style.display = 'none';
+    }
 }
 
 function getPrice(product) {
+    if (publicSellerStoreData && publicSellerStoreData.prices && publicSellerStoreData.prices[product.id]) {
+        return parseInt(publicSellerStoreData.prices[product.id]);
+    }
     if (isSellerMode && product.sellerPrice) {
         return product.sellerPrice;
     }
@@ -547,9 +569,82 @@ function setupEventListeners() {
         if (e.target === sellerModal) sellerModal.style.display = 'none';
         if (sellerDashboardModal && e.target === sellerDashboardModal) sellerDashboardModal.style.display = 'none';
         if (reminderEditorModal && e.target === reminderEditorModal) reminderEditorModal.style.display = 'none';
+        if (sellerStoreModal && e.target === sellerStoreModal) sellerStoreModal.style.display = 'none';
         if (clientLoginModal && e.target === clientLoginModal) clientLoginModal.style.display = 'none';
         if (clientDashboardModal && e.target === clientDashboardModal) clientDashboardModal.style.display = 'none';
     });
+
+    if (closeSellerStoreBtn) closeSellerStoreBtn.addEventListener('click', () => sellerStoreModal.style.display = 'none');
+
+    if (openSellerStoreBtn) {
+        openSellerStoreBtn.addEventListener('click', async () => {
+            if (!sellerStoreModal) return;
+            // Generate link
+            const baseUrl = window.location.origin + window.location.pathname;
+            storeLinkInput.value = `${baseUrl}?ref=${encodeURIComponent(currentSellerName)}`;
+
+            // Try to load existing data
+            const snap = await db.ref(`sellerStores/${currentSellerName}`).once('value');
+            const data = snap.val() || {};
+
+            storeWhatsappInput.value = data.whatsapp || '';
+            const existingPrices = data.prices || {};
+
+            // Render products inputs
+            storePricesList.innerHTML = '';
+            products.filter(p => p.active !== false).forEach(p => {
+                const myCost = p.sellerPrice || p.price;
+                const publicPrice = existingPrices[p.id] || p.price;
+
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex:1; min-width:150px;">
+                            <strong style="color:white; display:block;">${p.name}</strong>
+                            <span style="font-size:0.8rem; color:#a0a0a0;">Costo: $${myCost.toLocaleString()}</span>
+                        </div>
+                        <div style="width:120px;">
+                            <label style="font-size:0.75rem; color:#4cd137;">Precio de Venta ($):</label>
+                            <input type="number" class="store-custom-price input-modern" data-id="${p.id}" value="${publicPrice}" style="padding: 5px;">
+                        </div>
+                    </div>
+                `;
+                storePricesList.appendChild(div);
+            });
+
+            sellerStoreModal.style.display = 'block';
+        });
+    }
+
+    if (storeLinkInput) storeLinkInput.addEventListener('click', () => {
+        storeLinkInput.select();
+        document.execCommand('copy');
+        alert("Enlace copiado al portapapeles. ¡Envíalo a tus clientes!");
+    });
+
+    if (saveStoreBtn) {
+        saveStoreBtn.addEventListener('click', () => {
+            const wpp = storeWhatsappInput.value.replace(/\D/g, '');
+            if (!wpp) return alert('Debes agregar tu número de WhatsApp para poder recibir los pedidos de tus clientes.');
+
+            let customPrices = {};
+            document.querySelectorAll('.store-custom-price').forEach(input => {
+                const pid = input.getAttribute('data-id');
+                const pval = input.value;
+                if (pval) customPrices[pid] = parseInt(pval);
+            });
+
+            db.ref(`sellerStores/${currentSellerName}`).set({
+                whatsapp: wpp,
+                prices: customPrices
+            }).then(() => {
+                alert('Tienda virtual guardada con éxito. Ya puedes compartir tu enlace.');
+                sellerStoreModal.style.display = 'none';
+            }).catch(e => {
+                alert('Error al guardar: ' + e.message);
+            });
+        });
+    }
 
     // Code Fetch Logic (To be connected to Backend later)
     fetchCodeBtn.addEventListener('click', async () => {
@@ -678,8 +773,12 @@ function setupEventListeners() {
                 sellerName: isSellerMode ? currentSellerName : 'Página Web Oficial'
             };
 
-            if (isSellerMode) {
-                db.ref(`sellerSales/${currentSellerName}`).push(saleData);
+            // Public Seller Checkout Forwarding
+            let finalSellerDestination = isSellerMode ? currentSellerName : 'Página Web Oficial';
+            if (publicSellerRef) finalSellerDestination = publicSellerRef;
+
+            if (isSellerMode || publicSellerRef) {
+                db.ref(`sellerSales/${finalSellerDestination}`).push(saleData);
             }
 
             // Always save to client historical indexed by their clean phone
@@ -689,8 +788,13 @@ function setupEventListeners() {
             }
         }
 
+        let checkoutWhatsappNumber = storeConfig.whatsappNumber;
+        if (publicSellerStoreData && publicSellerStoreData.whatsapp) {
+            checkoutWhatsappNumber = publicSellerStoreData.whatsapp;
+        }
+
         const encoded = encodeURIComponent(message);
-        window.open(`https://wa.me/${storeConfig.whatsappNumber}?text=${encoded}`, '_blank');
+        window.open(`https://wa.me/${checkoutWhatsappNumber}?text=${encoded}`, '_blank');
     });
 }
 
@@ -909,16 +1013,31 @@ db.ref('/').once('value').then(snap => {
             storeConfig = val.storeConfig || {};
             products = val.products || [];
 
-            if (!window.appInitialized) {
-                window.appInitialized = true;
-                init(); // Iniciar UI y Listeners por primera y unica vez
+            const runInit = () => {
+                if (!window.appInitialized) {
+                    window.appInitialized = true;
+                    init(); // Iniciar UI y Listeners por primera y unica vez
+                } else {
+                    // Actualizar UI en vivo si hubo algun cambio desde el admin backend
+                    setupConfigUI();
+                    const activeTabBtn = document.querySelector('.tab-btn.active');
+                    if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
+                    updateCartUI();
+                    renderCartItems();
+                }
+            };
+
+            if (publicSellerRef && !window.appInitialized) {
+                db.ref(`sellerStores/${publicSellerRef}`).once('value').then(sp => {
+                    const resellerData = sp.val();
+                    if (resellerData) {
+                        publicSellerStoreData = resellerData;
+                        isSellerMode = false; // Fuerza vista cliente global
+                    }
+                    runInit();
+                }).catch(() => runInit());
             } else {
-                // Actualizar UI en vivo si hubo algun cambio desde el admin backend
-                setupConfigUI();
-                const activeTabBtn = document.querySelector('.tab-btn.active');
-                if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
-                updateCartUI();
-                renderCartItems();
+                runInit();
             }
         }
     });
