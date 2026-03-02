@@ -647,6 +647,7 @@
                 if (search && !p.name.toLowerCase().includes(search)) return;
 
                 const isActive = p.active !== false; // Si no tiene, default es true
+                const inStock = p.inStock !== false;
 
                 const div = document.createElement('div');
                 div.className = `admin-item ${!isActive ? 'inactive' : ''}`;
@@ -660,10 +661,14 @@
                         <br>
                         <span style="font-size: 0.8rem; color: var(--text-primary)">$${p.price.toLocaleString()}</span> - 
                         <span style="font-size: 0.8rem; color: #ccc;">${p.category} | ${p.brand}</span>
+                        ${!inStock ? '<br><span style="color:#ff4d4d; font-size: 0.75rem; font-weight: bold;">[AGOTADO]</span>' : ''}
                     </div>
                     <div class="item-actions">
                         <button class="btn-icon btn-toggle" onclick="toggleActive(${index})" title="${isActive ? 'Pausar/Ocultar' : 'Activar/Mostrar'}">
                             <i class="fa-solid ${isActive ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                        </button>
+                        <button class="btn-icon btn-toggle" style="color: ${inStock ? '#4cd137' : '#ff4d4d'}" onclick="toggleStock(${index})" title="${inStock ? 'Marcar Agotado' : 'Marcar Disponible'}">
+                            <i class="fa-solid ${inStock ? 'fa-box-open' : 'fa-box'}"></i>
                         </button>
                         <button class="btn-icon btn-edit" onclick="editProduct(${index})" title="Editar">
                             <i class="fa-solid fa-pen"></i>
@@ -699,6 +704,16 @@
                 dynamicProducts[index].active = false;
             } else {
                 dynamicProducts[index].active = !dynamicProducts[index].active;
+            }
+            saveProductsToStorage();
+            renderAdminList();
+        }
+
+        function toggleStock(index) {
+            if (dynamicProducts[index].inStock === undefined) {
+                dynamicProducts[index].inStock = false;
+            } else {
+                dynamicProducts[index].inStock = !dynamicProducts[index].inStock;
             }
             saveProductsToStorage();
             renderAdminList();

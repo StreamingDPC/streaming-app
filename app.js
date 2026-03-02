@@ -207,6 +207,11 @@ function renderProducts(category) {
         const displayPrice = getPrice(product);
 
         let sellerBadge = isSellerMode ? `<span style="background:#27ae60; color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:0.5rem">Precio Vendedor</span>` : '';
+        const inStock = product.inStock !== false;
+
+        let buttonHtml = inStock
+            ? `<button class="btn-add" onclick="addToCart(${product.id})">Agregar</button>`
+            : `<button class="btn-add" style="background:#ff4d4d; color:white; border-color:#ff4d4d; cursor:not-allowed;" disabled>Agotado</button>`;
 
         card.innerHTML = `
             <div style="text-align:center; margin-bottom:1rem">
@@ -218,7 +223,7 @@ function renderProducts(category) {
             ${sellerBadge}
             <div class="price-row" style="margin-top:1rem">
                 <span class="price">$${displayPrice.toLocaleString()}</span>
-                <button class="btn-add" onclick="addToCart(${product.id})">Agregar</button>
+                ${buttonHtml}
             </div>
         `;
         productsGrid.appendChild(card);
