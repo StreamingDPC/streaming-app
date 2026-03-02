@@ -269,8 +269,11 @@ function processCartDiscounts() {
         let isIndividual = item.category === 'individual';
 
         if (isIndividual) {
-            if (isClientPromoActive || isSellerPromoActive) {
-                if (promoCount < promoLimit) {
+            let isPromoBannerActiveEnabled = (isClientPromoActive || isSellerPromoActive);
+
+            if (isPromoBannerActiveEnabled) {
+                // Solo aplicar si alcanza o supera el límite de pantallas solicitado para la promo
+                if (individualCount >= promoLimit && promoCount < promoLimit) {
                     finalPrice -= promoDiscount;
                     promoCount++;
                     discountNote = `<span style="color:${isSellerMode ? '#c48dfc' : '#ff416c'}; font-size:0.7rem">(-$${promoDiscount.toLocaleString()} PROMO)</span>`;
