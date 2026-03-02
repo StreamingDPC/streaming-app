@@ -287,15 +287,11 @@ function processCartDiscounts() {
             // Si la promocion no aplica para este item (porq no alcanza limite, o ya se pasó límite),
             // debe aplicar el descuento normalito como respaldo.
             if (!appliedPromo && isGenericDiscountApplicable) {
-                if (!isSellerMode && storeConfig.discountEnabled && !publicSellerRef) {
+                if (!isSellerMode && storeConfig.discountEnabled && storeConfig.discountAmount > 0) {
                     finalPrice -= storeConfig.discountAmount;
                     discountNote = `<span style="color:#4cd137; font-size:0.7rem">(-$${storeConfig.discountAmount.toLocaleString()} Combo Propio)</span>`;
                     totalDiscountAmount += storeConfig.discountAmount;
-                } else if (!isSellerMode && storeConfig.discountEnabled && publicSellerRef) {
-                    finalPrice -= storeConfig.discountAmount;
-                    discountNote = `<span style="color:#4cd137; font-size:0.7rem">(-$${storeConfig.discountAmount.toLocaleString()} Combo Propio)</span>`;
-                    totalDiscountAmount += storeConfig.discountAmount;
-                } else if (isSellerMode && storeConfig.sellerDiscountEnabled) {
+                } else if (isSellerMode && storeConfig.sellerDiscountEnabled && storeConfig.sellerDiscountAmount > 0) {
                     finalPrice -= storeConfig.sellerDiscountAmount;
                     discountNote = `<span style="color:#2ab7ca; font-size:0.7rem">(-$${storeConfig.sellerDiscountAmount.toLocaleString()} Dcto Mayorista)</span>`;
                     totalDiscountAmount += storeConfig.sellerDiscountAmount;
