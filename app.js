@@ -844,7 +844,8 @@ function setupEventListeners() {
                 clientPhone: cPhone,
                 date: Date.now(),
                 expirationDate: Date.now() + (30 * 24 * 60 * 60 * 1000), // +30 days
-                items: cart.map(item => ({ id: item.id, name: item.name })),
+                items: stats.processedCart.map(item => ({ id: item.id, name: item.name, category: item.category, finalPrice: item.finalPrice })),
+                total: total,
                 sellerName: isSellerMode ? currentSellerName : 'Página Web Oficial'
             };
 

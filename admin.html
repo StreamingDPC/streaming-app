@@ -1075,9 +1075,14 @@
                         if (daysLeft <= 3 && daysLeft >= 0) statusColor = '#f39c12';
                         if (daysLeft < 0) statusColor = '#ff4d4d';
 
-                        const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
+                        const itemsStr = sale.items ? sale.items.map(i => {
+                            let formatName = i.name;
+                            if (i.category && i.category.startsWith('combos')) formatName = `🎬 *${i.name}* (Combo Prediseñado)`;
+                            return formatName;
+                        }).join(', ') : 'Pantallas';
                         const safeClient = (sale.clientName || 'Desconocido').replace(/'/g, '');
                         const safeSeller = sName.replace(/'/g, '');
+                        const totalDisp = sale.total ? `$${sale.total.toLocaleString()}` : 'No registrado';
 
                         const saleCard = document.createElement('div');
                         saleCard.style.padding = '1rem';
@@ -1091,15 +1096,22 @@
                                     ${daysLeft >= 0 ? `Vence en ${daysLeft} días` : 'Vencida'}
                                 </span>
                             </div>
-                            <p style="font-size:0.8rem; color:#ccc; margin-bottom:1rem; line-height:1.4;">
+                            <p style="font-size:0.8rem; color:#ccc; margin-bottom:0.8rem; line-height:1.4;">
                                 📺 ${itemsStr}<br>
+                                💰 Valor pagado: ${totalDisp}<br>
                                 📱 ${sale.clientPhone || 'N/A'} | 📍 ${sale.clientCity || 'N/A'}
                             </p>
-                            <button onclick="sendAdminReminderToSeller('${safeSeller}', '${safeClient}', '${encodeURIComponent(itemsStr)}', '${sale.clientPhone || ''}')" 
-                                style="padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137; width:100%; font-size:0.85rem; transition: background 0.3s;"
-                                onmouseover="this.style.background='rgba(76, 209, 55, 0.2)'" onmouseout="this.style.background='rgba(76, 209, 55, 0.1)'">
-                                <i class="fa-brands fa-whatsapp"></i> Recordar a Vendedor
-                            </button>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button onclick="sendAdminReminderToSeller('${safeSeller}', '${safeClient}', '${encodeURIComponent(itemsStr)}', '${sale.clientPhone || ''}', ${sale.total || 0})" 
+                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137; font-size:0.8rem; transition: background 0.3s;"
+                                    onmouseover="this.style.background='rgba(76, 209, 55, 0.2)'" onmouseout="this.style.background='rgba(76, 209, 55, 0.1)'">
+                                    <i class="fa-brands fa-whatsapp"></i> Recordar
+                                </button>
+                                <button onclick="deleteSellerSale('${safeSeller}', '${sale.id}')" 
+                                    style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
                         `;
                         salesContainer.appendChild(saleCard);
                     });
@@ -1111,9 +1123,23 @@
             });
         }
 
-        function sendAdminReminderToSeller(sellerName, clientName, itemsEncoded, clientPhone) {
+        function deleteSellerSale(sellerName, saleId) {
+            if (confirm('¿Estás seguro de que quieres eliminar este registro? (Útil si fue una prueba o error)')) {
+                db.ref(`sellerSales/${sellerName}/${saleId}`).remove().then(() => {
+                    alert('Registro eliminado de las ventas del vendedor.');
+                    fetchSellerSalesStats();
+                });
+            }
+        }
+
+        function sendAdminReminderToSeller(sellerName, clientName, itemsEncoded, clientPhone, saleTotal) {
             const itemsStr = decodeURIComponent(itemsEncoded);
             let msg = `Hola *${sellerName}* 👋\n\nTe recuerdo que la cuenta de tu cliente *${clientName}* (📱 ${clientPhone})\n\nCon: ${itemsStr}\n👉 *FINALIZA PRONTO o YA VENCIÓ* 👈\n\nPor favor contáctalo para gestionar su renovación.`;
+
+            if (saleTotal > 0) {
+                msg += `\n💰 *Total a Renovar:* $${saleTotal.toLocaleString()}`;
+            }
+
             const encodedMsg = encodeURIComponent(msg);
             window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
         }
@@ -1218,8 +1244,13 @@
                         if (daysLeft <= 3 && daysLeft >= 0) statusColor = '#f39c12';
                         if (daysLeft < 0) statusColor = '#ff4d4d';
 
-                        const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
+                        const itemsStr = sale.items ? sale.items.map(i => {
+                            let formatName = i.name;
+                            if (i.category && i.category.startsWith('combos')) formatName = `🎬 *${i.name}* (Combo Prediseñado)`;
+                            return formatName;
+                        }).join(', ') : 'Pantallas';
                         const safeClientName = c.name.replace(/'/g, '');
+                        const totalDisp = sale.total ? `$${sale.total.toLocaleString()}` : 'No registrado';
 
                         const saleCard = document.createElement('div');
                         saleCard.style.padding = '1rem';
@@ -1233,14 +1264,21 @@
                                     ${daysLeft >= 0 ? `Vence en ${daysLeft} d` : 'Vencida'}
                                 </span>
                             </div>
-                            <p style="font-size:0.8rem; color:var(--text-primary); margin-bottom:1rem; line-height:1.4;">
-                                📺 ${itemsStr}
+                            <p style="font-size:0.8rem; color:var(--text-primary); margin-bottom:0.8rem; line-height:1.4;">
+                                📺 ${itemsStr}<br>
+                                💰 Valor pagado: ${totalDisp}
                             </p>
-                            <button onclick="sendAdminReminderToDirectClient('${safeClientName}', '${encodeURIComponent(itemsStr)}', '${c.phone}')" 
-                                style="padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #2ab7ca; background: rgba(42, 183, 202, 0.1); color:#2ab7ca; width:100%; font-size:0.85rem; transition: background 0.3s;"
-                                onmouseover="this.style.background='rgba(42, 183, 202, 0.2)'" onmouseout="this.style.background='rgba(42, 183, 202, 0.1)'">
-                                <i class="fa-brands fa-whatsapp"></i> Recordar Cliente
-                            </button>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button onclick="sendAdminReminderToDirectClient('${safeClientName}', '${encodeURIComponent(itemsStr)}', '${c.phone}', ${sale.total || 0})" 
+                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #2ab7ca; background: rgba(42, 183, 202, 0.1); color:#2ab7ca; font-size:0.8rem; transition: background 0.3s;"
+                                    onmouseover="this.style.background='rgba(42, 183, 202, 0.2)'" onmouseout="this.style.background='rgba(42, 183, 202, 0.1)'">
+                                    <i class="fa-brands fa-whatsapp"></i> Recordar
+                                </button>
+                                <button onclick="deleteClientSale('${c.phone}', '${sale.id}')" 
+                                    style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
                         `;
                         salesContainer.appendChild(saleCard);
                     });
@@ -1252,10 +1290,24 @@
             });
         }
 
-        function sendAdminReminderToDirectClient(clientName, itemsEncoded, clientPhone) {
+        function deleteClientSale(phone, saleId) {
+            if (confirm('¿Estás seguro de que quieres eliminar este registro? (Útil si fue una prueba o error)')) {
+                db.ref(`clientSales/${phone}/${saleId}`).remove().then(() => {
+                    alert('Registro eliminado del historial del cliente.');
+                    fetchClientSalesHistory();
+                });
+            }
+        }
+
+        function sendAdminReminderToDirectClient(clientName, itemsEncoded, clientPhone, saleTotal) {
             const itemsStr = decodeURIComponent(itemsEncoded);
             let template = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*";
             let msg = template.replace(/{cliente}/g, clientName).replace(/{pantallas}/g, itemsStr);
+
+            if (saleTotal > 0) {
+                msg += `\n\n💰 *Total a Pagar:* $${saleTotal.toLocaleString()}`;
+            }
+
             const encodedMsg = encodeURIComponent(msg);
 
             // Add country code if it looks like a local Colombian number
