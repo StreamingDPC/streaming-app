@@ -536,9 +536,38 @@
 
                 <div class="form-col" style="margin-bottom: 2rem;">
                     <label>Mensaje Recordatorio Renovación (Usa {cliente} y {pantallas} para autocompletar)</label>
-                    <textarea id="conf-reminderTemplate" style="height: 250px; padding: 10px;"></textarea>
+                    <textarea id="conf-reminderTemplate" style="height: 150px; padding: 10px;"></textarea>
                     <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Este mensaje se mandará por
-                        WhatsApp cuando den clic en "Enviar Recordatorio".</p>
+                        WhatsApp para los que vencen HOY.</p>
+                </div>
+
+                <div class="form-col" style="margin-bottom: 2rem;">
+                    <label>Mensaje Vencimiento MAÑANA (Aviso Previo)</label>
+                    <textarea id="conf-reminderTomorrowTemplate" style="height: 100px; padding: 10px;"></textarea>
+                    <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Mensaje suave que se manda 1 día
+                        antes.</p>
+                </div>
+
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                    <div class="form-col">
+                        <label>Asistente Automático Diario (Notificaciones)</label>
+                        <select id="conf-autoReminderEnabled">
+                            <option value="true">Activo / Encendido</option>
+                            <option value="false">Apagado</option>
+                        </select>
+                        <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de WhatsApp
+                            por ti.</p>
+                    </div>
+                    <div class="form-col">
+                        <label>Hora de Activación (AM/PM)</label>
+                        <select id="conf-autoReminderHour">
+                            <option value="0">Toda hora (Pruebas)</option>
+                            <option value="7">A partir de las 7:00 AM</option>
+                            <option value="8">A partir de las 8:00 AM</option>
+                            <option value="9">A partir de las 9:00 AM</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-col" style="margin-bottom: 1rem;">
@@ -627,8 +656,13 @@
                 document.getElementById('conf-reminderTemplate').value = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*";
             }
 
-            if (document.getElementById('conf-netflixEnabled')) document.getElementById('conf-netflixEnabled').value = storeConfig.netflixEnabled !== false ? 'true' : 'false';
-            if (document.getElementById('conf-disneyEnabled')) document.getElementById('conf-disneyEnabled').value = storeConfig.disneyEnabled !== false ? 'true' : 'false';
+            document.getElementById('conf-netflixEnabled').value = storeConfig.netflixEnabled !== false ? 'true' : 'false';
+            document.getElementById('conf-disneyEnabled').value = storeConfig.disneyEnabled !== false ? 'true' : 'false';
+
+            document.getElementById('conf-autoReminderEnabled').value = storeConfig.autoReminderEnabled === false ? "false" : "true";
+            document.getElementById('conf-autoReminderHour').value = storeConfig.autoReminderHour || "8";
+            document.getElementById('conf-reminderTomorrowTemplate').value = storeConfig.reminderTomorrowTemplate || "Hola {cliente} 😊 Buen dia\nTe avisamos que TU {pantallas} finaliza \n👉 *MAÑANA* 👈\n⚠️ Para evitar la suspensión, por favor realiza el pago con tiempo ⚠️";
+
             if (document.getElementById('conf-sellerPassword')) document.getElementById('conf-sellerPassword').value = storeConfig.sellerPassword || 'admin';
 
             if (document.getElementById('conf-sellerDiscountEnabled')) document.getElementById('conf-sellerDiscountEnabled').value = storeConfig.sellerDiscountEnabled === true ? 'true' : 'false';
@@ -645,6 +679,9 @@
 
             fetchClientSalesHistory();
             fetchSellerSalesStats();
+
+            // Check auto reminders schedule
+            setTimeout(checkDailyAutoReminders, 2000); // 2 sec delay to ensure all setups finish
         }
 
         function switchTab(tabId, btn) {
@@ -860,6 +897,12 @@
             if (document.getElementById('conf-reminderTemplate')) {
                 storeConfig.reminderTemplate = document.getElementById('conf-reminderTemplate').value;
             }
+            if (document.getElementById('conf-reminderTomorrowTemplate')) {
+                storeConfig.reminderTomorrowTemplate = document.getElementById('conf-reminderTomorrowTemplate').value;
+            }
+
+            storeConfig.autoReminderEnabled = document.getElementById('conf-autoReminderEnabled').value === "true";
+            storeConfig.autoReminderHour = parseInt(document.getElementById('conf-autoReminderHour').value) || 8;
 
             storeConfig.sellerPassword = document.getElementById('conf-sellerPassword').value;
 
@@ -1510,6 +1553,160 @@
         }
 
         // No manually calling init() here anymore, it's called by Firebase observer.
+        function initApp() {
+            // function placeholder inside the script
+        }
+
+        let globalReminderQueue = [];
+
+        function checkDailyAutoReminders() {
+            if (storeConfig.autoReminderEnabled === false || storeConfig.autoReminderEnabled === "false") return;
+
+            const configHour = parseInt(storeConfig.autoReminderHour) || 0;
+            const currentHour = new Date().getHours();
+            if (configHour > 0 && currentHour < configHour) return;
+
+            const todayStr = new Date().toLocaleDateString();
+            if (localStorage.getItem('lastAutoReminderDate') === todayStr) return; // Already processed today
+
+            globalReminderQueue = [];
+
+            db.ref('/').once('value').then(snap => {
+                const data = snap.val() || {};
+                const cSales = data.clientSales || {};
+                const sSales = data.sellerSales || {};
+                const now = Date.now();
+
+                // Direct Clientes
+                Object.keys(cSales).forEach(phone => {
+                    const salesMap = cSales[phone];
+                    Object.keys(salesMap).forEach(k => {
+                        const sale = salesMap[k];
+                        const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
+
+                        if (daysLeft === 0 || daysLeft === 1) {
+                            let cName = sale.clientName || 'Cliente';
+                            if (!sale.clientName && data.clientProfiles && data.clientProfiles[phone]) {
+                                cName = data.clientProfiles[phone].name;
+                            }
+                            globalReminderQueue.push({ type: 'direct', phone: phone, name: cName, sale: sale, daysLeft: daysLeft });
+                        }
+                    });
+                });
+
+                // Vendedores
+                Object.keys(sSales).forEach(sellerName => {
+                    const salesMap = sSales[sellerName];
+                    Object.keys(salesMap).forEach(k => {
+                        const sale = salesMap[k];
+                        const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
+
+                        if (daysLeft === 0 || daysLeft === 1) {
+                            globalReminderQueue.push({ type: 'seller', phone: sale.clientPhone || '', seller: sellerName, name: sale.clientName || 'Cliente', sale: sale, daysLeft: daysLeft });
+                        }
+                    });
+                });
+
+                if (globalReminderQueue.length > 0) {
+                    showAutoReminderUI();
+                } else {
+                    localStorage.setItem('lastAutoReminderDate', todayStr);
+                }
+            });
+        }
+
+        function showAutoReminderUI() {
+            let container = document.getElementById('auto-reminder-ui');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'auto-reminder-ui';
+                container.style.position = 'fixed';
+                container.style.bottom = '20px';
+                container.style.right = '20px';
+                container.style.background = 'var(--surface-color)';
+                container.style.padding = '1.5rem';
+                container.style.borderRadius = '12px';
+                container.style.boxShadow = '0 10px 30px rgba(0,0,0,0.8)';
+                container.style.zIndex = '9999';
+                container.style.border = '2px solid var(--accent-light)';
+                container.style.width = '350px';
+                document.body.appendChild(container);
+            }
+
+            container.innerHTML = `
+                <h3 style="margin-top:0; color:white; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-robot" style="color:var(--accent-light);"></i> Asistente de Envíos
+                </h3>
+                <p style="font-size:0.85rem; color:#ccc; margin-bottom:1rem;">Tienes <strong>${globalReminderQueue.length}</strong> recordatorios (vencen hoy o mañana).</p>
+                <div style="display:flex; flex-direction:column; gap:0.5rem; max-height: 180px; overflow-y:auto; margin-bottom:1rem; padding-right:5px;">
+                    ${globalReminderQueue.map(r => `
+                        <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:6px; font-size:0.8rem; border-left: 3px solid ${r.daysLeft === 0 ? '#ff4d4d' : '#f39c12'}">
+                            <strong>${r.name}</strong> ${r.type === 'seller' ? '<span style="color:#a0a0a0; font-size:0.75rem;">(Vía Vendedor)</span>' : ''}<br>
+                            <span style="color:${r.daysLeft === 0 ? '#ff4d4d' : '#f39c12'}"><i class="fa-solid fa-clock"></i> Vence ${r.daysLeft === 0 ? 'HOY' : 'MAÑANA'}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="startAutoRemindersQueue()" style="width:100%; padding: 12px; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background:#4cd137; color:white; margin-bottom:0.5rem; box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);">
+                    <i class="fa-brands fa-whatsapp"></i> Enviar al Siguiente
+                </button>
+                <button onclick="dismissAutoReminders()" style="width:100%; padding: 8px; border-radius:8px; cursor:pointer; font-size:0.8rem; border:1px solid #ff4d4d; background:transparent; color:#ff4d4d;">
+                    Omitir por Hoy
+                </button>
+            `;
+        }
+
+        function startAutoRemindersQueue() {
+            if (globalReminderQueue.length === 0) {
+                alert('Todos los recordatorios fueron revisados.');
+                dismissAutoReminders();
+                return;
+            }
+
+            const r = globalReminderQueue.shift();
+            const itemsStr = r.sale.items ? r.sale.items.map(i => {
+                let formatName = i.name;
+                if (i.category && i.category.startsWith('combos')) formatName = `🎬 *${i.name}* (Combo Prediseñado)`;
+                return formatName;
+            }).join(', ') : 'Pantallas';
+
+            if (r.daysLeft === 1) { // Tomorrow
+                let templateText = storeConfig.reminderTomorrowTemplate || "Hola {cliente} 😊 Buen dia\nTe avisamos que TU {pantallas} finaliza \n👉 *MAÑANA* 👈\n⚠️ Para evitar la suspensión, por favor realiza el pago con tiempo ⚠️";
+                let msg = templateText.replace(/{cliente}/g, r.name).replace(/{pantallas}/g, itemsStr);
+
+                if (r.type === 'seller') {
+                    let msgSeller = `Hola *${r.seller}* 👋\n\nTe damos Aviso Previo que la cuenta de tu cliente *${r.name}* (📱 ${r.phone})\n\nCon: ${itemsStr}\n👉 *FINALIZA MAÑANA* 👈\n\nPor favor contáctalo para gestionar su renovación y evitar cortes.`;
+                    if (r.sale.total > 0) msgSeller += `\n💰 *Total a Renovar con Administrador:* $${r.sale.total.toLocaleString()}`;
+                    if (storeConfig.paymentInfo) msgSeller += `\n\n*Medios de Pago Autorizados:*\n${storeConfig.paymentInfo}`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(msgSeller)}`, '_blank');
+                } else {
+                    if (r.sale.total > 0) msg += `\n\n💰 *Total a Renovar:* $${r.sale.total.toLocaleString()}`;
+                    if (storeConfig.paymentInfo) msg += `\n\n*Medios de Pago:*\n${storeConfig.paymentInfo}`;
+
+                    let waPhone = r.phone.replace(/\D/g, '');
+                    if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
+                    window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                }
+            } else { // Today
+                if (r.type === 'seller') {
+                    sendAdminReminderToSeller(r.seller, r.name, encodeURIComponent(itemsStr), r.phone, r.sale.total || 0);
+                } else {
+                    sendAdminReminderToDirectClient(r.name, encodeURIComponent(itemsStr), r.phone, r.sale.total || 0);
+                }
+            }
+
+            if (globalReminderQueue.length > 0) {
+                showAutoReminderUI();
+            } else {
+                dismissAutoReminders();
+                alert('¡Excelente! Has terminado de enviar los recordatorios de hoy.');
+            }
+        }
+
+        function dismissAutoReminders() {
+            localStorage.setItem('lastAutoReminderDate', new Date().toLocaleDateString());
+            const elem = document.getElementById('auto-reminder-ui');
+            if (elem) elem.style.display = 'none';
+        }
     </script>
 </body>
 
