@@ -343,9 +343,17 @@
         <!-- TAB VENTAS (Vendedores) -->
         <div id="tab-ventas" class="tab-content">
             <div class="admin-form">
-                <h3>Ventas de Vendedores & Recordatorios</h3>
-                <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Visualiza las ventas de cada vendedor y
-                    envíales un recordatorio de vencimiento para que contacten a sus clientes.</p>
+                <div
+                    style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+                    <div>
+                        <h3 style="margin-bottom:0;">Ventas de Vendedores & Recordatorios</h3>
+                        <p style="font-size:0.85rem; color:#a0a0a0; margin-top:0.3rem;">Visualiza las ventas de cada
+                            vendedor y envíales un recordatorio de vencimiento para que contacten a sus clientes.</p>
+                    </div>
+                    <button class="save-btn" onclick="deleteSelectedSellerSales()"
+                        style="background:#ff4d4d; margin:0; width:auto; padding: 8px 15px; font-size:0.9rem;"><i
+                            class="fa-solid fa-trash"></i> Eliminar Selección</button>
+                </div>
                 <div id="admin-list-sellers-stats" class="admin-list"></div>
             </div>
         </div>
@@ -392,8 +400,14 @@
             </div>
             <div class="admin-form">
                 <h3>Lista de Todos los Clientes Registrados</h3>
-                <input type="text" id="filter-clients-text" placeholder="Buscar por número o nombre..."
-                    class="input-modern" style="margin-bottom:1rem;" oninput="renderAllClientsList()">
+                <div style="display:flex; gap: 1rem; margin-bottom:1rem; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="filter-clients-text" placeholder="Buscar por número o nombre..."
+                        class="input-modern" style="margin-bottom:0; flex:1; min-width: 200px;"
+                        oninput="renderAllClientsList()">
+                    <button class="save-btn" onclick="deleteSelectedClientSales()"
+                        style="background:#ff4d4d; margin:0; width:auto; padding: 10px 20px;"><i
+                            class="fa-solid fa-trash"></i> Eliminar Selección</button>
+                </div>
                 <div id="admin-list-all-clients" class="admin-list" style="max-height: 400px; overflow-y: auto;"></div>
             </div>
             <div class="admin-form">
@@ -1091,7 +1105,10 @@
                         saleCard.style.borderRadius = '8px';
                         saleCard.innerHTML = `
                             <div style="display:flex; justify-content:space-between; margin-bottom: 0.3rem;">
-                                <strong style="color:white; font-size:1rem;">${safeClient}</strong>
+                                <strong style="color:white; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                                    <input type="checkbox" class="seller-sale-checkbox" value="${safeSeller}|${sale.id}" style="cursor:pointer; width:16px; height:16px;" title="Seleccionar para eliminar">
+                                    ${safeClient}
+                                </strong>
                                 <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold;">
                                     ${daysLeft >= 0 ? `Vence en ${daysLeft} días` : 'Vencida'}
                                 </span>
@@ -1129,6 +1146,28 @@
                     alert('Registro eliminado de las ventas del vendedor.');
                     fetchSellerSalesStats();
                 });
+            }
+        }
+
+        async function deleteSelectedSellerSales() {
+            const checkboxes = document.querySelectorAll('.seller-sale-checkbox:checked');
+            if (checkboxes.length === 0) return alert('Selecciona al menos una venta marcando la casilla correspondiente para eliminar.');
+
+            if (confirm(`¿Estás seguro de eliminar ${checkboxes.length} registro(s) seleccionado(s) de los vendedores?`)) {
+                let updates = {};
+                checkboxes.forEach(cb => {
+                    const [seller, id] = cb.value.split('|');
+                    updates[`sellerSales/${seller}/${id}`] = null;
+                });
+
+                try {
+                    await db.ref().update(updates);
+                    alert(`Registros eliminados correctamente (${checkboxes.length}).`);
+                    fetchSellerSalesStats();
+                } catch (err) {
+                    alert('Hubo un error al eliminar los registros.');
+                    console.error(err);
+                }
             }
         }
 
@@ -1263,7 +1302,10 @@
                         saleCard.style.borderRadius = '8px';
                         saleCard.innerHTML = `
                             <div style="display:flex; justify-content:space-between; margin-bottom: 0.3rem;">
-                                <span style="font-size: 0.85rem; color:#ccc;">${new Date(sale.date).toLocaleDateString()}</span>
+                                <span style="font-size: 0.85rem; color:#ccc; display:flex; align-items:center; gap:8px;">
+                                    <input type="checkbox" class="client-sale-checkbox" value="${c.phone}|${sale.id}" style="cursor:pointer; width:16px; height:16px;" title="Seleccionar para eliminar">
+                                    ${new Date(sale.date).toLocaleDateString()}
+                                </span>
                                 <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold;">
                                     ${daysLeft >= 0 ? `Vence en ${daysLeft} d` : 'Vencida'}
                                 </span>
@@ -1300,6 +1342,28 @@
                     alert('Registro eliminado del historial del cliente.');
                     fetchClientSalesHistory();
                 });
+            }
+        }
+
+        async function deleteSelectedClientSales() {
+            const checkboxes = document.querySelectorAll('.client-sale-checkbox:checked');
+            if (checkboxes.length === 0) return alert('Selecciona al menos un registro marcando la casilla correspondiente para eliminar.');
+
+            if (confirm(`¿Estás seguro de eliminar ${checkboxes.length} registro(s) seleccionado(s) de los clientes directos?`)) {
+                let updates = {};
+                checkboxes.forEach(cb => {
+                    const [phone, id] = cb.value.split('|');
+                    updates[`clientSales/${phone}/${id}`] = null;
+                });
+
+                try {
+                    await db.ref().update(updates);
+                    alert(`Registros eliminados correctamente (${checkboxes.length}).`);
+                    fetchClientSalesHistory();
+                } catch (err) {
+                    alert('Hubo un error al eliminar los registros.');
+                    console.error(err);
+                }
             }
         }
 
