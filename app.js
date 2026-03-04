@@ -1069,7 +1069,8 @@ function renderSellerDashboard() {
         const sellers = storeConfig.sellers || [];
         const sellerProfile = sellers.find(s => s.name === currentSellerName);
         const redeemed = sellerProfile && sellerProfile.bonusesRedeemed ? parseInt(sellerProfile.bonusesRedeemed) : 0;
-        const netAccumulated = totalAccumulated - redeemed;
+        let netAccumulated = totalAccumulated - redeemed;
+        if (netAccumulated < 0) netAccumulated = 0;
 
         const board = document.getElementById('seller-incentives-board');
         const boardMsg = document.getElementById('seller-incentive-msg');

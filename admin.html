@@ -1404,7 +1404,8 @@
                 });
 
                 const redeemed = seller.bonusesRedeemed ? parseInt(seller.bonusesRedeemed) : 0;
-                const netAccumulated = totalAccumulated - redeemed;
+                let netAccumulated = totalAccumulated - redeemed;
+                if (netAccumulated < 0) netAccumulated = 0;
                 const safeSellerString = sName.replace(/'/g, "\\'");
 
                 const div = document.createElement('div');
