@@ -1178,13 +1178,19 @@
                 const sales = data[sName] || {};
                 let count = 0;
                 let screensSold = 0;
+                let totalAccumulated = 0;
 
                 const salesArray = Object.keys(sales).map(k => ({ id: k, ...sales[k] })).sort((a, b) => b.date - a.date);
 
                 salesArray.forEach(sale => {
                     count++;
                     screensSold += (sale.items || []).length;
+                    if (sale.incentiveEarned) totalAccumulated += sale.incentiveEarned;
                 });
+
+                const redeemed = seller.bonusesRedeemed ? parseInt(seller.bonusesRedeemed) : 0;
+                const netAccumulated = totalAccumulated - redeemed;
+                const safeSellerString = sName.replace(/'/g, "\\'");
 
                 const div = document.createElement('div');
                 div.className = 'admin-item';
@@ -1198,7 +1204,16 @@
                         <div style="flex:1;">
                             <strong style="color: white; font-size:1.1rem">${sName}</strong><br>
                             <span style="font-size: 0.9rem; color: var(--text-primary); margin-right:1rem;"><i class="fa-solid fa-receipt"></i> Ventas: ${count}</span>
-                            <span style="font-size: 0.9rem; color: #f39c12;"><i class="fa-solid fa-tv"></i> Pantallas: ${screensSold}</span>
+                            <span style="font-size: 0.9rem; color: #f39c12;"><i class="fa-solid fa-tv"></i> Pantallas: ${screensSold}</span><br>
+                            <div style="margin-top:0.5rem; display:flex; align-items:center; gap: 0.5rem; flex-wrap:wrap;">
+                                <span style="background: rgba(243,156,18,0.2); border: 1px solid #f39c12; color: #f39c12; padding: 2px 8px; border-radius:6px; font-size:0.85rem; font-weight:bold;"><i class="fa-solid fa-trophy"></i> Saldo Activo: $${netAccumulated.toLocaleString()}</span>
+                                <span style="font-size:0.75rem; color:#ccc;">(Acumulado total: $${totalAccumulated.toLocaleString()} | Ya canjeado: $${redeemed.toLocaleString()})</span>
+                            </div>
+                        </div>
+                        <div>
+                            <button onclick="redeemSellerBonuses('${safeSellerString}', ${netAccumulated})" style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border:none; color:black; font-weight:bold; padding: 0.5rem 1rem; border-radius:8px; cursor:pointer;" title="Restar bonos porque se le han pagado/entregado">
+                                <i class="fa-solid fa-gift"></i> Canjear Bonos
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1317,6 +1332,28 @@
 
             const encodedMsg = encodeURIComponent(msg);
             window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+        }
+
+        function redeemSellerBonuses(sellerName, maxAmount) {
+            if (maxAmount <= 0) return alert('Este vendedor no tiene saldo activo para canjear en este momento.');
+
+            const p = prompt(`Saldo Activo de ${sellerName}: $${maxAmount.toLocaleString()}\n\n¿Cuánto dinero deseas "CANJEAR" (restar) de su saldo?\nEscribe solo números, sin puntos ni comas.`);
+            if (!p) return;
+
+            const deduct = parseInt(p.trim());
+            if (isNaN(deduct) || deduct <= 0) return alert('Ingresa un valor numérico válido.');
+            if (deduct > maxAmount) return alert('No puedes canjear más dinero del saldo que tiene disponible el vendedor.');
+
+            const selIndex = storeConfig.sellers.findIndex(s => s.name === sellerName);
+            if (selIndex === -1) return alert('Vendedor no encontrado.');
+
+            let curRedeemed = storeConfig.sellers[selIndex].bonusesRedeemed ? parseInt(storeConfig.sellers[selIndex].bonusesRedeemed) : 0;
+            storeConfig.sellers[selIndex].bonusesRedeemed = curRedeemed + deduct;
+
+            db.ref('storeConfig').set(storeConfig).then(() => {
+                alert(`Has canjeado exitosamente $${deduct.toLocaleString()} del saldo de ${sellerName}.`);
+                fetchSellerSalesStats();
+            });
         }
 
         // --- SECTION CLIENTS ---

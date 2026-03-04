@@ -928,6 +928,12 @@ function renderSellerDashboard() {
             if (sale.incentiveEarned) totalAccumulated += sale.incentiveEarned;
         });
 
+        // Aplicar bonos ya canjeados por el admin
+        const sellers = storeConfig.sellers || [];
+        const sellerProfile = sellers.find(s => s.name === currentSellerName);
+        const redeemed = sellerProfile && sellerProfile.bonusesRedeemed ? parseInt(sellerProfile.bonusesRedeemed) : 0;
+        const netAccumulated = totalAccumulated - redeemed;
+
         const board = document.getElementById('seller-incentives-board');
         const boardMsg = document.getElementById('seller-incentive-msg');
         const boardAmount = document.getElementById('seller-incentive-amount');
@@ -941,7 +947,7 @@ function renderSellerDashboard() {
 
         if (board) {
             board.style.display = 'block';
-            boardAmount.innerHTML = totalAccumulated.toLocaleString();
+            boardAmount.innerHTML = netAccumulated.toLocaleString();
 
             if (storeConfig.incentiveEnabled) {
                 boardMsg.innerHTML = storeConfig.incentiveMessage || 'Sigue vendiendo para acumular increíbles bonos y recompensas.';
