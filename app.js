@@ -209,20 +209,8 @@ function setupConfigUI() {
 
     // Featured Hero Banner
     const featuredContainer = document.getElementById('featured-hero-container');
-    const heroTitleCont = document.querySelector('.hero');
     if (featuredContainer) {
         let banners = storeConfig.mainBanners || [];
-        // Fallback for previous single banner
-        if (banners.length === 0 && storeConfig.mainBannerTitle) {
-            banners = [{
-                badge: storeConfig.mainBannerBadge,
-                title: storeConfig.mainBannerTitle,
-                desc: storeConfig.mainBannerDesc,
-                img: storeConfig.mainBannerImage || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-                btnText: storeConfig.mainBannerBtnText,
-                btnLink: storeConfig.mainBannerBtnLink
-            }];
-        }
 
         if (storeConfig.mainBannerEnabled && banners.length > 0) {
             let slidesHtml = '';
