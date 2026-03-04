@@ -129,12 +129,12 @@ function setupConfigUI() {
     let ytLinkHref = storeConfig.youtubeUrl || null;
 
     if (publicSellerStoreData) {
-        if (publicSellerStoreData.whatsapp) waLinkHref = `https://wa.me/${publicSellerStoreData.whatsapp}`;
-        if (publicSellerStoreData.facebookUrl) fbLinkHref = publicSellerStoreData.facebookUrl;
-        if (publicSellerStoreData.instagramUrl) igLinkHref = publicSellerStoreData.instagramUrl;
-        if (publicSellerStoreData.tiktokUrl) tkLinkHref = publicSellerStoreData.tiktokUrl;
-        if (publicSellerStoreData.kwaiUrl) kwLinkHref = publicSellerStoreData.kwaiUrl;
-        if (publicSellerStoreData.youtubeUrl) ytLinkHref = publicSellerStoreData.youtubeUrl;
+        waLinkHref = publicSellerStoreData.whatsapp ? `https://wa.me/${publicSellerStoreData.whatsapp}` : null;
+        fbLinkHref = publicSellerStoreData.facebookUrl || null;
+        igLinkHref = publicSellerStoreData.instagramUrl || null;
+        tkLinkHref = publicSellerStoreData.tiktokUrl || null;
+        kwLinkHref = publicSellerStoreData.kwaiUrl || null;
+        ytLinkHref = publicSellerStoreData.youtubeUrl || null;
     }
 
     const waLink = document.getElementById('footer-wa');
