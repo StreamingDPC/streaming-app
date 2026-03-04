@@ -511,6 +511,25 @@
                     </div>
                 </div>
 
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Link de TikTok (Opcional)</label>
+                        <input type="text" id="conf-tiktok" placeholder="Ej: https://tiktok.com/@tu_perfil">
+                    </div>
+                    <div class="form-col">
+                        <label>Link de Kwai (Opcional)</label>
+                        <input type="text" id="conf-kwai" placeholder="Ej: https://kwai.com/@tu_perfil">
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Link de YouTube (Opcional)</label>
+                        <input type="text" id="conf-youtube" placeholder="Ej: https://youtube.com/@tu_canal">
+                    </div>
+                    <div class="form-col"></div>
+                </div>
+
                 <div class="form-col" style="margin-bottom: 1rem;">
                     <label>Información de Pagos (Mensaje de WhatsApp)</label>
                     <textarea id="conf-paymentInfo"></textarea>
@@ -814,6 +833,10 @@
             document.getElementById('conf-whatsapp').value = storeConfig.whatsappNumber || '';
             if (document.getElementById('conf-facebook')) document.getElementById('conf-facebook').value = storeConfig.facebookUrl || '';
             if (document.getElementById('conf-instagram')) document.getElementById('conf-instagram').value = storeConfig.instagramUrl || '';
+            if (document.getElementById('conf-tiktok')) document.getElementById('conf-tiktok').value = storeConfig.tiktokUrl || '';
+            if (document.getElementById('conf-kwai')) document.getElementById('conf-kwai').value = storeConfig.kwaiUrl || '';
+            if (document.getElementById('conf-youtube')) document.getElementById('conf-youtube').value = storeConfig.youtubeUrl || '';
+
             document.getElementById('conf-paymentInfo').value = storeConfig.paymentInfo || '';
             document.getElementById('conf-discountEnabled').value = storeConfig.discountEnabled.toString();
             document.getElementById('conf-discountAmount').value = storeConfig.discountAmount;
@@ -1063,6 +1086,10 @@
             storeConfig.whatsappNumber = document.getElementById('conf-whatsapp').value;
             if (document.getElementById('conf-facebook')) storeConfig.facebookUrl = document.getElementById('conf-facebook').value.trim();
             if (document.getElementById('conf-instagram')) storeConfig.instagramUrl = document.getElementById('conf-instagram').value.trim();
+            if (document.getElementById('conf-tiktok')) storeConfig.tiktokUrl = document.getElementById('conf-tiktok').value.trim();
+            if (document.getElementById('conf-kwai')) storeConfig.kwaiUrl = document.getElementById('conf-kwai').value.trim();
+            if (document.getElementById('conf-youtube')) storeConfig.youtubeUrl = document.getElementById('conf-youtube').value.trim();
+
             storeConfig.paymentInfo = document.getElementById('conf-paymentInfo').value;
             storeConfig.discountEnabled = document.getElementById('conf-discountEnabled').value === 'true';
             storeConfig.discountAmount = parseInt(document.getElementById('conf-discountAmount').value) || 0;
