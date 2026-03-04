@@ -90,6 +90,8 @@ const closeSellerStoreBtn = document.querySelector('.seller-store-close');
 const openSellerStoreBtn = document.getElementById('open-seller-store-btn');
 const storeLinkInput = document.getElementById('store-link-input');
 const storeWhatsappInput = document.getElementById('store-whatsapp');
+const storeFacebookInput = document.getElementById('store-facebook');
+const storeInstagramInput = document.getElementById('store-instagram');
 const storePaymentInfoInput = document.getElementById('store-payment-info');
 const storePricesList = document.getElementById('store-prices-list');
 const saveStoreBtn = document.getElementById('save-store-btn');
@@ -116,17 +118,33 @@ function setupConfigUI() {
     }
 
     // Bind Footer Links
+    let waLinkHref = storeConfig.whatsappNumber ? `https://wa.me/${storeConfig.whatsappNumber}` : null;
+    let fbLinkHref = storeConfig.facebookUrl || null;
+    let igLinkHref = storeConfig.instagramUrl || null;
+
+    if (publicSellerStoreData) {
+        if (publicSellerStoreData.whatsapp) waLinkHref = `https://wa.me/${publicSellerStoreData.whatsapp}`;
+        if (publicSellerStoreData.facebookUrl) fbLinkHref = publicSellerStoreData.facebookUrl;
+        if (publicSellerStoreData.instagramUrl) igLinkHref = publicSellerStoreData.instagramUrl;
+    }
+
     const waLink = document.getElementById('footer-wa');
-    if (waLink && storeConfig.whatsappNumber) waLink.href = `https://wa.me/${storeConfig.whatsappNumber}`;
-    else if (waLink) waLink.style.display = 'none';
+    if (waLink && waLinkHref) {
+        waLink.href = waLinkHref;
+        waLink.style.display = 'inline-block';
+    } else if (waLink) waLink.style.display = 'none';
 
     const fbLink = document.getElementById('footer-fb');
-    if (fbLink && storeConfig.facebookUrl) fbLink.href = storeConfig.facebookUrl;
-    else if (fbLink) fbLink.style.display = 'none';
+    if (fbLink && fbLinkHref) {
+        fbLink.href = fbLinkHref;
+        fbLink.style.display = 'inline-block';
+    } else if (fbLink) fbLink.style.display = 'none';
 
     const igLink = document.getElementById('footer-ig');
-    if (igLink && storeConfig.instagramUrl) igLink.href = storeConfig.instagramUrl;
-    else if (igLink) igLink.style.display = 'none';
+    if (igLink && igLinkHref) {
+        igLink.href = igLinkHref;
+        igLink.style.display = 'inline-block';
+    } else if (igLink) igLink.style.display = 'none';
 
     // Toggle Reseller colors
     if (isSellerMode) {
@@ -786,6 +804,8 @@ function setupEventListeners() {
             const data = snap.val() || {};
 
             storeWhatsappInput.value = data.whatsapp || '';
+            if (storeFacebookInput) storeFacebookInput.value = data.facebookUrl || '';
+            if (storeInstagramInput) storeInstagramInput.value = data.instagramUrl || '';
             if (storePaymentInfoInput) storePaymentInfoInput.value = data.paymentInfo || '';
             const existingPrices = data.prices || {};
 
@@ -825,6 +845,8 @@ function setupEventListeners() {
         saveStoreBtn.addEventListener('click', () => {
             const wpp = storeWhatsappInput.value.replace(/\D/g, '');
             if (!wpp) return alert('Debes agregar tu número de WhatsApp para poder recibir los pedidos de tus clientes.');
+            const fbUrl = storeFacebookInput ? storeFacebookInput.value.trim() : '';
+            const igUrl = storeInstagramInput ? storeInstagramInput.value.trim() : '';
 
             let customPrices = {};
             document.querySelectorAll('.store-custom-price').forEach(input => {
@@ -835,6 +857,8 @@ function setupEventListeners() {
 
             let storeDbObj = {
                 whatsapp: wpp,
+                facebookUrl: fbUrl,
+                instagramUrl: igUrl,
                 prices: customPrices
             };
 
