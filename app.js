@@ -88,6 +88,11 @@ let clientPhoneLoggedIn = localStorage.getItem('clientPhone') || '';
 // Public Seller Store Variables
 const urlParams = new URLSearchParams(window.location.search);
 const publicSellerRef = urlParams.get('ref');
+
+if (publicSellerRef) {
+    isSellerMode = false; // Fuerza vista cliente global sincronamente
+}
+
 let publicSellerStoreData = null;
 
 // Seller Store DOM
@@ -204,8 +209,8 @@ function setupConfigUI() {
             bannerText.innerText = storeConfig.sellerBannerText;
             bannerDiv.style.background = 'linear-gradient(90deg, #c48dfc, #8a2be2)';
             bannerDiv.style.boxShadow = '0 4px 15px rgba(138,43,226, 0.4)';
-        } else if (!isSellerMode && !publicSellerRef && storeConfig.clientBannerEnabled && storeConfig.clientBannerText) {
-            // General Clients view
+        } else if (!isSellerMode && storeConfig.clientBannerEnabled && storeConfig.clientBannerText) {
+            // General Clients view (Including seller's clients)
             bannerDiv.style.display = 'block';
             bannerText.innerText = storeConfig.clientBannerText;
         } else {
@@ -310,9 +315,6 @@ window.openVideoModal = function (url) {
 }
 
 function getPrice(product) {
-    if (publicSellerStoreData && publicSellerStoreData.prices && publicSellerStoreData.prices[product.id]) {
-        return parseInt(publicSellerStoreData.prices[product.id]);
-    }
     if (isSellerMode && product.sellerPrice) {
         return product.sellerPrice;
     }
@@ -418,7 +420,7 @@ function removeFromCart(index) {
 
 function processCartDiscounts() {
     let individualCount = cart.filter(p => p.category === 'individual').length;
-    let isClientPromoActive = !isSellerMode && !publicSellerRef && storeConfig.clientBannerEnabled && storeConfig.clientPromoLimit > 0 && storeConfig.clientPromoDiscount > 0;
+    let isClientPromoActive = !isSellerMode && storeConfig.clientBannerEnabled && storeConfig.clientPromoLimit > 0 && storeConfig.clientPromoDiscount > 0;
     let isSellerPromoActive = isSellerMode && storeConfig.sellerBannerEnabled && storeConfig.sellerPromoLimit > 0 && storeConfig.sellerPromoDiscount > 0;
 
     let promoLimit = isClientPromoActive ? storeConfig.clientPromoLimit : (isSellerPromoActive ? storeConfig.sellerPromoLimit : 0);

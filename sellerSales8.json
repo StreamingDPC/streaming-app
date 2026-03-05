@@ -1,0 +1,353 @@
+﻿{
+    "Duay":  {
+                 "-OmjJFXRiXC9Nou8ux2O":  {
+                                              "clientCity":  "ARJONA BOLIVAR",
+                                              "clientName":  "SOFIA",
+                                              "clientPhone":  "3205748493",
+                                              "date":  1772467849262,
+                                              "expirationDate":  1775059849262,
+                                              "items":  [
+                                                            {
+                                                                "id":  1772292903394,
+                                                                "name":  "Netflix"
+                                                            }
+                                                        ],
+                                              "sellerName":  "Duay"
+                                          }
+             },
+    "Katherin":  {
+                     "-OmenJQe_3L2-kZ9_qd-":  {
+                                                  "clientCity":  "Pop",
+                                                  "clientName":  "Therin",
+                                                  "clientPhone":  "",
+                                                  "date":  1772392105520,
+                                                  "expirationDate":  1774984105520,
+                                                  "items":  [
+                                                                {
+                                                                    "id":  1772292697799,
+                                                                    "name":  "Prime Video"
+                                                                }
+                                                            ],
+                                                  "sellerName":  "Katherin"
+                                              }
+                 },
+    "Laura":  {
+                  "-OmlC25d20sXcMAWbeAf":  {
+                                               "clientCity":  "Pamplona",
+                                               "clientName":  "Martha Yesenia",
+                                               "clientPhone":  "3227512502",
+                                               "date":  1772499513064,
+                                               "expirationDate":  1775091513065,
+                                               "items":  [
+                                                             {
+                                                                 "id":  1772292903394,
+                                                                 "name":  "Netflix"
+                                                             }
+                                                         ],
+                                               "sellerName":  "Laura"
+                                           },
+                  "-Omp6TggJKrhayAsCh8y":  {
+                                               "clientCity":  "Pamplona",
+                                               "clientName":  "Javier Romero",
+                                               "clientPhone":  "3208071217",
+                                               "date":  1772565162084,
+                                               "expirationDate":  1775157162084,
+                                               "items":  [
+                                                             {
+                                                                 "id":  1772298222318,
+                                                                 "name":  "Netflix + Crunchyroll "
+                                                             }
+                                                         ],
+                                               "sellerName":  "Laura"
+                                           },
+                  "-Omv1VSPzfxYYhRNQS_T":  {
+                                               "clientCity":  "Bogotá",
+                                               "clientName":  "Familia Serrano",
+                                               "clientPhone":  "3203030209",
+                                               "date":  1772664521873,
+                                               "expirationDate":  1775256521873,
+                                               "incentiveEarned":  0,
+                                               "items":  [
+                                                             {
+                                                                 "category":  "individual",
+                                                                 "finalPrice":  10000,
+                                                                 "id":  1772292389962,
+                                                                 "name":  "Disney"
+                                                             }
+                                                         ],
+                                               "sellerName":  "Laura",
+                                               "total":  10000
+                                           }
+              },
+    "Maac":  {
+                 "-Omv2vNkRvB1orE_LV1e":  {
+                                              "clientCity":  "Colombia",
+                                              "clientName":  "Ruben",
+                                              "clientPhone":  "3155182545",
+                                              "date":  1772664896037,
+                                              "expirationDate":  1775256896037,
+                                              "incentiveEarned":  0,
+                                              "items":  [
+                                                            {
+                                                                "category":  "individual",
+                                                                "finalPrice":  10000,
+                                                                "id":  1772292389962,
+                                                                "name":  "Disney"
+                                                            }
+                                                        ],
+                                              "sellerName":  "Maac",
+                                              "total":  10000
+                                          },
+                 "-Omv3DUk2j7UF9u7Dksq":  {
+                                              "clientCity":  "Colombia",
+                                              "clientName":  "Ruben",
+                                              "clientPhone":  "3155182545",
+                                              "date":  1772664974312,
+                                              "expirationDate":  1775256974312,
+                                              "incentiveEarned":  0,
+                                              "items":  [
+                                                            {
+                                                                "category":  "individual",
+                                                                "finalPrice":  10000,
+                                                                "id":  1772292225208,
+                                                                "name":  "Hbo Max"
+                                                            }
+                                                        ],
+                                              "sellerName":  "Maac",
+                                              "total":  10000
+                                          }
+             },
+    "Pedro":  {
+                  "-OmpjZvPn8BF35SxWruS":  {
+                                               "clientCity":  "Palmira",
+                                               "clientName":  "Joseeduvigis",
+                                               "clientPhone":  "3150700693",
+                                               "date":  1772575674455,
+                                               "expirationDate":  1775167674455,
+                                               "items":  [
+                                                             {
+                                                                 "id":  1772292868921,
+                                                                 "name":  "Netflix Privada"
+                                                             }
+                                                         ],
+                                               "sellerName":  "Pedro"
+                                           },
+                  "-Omu1Fitw1ZOu3jo8r1E":  {
+                                               "clientCity":  "Cali",
+                                               "clientName":  "Lucero",
+                                               "clientPhone":  "3154218626",
+                                               "date":  1772647681388,
+                                               "expirationDate":  1775239681388,
+                                               "incentiveEarned":  0,
+                                               "items":  [
+                                                             {
+                                                                 "category":  "individual",
+                                                                 "finalPrice":  10000,
+                                                                 "id":  1772292389962,
+                                                                 "name":  "Disney"
+                                                             }
+                                                         ],
+                                               "sellerName":  "Pedro",
+                                               "total":  10000
+                                           }
+              },
+    "Prueba":  {
+                   "-OmbCx8mZglkkSRxMkdc":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Pedro",
+                                                "clientPhone":  "",
+                                                "date":  1772331979979,
+                                                "expirationDate":  1774923979979,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              },
+                                                              {
+                                                                  "id":  1772292697799,
+                                                                  "name":  "Prime Video"
+                                                              }
+                                                          ]
+                                            },
+                   "-OmbE0bbYbCOnqH3OvRI":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Juan",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772332260424,
+                                                "expirationDate":  1774924260424,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              },
+                                                              {
+                                                                  "id":  1772292697799,
+                                                                  "name":  "Prime Video"
+                                                              }
+                                                          ]
+                                            },
+                   "-OmbFFRVy5JnuUx6lH7b":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Juan",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772332583309,
+                                                "expirationDate":  1774924583309,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              },
+                                                              {
+                                                                  "id":  1772292697799,
+                                                                  "name":  "Prime Video"
+                                                              }
+                                                          ]
+                                            },
+                   "-OmdQ1S96lfKhluGxphb":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Pedro",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772368964999,
+                                                "expirationDate":  1774960964999,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              },
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Prueba"
+                                            },
+                   "-OmdRBi3XxAyqiJ-D3BQ":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Ruben",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772369269131,
+                                                "expirationDate":  1774961269131,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Página Web Oficial"
+                                            },
+                   "-OmdSQD_YKfk9tMLPti_":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Ruben",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772369590784,
+                                                "expirationDate":  1774961590784,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Página Web Oficial"
+                                            },
+                   "-OmdSawaWdVxS8csQI9j":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Ruben",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772369638784,
+                                                "expirationDate":  1774961638784,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Página Web Oficial"
+                                            },
+                   "-OmdTzZKwq9mN-cOJkeo":  {
+                                                "clientCity":  "Colombia",
+                                                "clientName":  "Ruben",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772370001718,
+                                                "expirationDate":  1774962001718,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Página Web Oficial"
+                                            },
+                   "-OmdU7iXHyxdTDa3SA33":  {
+                                                "clientCity":  "Colombia",
+                                                "clientName":  "Ruben",
+                                                "clientPhone":  "3155182545",
+                                                "date":  1772370039238,
+                                                "expirationDate":  1774962039238,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Página Web Oficial"
+                                            },
+                   "-OmdUOuo-TWD61AyXrrh":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Ruben",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772370109743,
+                                                "expirationDate":  1774962109743,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Página Web Oficial"
+                                            },
+                   "-OmdYfKrjnGhPSLkvMFC":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Juan",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772371227349,
+                                                "expirationDate":  1774963227349,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Página Web Oficial"
+                                            },
+                   "-Omd_BDA65IP22vdUA_v":  {
+                                                "clientCity":  "Pamplona",
+                                                "clientName":  "Ruben",
+                                                "clientPhone":  "3182948698",
+                                                "date":  1772371624172,
+                                                "expirationDate":  1774963624172,
+                                                "items":  [
+                                                              {
+                                                                  "id":  1772292903394,
+                                                                  "name":  "Netflix"
+                                                              }
+                                                          ],
+                                                "sellerName":  "Prueba"
+                                            }
+               },
+    "Stefani":  {
+                    "-OmpvzpoDUBLe15CaUCQ":  {
+                                                 "clientCity":  "Piedecuesta, Santander",
+                                                 "clientName":  "Diana Poveda",
+                                                 "clientPhone":  "317 8394953",
+                                                 "date":  1772578928146,
+                                                 "expirationDate":  1775170928146,
+                                                 "items":  [
+                                                               {
+                                                                   "id":  1772292868921,
+                                                                   "name":  "Netflix Privada"
+                                                               }
+                                                           ],
+                                                 "sellerName":  "Stefani"
+                                             }
+                }
+}
