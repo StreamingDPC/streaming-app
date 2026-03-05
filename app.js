@@ -132,20 +132,29 @@ function setupConfigUI() {
     }
 
     // Bind Footer Links
-    let waLinkHref = storeConfig.whatsappNumber ? `https://wa.me/${storeConfig.whatsappNumber}` : null;
-    let fbLinkHref = storeConfig.facebookUrl || null;
-    let igLinkHref = storeConfig.instagramUrl || null;
-    let tkLinkHref = storeConfig.tiktokUrl || null;
-    let kwLinkHref = storeConfig.kwaiUrl || null;
-    let ytLinkHref = storeConfig.youtubeUrl || null;
+    let waLinkHref = null;
+    let fbLinkHref = null;
+    let igLinkHref = null;
+    let tkLinkHref = null;
+    let kwLinkHref = null;
+    let ytLinkHref = null;
 
-    if (publicSellerStoreData) {
-        waLinkHref = publicSellerStoreData.whatsapp ? `https://wa.me/${publicSellerStoreData.whatsapp}` : null;
-        fbLinkHref = publicSellerStoreData.facebookUrl || null;
-        igLinkHref = publicSellerStoreData.instagramUrl || null;
-        tkLinkHref = publicSellerStoreData.tiktokUrl || null;
-        kwLinkHref = publicSellerStoreData.kwaiUrl || null;
-        ytLinkHref = publicSellerStoreData.youtubeUrl || null;
+    if (publicSellerRef) {
+        if (publicSellerStoreData) {
+            waLinkHref = publicSellerStoreData.whatsapp ? `https://wa.me/${publicSellerStoreData.whatsapp}` : null;
+            fbLinkHref = publicSellerStoreData.facebookUrl || null;
+            igLinkHref = publicSellerStoreData.instagramUrl || null;
+            tkLinkHref = publicSellerStoreData.tiktokUrl || null;
+            kwLinkHref = publicSellerStoreData.kwaiUrl || null;
+            ytLinkHref = publicSellerStoreData.youtubeUrl || null;
+        }
+    } else {
+        waLinkHref = storeConfig.whatsappNumber ? `https://wa.me/${storeConfig.whatsappNumber}` : null;
+        fbLinkHref = storeConfig.facebookUrl || null;
+        igLinkHref = storeConfig.instagramUrl || null;
+        tkLinkHref = storeConfig.tiktokUrl || null;
+        kwLinkHref = storeConfig.kwaiUrl || null;
+        ytLinkHref = storeConfig.youtubeUrl || null;
     }
 
     const waLink = document.getElementById('footer-wa');
