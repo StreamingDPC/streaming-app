@@ -245,8 +245,15 @@
                             <option value="combos3">Combo 3</option>
                             <option value="combos4">Combo 4</option>
                             <option value="combos5">Combo 5</option>
+                            <option value="ventas_extras">Ventas Extras (Admin y Vendedores)</option>
                             <option value="promociones_finde">Promoción fin de semana</option>
                             <option value="promociones">Promociones del mes</option>
+                        </select>
+                    </div>
+                    <div class="form-col" id="owner-col" style="display:none;">
+                        <label>Vendedor Dueño (solo Ventas Extras)</label>
+                        <select id="new-owner">
+                            <option value="admin">Administrador (Global)</option>
                         </select>
                     </div>
                     <div class="form-col">
@@ -386,6 +393,17 @@
                         <label>Contraseña</label>
                         <input type="text" id="new-seller-pass" placeholder="Ej: pWd123">
                     </div>
+                    <div class="form-col" style="margin-bottom: 1rem;">
+                        <label>Habilitar Ventas Extras</label>
+                        <select id="new-seller-extras-enabled">
+                            <option value="false">No (Inactivo)</option>
+                            <option value="true">Sí (Activo)</option>
+                        </select>
+                    </div>
+                    <div class="form-col" style="margin-bottom: 1rem;">
+                        <label>Límite Prod. Extras (Cant.)</label>
+                        <input type="number" id="new-seller-extras-limit" placeholder="Ej: 5" value="0">
+                    </div>
                 </div>
                 <div style="display:flex; gap:1rem; align-items:center;">
                     <button class="save-btn" id="btn-save-seller" onclick="saveSeller()" style="flex:1;">Añadir
@@ -495,6 +513,23 @@
         <div id="tab-configuracion" class="tab-content">
             <div class="admin-form">
                 <h3>Ajustes Generales de la Tienda</h3>
+
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom:1rem;">
+                    <div class="form-col">
+                        <label>Modo Mantenimiento (Apagar tienda visible)</label>
+                        <select id="conf-maintenanceEnabled">
+                            <option value="false">Inactivo / En Línea</option>
+                            <option value="true">Activo / En Mantenimiento</option>
+                        </select>
+                    </div>
+                    <div class="form-col" style="grid-column: 1 / -1;">
+                        <label>Mensaje de Mantenimiento</label>
+                        <textarea id="conf-maintenanceMessage" rows="2"
+                            placeholder="Ej: Estamos actualizando nuestros servicios, volvemos pronto."></textarea>
+                    </div>
+                </div>
+
                 <div class="form-col" style="margin-bottom: 1rem;">
                     <label>Número de WhatsApp (Ej: 573155182545)</label>
                     <input type="text" id="conf-whatsapp">
@@ -936,7 +971,32 @@
             btn.classList.add('active');
         }
 
+        function populateOwnerSelect() {
+            const ownerSelect = document.getElementById('new-owner');
+            if (!ownerSelect) return;
+            const currentVal = ownerSelect.value;
+            ownerSelect.innerHTML = '<option value="admin">Administrador (Global)</option>';
+            const sellers = storeConfig.sellers || [];
+            sellers.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                opt.text = 'Vendedor: ' + s.name;
+                ownerSelect.appendChild(opt);
+            });
+            if (currentVal && Array.from(ownerSelect.options).some(o => o.value === currentVal)) {
+                ownerSelect.value = currentVal;
+            } else {
+                ownerSelect.value = 'admin';
+            }
+        }
+
+        // Detecta cambio en categoria para mostrar owner
+        document.getElementById('new-category').addEventListener('change', function () {
+            document.getElementById('owner-col').style.display = this.value === 'ventas_extras' ? 'block' : 'none';
+        });
+
         function renderAdminList() {
+            populateOwnerSelect();
             const listDiv = document.getElementById('admin-list');
             const search = document.getElementById('search-prod').value.toLowerCase();
             const filterCat = document.getElementById('filter-cat').value;
@@ -1028,6 +1088,9 @@
             document.getElementById('new-price').value = p.price;
             document.getElementById('new-seller-price').value = p.sellerPrice || p.price;
             document.getElementById('new-category').value = p.category;
+            populateOwnerSelect();
+            document.getElementById('new-owner').value = p.owner || 'admin';
+            document.getElementById('owner-col').style.display = p.category === 'ventas_extras' ? 'block' : 'none';
             document.getElementById('new-brand').value = p.brand;
             document.getElementById('new-image').value = p.image || '';
 
@@ -1045,6 +1108,8 @@
             document.getElementById('new-seller-price').value = '';
             document.getElementById('new-brand').value = '';
             document.getElementById('new-image').value = '';
+            document.getElementById('owner-col').style.display = 'none';
+            document.getElementById('new-owner').value = 'admin';
 
             document.getElementById('form-title').innerText = "Agregar Nuevo Producto";
             document.querySelector('.save-btn').innerText = "Guardar Producto";
@@ -1056,10 +1121,22 @@
             const price = parseInt(document.getElementById('new-price').value);
             const sellerPrice = parseInt(document.getElementById('new-seller-price').value) || price;
             const category = document.getElementById('new-category').value;
+            const owner = category === 'ventas_extras' ? document.getElementById('new-owner').value : undefined;
             const brand = document.getElementById('new-brand').value;
             let image = document.getElementById('new-image').value;
 
             if (!name || isNaN(price)) return alert('Completa los campos de Nombre y Precio');
+
+            if (category === 'ventas_extras' && owner !== 'admin') {
+                const s = (storeConfig.sellers || []).find(sel => sel.name === owner);
+                if (s) {
+                    const limit = s.extraProductsLimit || 0;
+                    const currentlyInSystem = dynamicProducts.filter(dp => dp.category === 'ventas_extras' && dp.owner === owner && (editIndex === -1 || dp.id !== dynamicProducts[editIndex].id)).length;
+                    if (limit > 0 && currentlyInSystem >= limit) {
+                        return alert('Atención: Este vendedor ha alcanzado su límite de ' + limit + ' productos extras permitidos según su plan.');
+                    }
+                }
+            }
 
             // Set default image dynamically if empty
             if (!image) {
@@ -1082,6 +1159,7 @@
                     price,
                     sellerPrice,
                     category,
+                    owner,
                     brand,
                     image,
                     active: true
@@ -1092,6 +1170,7 @@
                 dynamicProducts[editIndex].price = price;
                 dynamicProducts[editIndex].sellerPrice = sellerPrice;
                 dynamicProducts[editIndex].category = category;
+                dynamicProducts[editIndex].owner = owner;
                 dynamicProducts[editIndex].brand = brand;
                 dynamicProducts[editIndex].image = image;
                 // doesn't touch active status
@@ -1117,6 +1196,11 @@
         }
 
         function saveConfig() {
+            if (document.getElementById('conf-maintenanceEnabled')) {
+                storeConfig.maintenanceEnabled = document.getElementById('conf-maintenanceEnabled').value === 'true';
+                storeConfig.maintenanceMessage = document.getElementById('conf-maintenanceMessage').value;
+            }
+
             storeConfig.whatsappNumber = document.getElementById('conf-whatsapp').value;
             if (document.getElementById('conf-facebook')) storeConfig.facebookUrl = document.getElementById('conf-facebook').value.trim();
             if (document.getElementById('conf-instagram')) storeConfig.instagramUrl = document.getElementById('conf-instagram').value.trim();
@@ -1282,6 +1366,12 @@
                         <span style="font-size: 0.8rem; color: #a0a0a0;">${b.desc}</span>
                     </div>
                     <div class="item-actions">
+                        <button class="btn-icon btn-edit" onclick="moveBannerUp(${index})" title="Subir (Ver Primero)">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                        <button class="btn-icon btn-edit" onclick="moveBannerDown(${index})" title="Bajar">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </button>
                         <button class="btn-icon btn-edit" onclick="editBanner(${index})" title="Editar">
                             <i class="fa-solid fa-pen"></i>
                         </button>
@@ -1355,6 +1445,22 @@
                 db.ref('storeConfig').set(storeConfig);
                 renderBannersList();
             }
+        }
+
+        function moveBannerUp(index) {
+            if (index === 0) return;
+            const b = storeConfig.mainBanners.splice(index, 1)[0];
+            storeConfig.mainBanners.splice(index - 1, 0, b);
+            db.ref('storeConfig').set(storeConfig);
+            renderBannersList();
+        }
+
+        function moveBannerDown(index) {
+            if (index === storeConfig.mainBanners.length - 1) return;
+            const b = storeConfig.mainBanners.splice(index, 1)[0];
+            storeConfig.mainBanners.splice(index + 1, 0, b);
+            db.ref('storeConfig').set(storeConfig);
+            renderBannersList();
         }
 
         // --- SECTION VENDEDORES ---

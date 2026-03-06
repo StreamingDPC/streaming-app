@@ -117,6 +117,21 @@ function init() {
 }
 
 function setupConfigUI() {
+    // Maintenance Mode Check
+    const maintenanceOverlay = document.getElementById('maintenance-overlay');
+    const appContainer = document.querySelector('.app-container');
+    if (storeConfig.maintenanceEnabled === true) {
+        if (maintenanceOverlay) {
+            maintenanceOverlay.style.display = 'flex';
+            document.getElementById('maintenance-message').innerText = storeConfig.maintenanceMessage || 'Volveremos pronto.';
+        }
+        if (appContainer) appContainer.style.display = 'none';
+        return; // Detener carga de UI
+    } else {
+        if (maintenanceOverlay) maintenanceOverlay.style.display = 'none';
+        if (appContainer) appContainer.style.display = 'block';
+    }
+
     // Hide or process Code Modal options
     if (storeConfig.netflixEnabled === false) {
         let opt = codePlatformSelect.querySelector('option[value="netflix"]');
@@ -285,6 +300,27 @@ function setupConfigUI() {
             if (heroTitleCont) heroTitleCont.style.display = 'block';
         }
     }
+
+    // Ventas Extras Tab Visibility
+    const tabVentasExtras = document.getElementById('tab-ventas-extras');
+    if (tabVentasExtras) {
+        let showVentasExtras = false;
+        let targetSeller = null;
+        if (publicSellerRef) targetSeller = publicSellerRef;
+        else if (isSellerMode) targetSeller = currentSellerName;
+
+        if (targetSeller) {
+            const sellers = storeConfig.sellers || [];
+            const profile = sellers.find(s => s.name === targetSeller);
+            if (profile && profile.extraSalesEnabled === true) {
+                showVentasExtras = true;
+            }
+        } else {
+            // Global admin can always see
+            showVentasExtras = true;
+        }
+        tabVentasExtras.style.display = showVentasExtras ? 'inline-block' : 'none';
+    }
 }
 
 window.moveBannerSlider = function (dir) {
@@ -368,9 +404,30 @@ function renderProducts(category) {
         return;
     }
 
+    let targetSeller = null;
+    if (publicSellerRef) targetSeller = publicSellerRef;
+    else if (isSellerMode) targetSeller = currentSellerName;
+    let scopeOwner = targetSeller ? targetSeller : 'admin';
+
     const filtered = category === 'all'
-        ? products.filter(p => p.active !== false)
-        : products.filter(p => p.category === category && p.active !== false);
+        ? products.filter(p => {
+            if (p.active === false) return false;
+            if (p.category === 'ventas_extras' && p.owner !== scopeOwner && p.owner !== 'Administrador (Global)') return false;
+            // Compat with previously global without owner: Assume if no owner, it belongs to global
+            if (p.category === 'ventas_extras' && scopeOwner !== 'admin' && (!p.owner || p.owner === 'admin')) return false;
+            return true;
+        })
+        : products.filter(p => {
+            if (p.category !== category || p.active === false) return false;
+            if (category === 'ventas_extras') {
+                if (scopeOwner === 'admin') {
+                    return !p.owner || p.owner === 'admin' || p.owner === 'Administrador (Global)';
+                } else {
+                    return p.owner === scopeOwner;
+                }
+            }
+            return true;
+        });
 
     filtered.forEach(product => {
         const card = document.createElement('div');
@@ -846,7 +903,11 @@ function setupEventListeners() {
 
             // Render products inputs
             storePricesList.innerHTML = '';
-            products.filter(p => p.active !== false).forEach(p => {
+            products.filter(p => {
+                if (p.active === false) return false;
+                if (p.category === 'ventas_extras' && p.owner !== currentSellerName) return false;
+                return true;
+            }).forEach(p => {
                 const myCost = p.sellerPrice || p.price;
                 const publicPrice = existingPrices[p.id] || p.price;
 
