@@ -288,6 +288,7 @@ function setupConfigUI() {
                 </div>
             `;
             featuredContainer.style.display = 'block';
+            const heroTitleCont = document.querySelector('.hero');
             if (heroTitleCont) heroTitleCont.style.display = 'none';
 
             // Auto start timer
@@ -297,6 +298,7 @@ function setupConfigUI() {
             }
         } else {
             featuredContainer.style.display = 'none';
+            const heroTitleCont = document.querySelector('.hero');
             if (heroTitleCont) heroTitleCont.style.display = 'block';
         }
     }
