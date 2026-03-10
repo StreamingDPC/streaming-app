@@ -705,19 +705,25 @@ footer {
 /* Responsive */
 @media (max-width: 600px) {
     header {
-        padding: 1rem 0.5rem;
+        flex-direction: column;
+        padding: 1rem;
+        gap: 1rem;
     }
 
     .header-actions {
-        gap: 0.5rem !important;
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.8rem !important;
     }
 
     .get-code-btn {
-        padding: 8px 10px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
     }
 
     .cart-icon {
-        padding: 8px 10px;
+        padding: 8px 12px;
         font-size: 1.2rem;
     }
 
@@ -733,7 +739,8 @@ footer {
         font-size: 2.2rem;
     }
 
+    /* Keep hide-mobile text visible but slightly smaller */
     .hide-mobile {
-        display: none;
+        display: inline;
     }
 }
