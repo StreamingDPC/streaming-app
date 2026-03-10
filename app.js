@@ -474,6 +474,7 @@ function renderProducts(category) {
             <h3 class="product-title">${product.name}</h3>
             <p class="product-desc" style="margin-bottom: 0.5rem">${product.desc || 'Pantalla original premium con garantía.'}</p>
             ${sellerBadge}
+            ${product.stock > 0 ? `<div style="color:#f39c12; font-size: 0.8rem; font-weight: bold; margin-bottom: 0.5rem;"><i class="fa-solid fa-layer-group"></i> Disponibles: ${product.stock}</div>` : ''}
             <div class="price-row" style="margin-top:1rem">
                 <span class="price">$${displayPrice.toLocaleString()}</span>
                 ${buttonHtml}
