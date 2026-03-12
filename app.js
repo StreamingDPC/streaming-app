@@ -146,6 +146,46 @@ function setupConfigUI() {
         openCodeBtn.style.display = 'none';
     }
 
+    // Dynamic Payment Methods
+    const paymentMethodsContainer = document.getElementById('dynamic-payment-methods');
+    if (paymentMethodsContainer) {
+        let methodsHtml = '';
+        if (storeConfig.nequiEnabled !== false) {
+            methodsHtml += `
+                <div class="method-card">
+                    <img src="${storeConfig.nequiImg || 'assets/nequi_daviplata.png'}" alt="Nequi Daviplata" style="border-radius: 8px; max-height: 48px; object-fit: contain;">
+                    <span>${storeConfig.nequiLabel || 'Nequi / Daviplata'}</span>
+                </div>`;
+        }
+        if (storeConfig.nuEnabled !== false) {
+            methodsHtml += `
+                <div class="method-card">
+                    <img src="${storeConfig.nuImg || 'assets/nu_bre.jpg'}" alt="Nu Bre b" style="border-radius: 8px; max-height: 48px; object-fit: contain;">
+                    <span>${storeConfig.nuLabel || 'Nu / Bre b'}</span>
+                </div>`;
+        }
+        paymentMethodsContainer.innerHTML = methodsHtml;
+        const section = paymentMethodsContainer.closest('.payment-methods');
+        if (section) section.style.display = methodsHtml ? 'block' : 'none';
+    }
+
+    // Dynamic Tab Order
+    if (storeConfig.tabOrder && Array.isArray(storeConfig.tabOrder)) {
+        const tabsContainer = document.querySelector('.tabs');
+        if (tabsContainer) {
+            const tabsArray = Array.from(tabsContainer.querySelectorAll('.tab-btn'));
+            tabsArray.sort((a, b) => {
+                const idxA = storeConfig.tabOrder.indexOf(a.dataset.tab);
+                const idxB = storeConfig.tabOrder.indexOf(b.dataset.tab);
+                if (idxA === -1 && idxB === -1) return 0;
+                if (idxA === -1) return 1;
+                if (idxB === -1) return -1;
+                return idxA - idxB;
+            });
+            tabsArray.forEach(tab => tabsContainer.appendChild(tab));
+        }
+    }
+
     // Bind Footer Links
     let waLinkHref = null;
     let fbLinkHref = null;
@@ -1177,7 +1217,8 @@ function setupEventListeners() {
                 total: total,
                 sellerName: isSellerMode ? currentSellerName : 'Página Web Oficial',
                 incentiveEarned: incentiveEarned,
-                incentiveDetails: incentiveDetails
+                incentiveDetails: incentiveDetails,
+                isPaid: false
             };
 
             // Public Seller Checkout Forwarding
@@ -1256,7 +1297,7 @@ function renderSellerDashboard() {
 
         let totalAccumulated = 0;
         salesArray.forEach(sale => {
-            if (sale.incentiveEarned) totalAccumulated += sale.incentiveEarned;
+            if (sale.incentiveEarned && sale.isPaid !== false) totalAccumulated += sale.incentiveEarned;
         });
 
         // Aplicar bonos ya canjeados por el admin

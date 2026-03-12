@@ -103,6 +103,11 @@
             font-family: inherit;
         }
 
+        select option {
+            background-color: var(--bg-dark, #050507);
+            color: white;
+        }
+
         textarea {
             resize: vertical;
             min-height: 120px;
@@ -732,6 +737,60 @@
             <div class="form-grid"
                 style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
                 <div class="form-col" style="grid-column: 1 / -1;">
+                    <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-list"
+                            style="color:#f39c12;"></i> Orden de Pestañas</h3>
+                    <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Define el orden en el que quieres
+                        que aparezcan las pestañas. Separa cada una por comas. (Valores:
+                        individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all)</p>
+                    <input type="text" id="conf-tabOrder"
+                        placeholder="Ej: individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all">
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-credit-card"
+                            style="color:#f39c12;"></i> Logos de Métodos de Pago</h3>
+                </div>
+                <!-- Nequi / Daviplata -->
+                <div class="form-col">
+                    <label>Habilitar Logo 1 (Nequi/Daviplata)</label>
+                    <select id="conf-nequiEnabled">
+                        <option value="true">Activo</option>
+                        <option value="false">Apagado</option>
+                    </select>
+                </div>
+                <div class="form-col">
+                    <label>Texto Logo 1</label>
+                    <input type="text" id="conf-nequiLabel" placeholder="Nequi / Daviplata">
+                </div>
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <label>Enlace de Imagen Logo 1</label>
+                    <input type="text" id="conf-nequiImg" placeholder="Ej: assets/nequi_daviplata.png">
+                </div>
+
+                <!-- Nu / Bre b -->
+                <div class="form-col" style="margin-top: 1rem;">
+                    <label>Habilitar Logo 2 (Nu / Bre b)</label>
+                    <select id="conf-nuEnabled">
+                        <option value="true">Activo</option>
+                        <option value="false">Apagado</option>
+                    </select>
+                </div>
+                <div class="form-col" style="margin-top: 1rem;">
+                    <label>Texto Logo 2</label>
+                    <input type="text" id="conf-nuLabel" placeholder="Nu / Bre b">
+                </div>
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <label>Enlace de Imagen Logo 2</label>
+                    <input type="text" id="conf-nuImg" placeholder="Ej: assets/nu_bre.jpg">
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col" style="grid-column: 1 / -1;">
                     <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-trophy"
                             style="color:#f39c12;"></i> Sistema de Incentivos para Vendedores</h3>
                     <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Motiva a tus vendedores
@@ -973,6 +1032,17 @@
             if (document.getElementById('conf-incentiveCombo5')) document.getElementById('conf-incentiveCombo5').value = storeConfig.incentiveCombo5 || 0;
             if (document.getElementById('conf-incentiveFinde')) document.getElementById('conf-incentiveFinde').value = storeConfig.incentiveFinde || 0;
             if (document.getElementById('conf-incentiveMes')) document.getElementById('conf-incentiveMes').value = storeConfig.incentiveMes || 0;
+
+            if (document.getElementById('conf-tabOrder')) {
+                document.getElementById('conf-tabOrder').value = storeConfig.tabOrder ? storeConfig.tabOrder.join(',') : 'individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all';
+            }
+            if (document.getElementById('conf-nequiEnabled')) document.getElementById('conf-nequiEnabled').value = storeConfig.nequiEnabled !== false ? 'true' : 'false';
+            if (document.getElementById('conf-nequiLabel')) document.getElementById('conf-nequiLabel').value = storeConfig.nequiLabel || '';
+            if (document.getElementById('conf-nequiImg')) document.getElementById('conf-nequiImg').value = storeConfig.nequiImg || '';
+
+            if (document.getElementById('conf-nuEnabled')) document.getElementById('conf-nuEnabled').value = storeConfig.nuEnabled !== false ? 'true' : 'false';
+            if (document.getElementById('conf-nuLabel')) document.getElementById('conf-nuLabel').value = storeConfig.nuLabel || '';
+            if (document.getElementById('conf-nuImg')) document.getElementById('conf-nuImg').value = storeConfig.nuImg || '';
 
             fetchClientSalesHistory();
             fetchSellerSalesStats();
@@ -1290,6 +1360,20 @@
             storeConfig.incentiveCombo5 = parseInt(document.getElementById('conf-incentiveCombo5').value) || 0;
             storeConfig.incentiveFinde = parseInt(document.getElementById('conf-incentiveFinde').value) || 0;
             storeConfig.incentiveMes = parseInt(document.getElementById('conf-incentiveMes').value) || 0;
+
+            if (document.getElementById('conf-tabOrder')) {
+                const arr = document.getElementById('conf-tabOrder').value.split(',').map(s => s.trim()).filter(s => s);
+                storeConfig.tabOrder = arr.length > 0 ? arr : null;
+            }
+            if (document.getElementById('conf-nequiEnabled')) {
+                storeConfig.nequiEnabled = document.getElementById('conf-nequiEnabled').value === 'true';
+                storeConfig.nequiLabel = document.getElementById('conf-nequiLabel').value.trim();
+                storeConfig.nequiImg = document.getElementById('conf-nequiImg').value.trim();
+
+                storeConfig.nuEnabled = document.getElementById('conf-nuEnabled').value === 'true';
+                storeConfig.nuLabel = document.getElementById('conf-nuLabel').value.trim();
+                storeConfig.nuImg = document.getElementById('conf-nuImg').value.trim();
+            }
 
             db.ref('storeConfig').set(storeConfig).then(() => {
                 alert('¡Configuración guardada exitosamente!');
@@ -1615,9 +1699,11 @@
                 const salesArray = Object.keys(sales).map(k => ({ id: k, ...sales[k] })).sort((a, b) => b.date - a.date);
 
                 salesArray.forEach(sale => {
-                    count++;
-                    screensSold += (sale.items || []).length;
-                    if (sale.incentiveEarned) totalAccumulated += sale.incentiveEarned;
+                    if (sale.isPaid !== false) {
+                        count++;
+                        screensSold += (sale.items || []).length;
+                        if (sale.incentiveEarned) totalAccumulated += sale.incentiveEarned;
+                    }
                 });
 
                 const redeemed = seller.bonusesRedeemed ? parseInt(seller.bonusesRedeemed) : 0;
@@ -1688,9 +1774,15 @@
                                     <input type="checkbox" class="seller-sale-checkbox" value="${safeSeller}|${sale.id}" style="cursor:pointer; width:16px; height:16px;" title="Seleccionar para eliminar">
                                     ${safeClient}
                                 </strong>
-                                <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold;">
+                                <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
                                     ${daysLeft >= 0 ? `Vence en ${daysLeft} días` : 'Vencida'}
                                 </span>
+                            </div>
+                            <div style="margin-bottom:0.5rem; display:flex;">
+                                <button onclick="toggleSaleStatus('seller', '${safeSeller}', '${sale.id}', ${sale.isPaid === false ? 'true' : 'false'}, '${sale.clientPhone || ''}')" 
+                                    style="padding:0.4rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid ${sale.isPaid === false ? '#f39c12' : '#4cd137'}; background: transparent; color:${sale.isPaid === false ? '#f39c12' : '#4cd137'}; font-size:0.75rem;">
+                                    <i class="fa-solid ${sale.isPaid === false ? 'fa-square' : 'fa-check-square'}"></i> ${sale.isPaid === false ? 'Pago Pendiente (No Suma)' : 'Pagado (Contabilizada)'}
+                                </button>
                             </div>
                             <p style="font-size:0.8rem; color:#ccc; margin-bottom:0.8rem; line-height:1.4;">
                                 📺 ${itemsStr}<br>
@@ -1894,8 +1986,13 @@
 
             const clientsData = phones.map(phone => {
                 const sales = allClientSalesMap[phone];
+                // Count valid sales only
+                let validCount = 0;
+                Object.values(sales).forEach(s => {
+                    if (s.isPaid !== false) validCount++;
+                });
                 const latestSale = Object.values(sales).sort((a, b) => b.date - a.date)[0];
-                return { phone, name: latestSale.clientName || 'Desconocido', city: latestSale.clientCity || 'N/A', count: Object.keys(sales).length };
+                return { phone, name: latestSale.clientName || 'Desconocido', city: latestSale.clientCity || 'N/A', count: validCount };
             });
 
             clientsData.filter(c => c.phone.includes(filterText) || c.name.toLowerCase().includes(filterText)).forEach(c => {
@@ -1961,9 +2058,15 @@
                                     <input type="checkbox" class="client-sale-checkbox" value="${c.phone}|${sale.id}" style="cursor:pointer; width:16px; height:16px;" title="Seleccionar para eliminar">
                                     ${new Date(sale.date).toLocaleDateString()}
                                 </span>
-                                <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold;">
+                                <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
                                     ${daysLeft >= 0 ? `Vence en ${daysLeft} d` : 'Vencida'}
                                 </span>
+                            </div>
+                            <div style="margin-bottom:0.5rem; display:flex;">
+                                <button onclick="toggleSaleStatus('client', '${c.phone}', '${sale.id}', ${sale.isPaid === false ? 'true' : 'false'}, '${c.phone}')" 
+                                    style="padding:0.4rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid ${sale.isPaid === false ? '#f39c12' : '#4cd137'}; background: transparent; color:${sale.isPaid === false ? '#f39c12' : '#4cd137'}; font-size:0.75rem;">
+                                    <i class="fa-solid ${sale.isPaid === false ? 'fa-square' : 'fa-check-square'}"></i> ${sale.isPaid === false ? 'Pago Pendiente (No Suma)' : 'Pagado (Contabilizada)'}
+                                </button>
                             </div>
                             <p style="font-size:0.8rem; color:var(--text-primary); margin-bottom:0.8rem; line-height:1.4;">
                                 📺 ${itemsStr}<br>
@@ -1993,12 +2096,32 @@
 
         function deleteClientSale(phone, saleId) {
             if (confirm('¿Estás seguro de que quieres eliminar este registro? (Útil si fue una prueba o error)')) {
-                db.ref(`clientSales / ${phone}/${saleId}`).remove().then(() => {
+                db.ref(`clientSales/${phone}/${saleId}`).remove().then(() => {
                     alert('Registro eliminado del historial del cliente.');
                     fetchClientSalesHistory();
                 });
             }
         }
+
+        window.toggleSaleStatus = async function (type, personId, saleId, newStatus, phoneString) {
+            const dbPath = type === 'seller' ? `sellerSales/${personId}/${saleId}` : `clientSales/${personId}/${saleId}`;
+            try {
+                await db.ref(dbPath).update({ isPaid: newStatus });
+                if (newStatus && phoneString) {
+                    if (confirm('¿Deseas enviar el mensaje de Pago Verificado por WhatsApp al cliente/vendedor?')) {
+                        const msg = "¡Hola! Te confirmamos que tu *pago ha sido verificado y registrado exitosamente*. ✅\n\nGracias por tu confianza.";
+                        let waPhone = phoneString.replace(/\D/g, '');
+                        if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
+                        window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                    }
+                }
+                alert(`Estado actualizado a ${newStatus ? 'Pagado' : 'Pendiente'}.`);
+                if (type === 'seller') fetchSellerSalesStats();
+                else fetchClientSalesHistory();
+            } catch (err) {
+                alert('Error al cambiar el estado.');
+            }
+        };
 
         async function deleteSelectedClientSales() {
             const checkboxes = document.querySelectorAll('.client-sale-checkbox:checked');
@@ -2194,6 +2317,30 @@
                 const cSales = data.clientSales || {};
                 const sSales = data.sellerSales || {};
                 const now = Date.now();
+
+                // Check end of month cleanup
+                const nowDate = new Date();
+                const lastDayOfMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0).getDate();
+                if (nowDate.getDate() === lastDayOfMonth && localStorage.getItem('lastAutoCleanupMonth') !== `${nowDate.getFullYear()}-${nowDate.getMonth()}`) {
+                    let updates = {};
+                    let cleanCount = 0;
+                    Object.keys(cSales).forEach(phone => {
+                        Object.keys(cSales[phone]).forEach(k => {
+                            if (cSales[phone][k].isPaid === false) { updates[`clientSales/${phone}/${k}`] = null; cleanCount++; }
+                        });
+                    });
+                    Object.keys(sSales).forEach(seller => {
+                        Object.keys(sSales[seller]).forEach(k => {
+                            if (sSales[seller][k].isPaid === false) { updates[`sellerSales/${seller}/${k}`] = null; cleanCount++; }
+                        });
+                    });
+                    if (Object.keys(updates).length > 0) {
+                        db.ref('/').update(updates).then(() => {
+                            console.log(`Auto-cleaned ${cleanCount} unpaid sales at end of month.`);
+                        });
+                    }
+                    localStorage.setItem('lastAutoCleanupMonth', `${nowDate.getFullYear()}-${nowDate.getMonth()}`);
+                }
 
                 // Direct Clientes
                 Object.keys(cSales).forEach(phone => {
