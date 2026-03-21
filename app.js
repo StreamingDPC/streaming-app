@@ -485,14 +485,6 @@ function renderProducts(category) {
         })
         : products.filter(p => {
             if (p.category !== category || p.active === false) return false;
-            if (category === 'ventas_extras') {
-                if (scopeOwner === 'admin') {
-                    // Solo las ventas de vendedores de ventas extras
-                    return p.owner && p.owner !== 'admin' && p.owner !== 'Administrador (Global)';
-                } else {
-                    return p.owner === scopeOwner;
-                }
-            }
             return true;
         });
 
@@ -1174,6 +1166,16 @@ function setupEventListeners() {
             total = customClientPrice;
         }
 
+        let extrasOriginalOwner = null;
+        const extrasCartItem = stats.processedCart.find(i => {
+            const pDb = products.find(p => p.id === i.id);
+            return pDb && pDb.category === 'ventas_extras' && pDb.owner && pDb.owner !== 'admin' && pDb.owner !== 'Administrador (Global)';
+        });
+        if (extrasCartItem) {
+            const pDb = products.find(p => p.id === extrasCartItem.id);
+            extrasOriginalOwner = pDb.owner;
+        }
+
         let individualCount = cart.filter(p => p.category === 'individual').length;
         let message = `🚀 *Nuevo Pedido - Streaming DPC*\n\n`;
 
@@ -1275,19 +1277,6 @@ function setupEventListeners() {
             // Public Seller Checkout Forwarding
             let finalSellerDestination = isSellerMode ? currentSellerName : 'Página Web Oficial';
             if (publicSellerRef) finalSellerDestination = publicSellerRef;
-
-            // NEW LOGIC: Si no es modo vendedor ni link público, verificar si hay un producto de ventas extras
-            let extrasOriginalOwner = null;
-            if (!isSellerMode && !publicSellerRef) {
-                const extrasCartItem = stats.processedCart.find(i => {
-                    const pDb = products.find(p => p.id === i.id);
-                    return pDb && pDb.category === 'ventas_extras' && pDb.owner && pDb.owner !== 'admin' && pDb.owner !== 'Administrador (Global)';
-                });
-                if (extrasCartItem) {
-                    const pDb = products.find(p => p.id === extrasCartItem.id);
-                    extrasOriginalOwner = pDb.owner;
-                }
-            }
 
             if (extrasOriginalOwner) {
                 finalSellerDestination = extrasOriginalOwner;
