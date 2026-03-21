@@ -18,12 +18,6 @@ let storeConfig = {};
 let products = [];
 let cart = [];
 
-// Notificación de Actualización
-if (!sessionStorage.getItem('bonoUpdateShown')) {
-    alert('Sistema de Bonos Individualizado Actualizado ✔️. Versión: 3.5.0\nSi ves este mensaje, asegúrate de revisar la "Configuración" en el panel Admin y colocar los montos de cada plataforma antes de probar ventas.');
-    sessionStorage.setItem('bonoUpdateShown', 'true');
-}
-
 // DOM Elements
 const productsGrid = document.getElementById('products-grid');
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -428,29 +422,52 @@ function renderProducts(category) {
             return;
         }
 
+        const estByMonth = {};
         estrenos.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
+            const m = item.month || 'Otros';
+            if (!estByMonth[m]) estByMonth[m] = [];
+            estByMonth[m].push(item);
+        });
 
-            let videoId = null;
-            if (item.url.includes('youtube.com/watch?v=')) {
-                videoId = item.url.split('v=')[1]?.split('&')[0];
-            } else if (item.url.includes('youtu.be/')) {
-                videoId = item.url.split('youtu.be/')[1]?.split('?')[0];
+        const monthOrder = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre", "Otros"];
+
+        monthOrder.forEach(mName => {
+            if (estByMonth[mName] && estByMonth[mName].length > 0) {
+                const mTitle = document.createElement('h2');
+                mTitle.style.gridColumn = '1 / -1';
+                mTitle.style.margin = '1.5rem 0 0.5rem 0';
+                mTitle.style.borderBottom = '1px solid var(--glass-border)';
+                mTitle.style.paddingBottom = '0.5rem';
+                mTitle.style.color = 'var(--text-primary)';
+                mTitle.style.fontSize = '1.3rem';
+                mTitle.innerHTML = `<i class="fa-regular fa-calendar" style="color:var(--accent-primary);"></i> Estrenos de ${mName}`;
+                productsGrid.appendChild(mTitle);
+
+                estByMonth[mName].forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+
+                    let videoId = null;
+                    if (item.url.includes('youtube.com/watch?v=')) {
+                        videoId = item.url.split('v=')[1]?.split('&')[0];
+                    } else if (item.url.includes('youtu.be/')) {
+                        videoId = item.url.split('youtu.be/')[1]?.split('?')[0];
+                    }
+                    const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : 'https://img.icons8.com/color/96/movie.png';
+
+                    card.innerHTML = `
+                        <div style="position:relative; border-radius:12px; overflow:hidden; margin-bottom:1rem; cursor:pointer;" onclick="openVideoModal('${item.url}')">
+                            <img src="${thumbUrl}" alt="Trailer" style="width:100%; height:200px; object-fit:cover; display:block;">
+                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--accent-primary); width:50px; height:50px; border-radius:50%; display:flex; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                                <i class="fa-solid fa-play" style="color:black; font-size:1.5rem; margin-left:5px;"></i>
+                            </div>
+                        </div>
+                        <h3 class="product-title" style="margin-top:auto;">${item.title}</h3>
+                        <p class="product-desc" style="margin-bottom:0;">🍿 Tráiler Oficial</p>
+                    `;
+                    productsGrid.appendChild(card);
+                });
             }
-            const thumbUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : 'https://img.icons8.com/color/96/movie.png';
-
-            card.innerHTML = `
-                <div style="position:relative; border-radius:12px; overflow:hidden; margin-bottom:1rem; cursor:pointer;" onclick="openVideoModal('${item.url}')">
-                    <img src="${thumbUrl}" alt="Trailer" style="width:100%; height:200px; object-fit:cover; display:block;">
-                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--accent-primary); width:50px; height:50px; border-radius:50%; display:flex; justify-content:center; align-items:center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                        <i class="fa-solid fa-play" style="color:black; font-size:1.5rem; margin-left:5px;"></i>
-                    </div>
-                </div>
-                <h3 class="product-title" style="margin-top:auto;">${item.title}</h3>
-                <p class="product-desc" style="margin-bottom:0;">🍿 Tráiler Oficial</p>
-            `;
-            productsGrid.appendChild(card);
         });
         return;
     }
@@ -470,7 +487,8 @@ function renderProducts(category) {
             if (p.category !== category || p.active === false) return false;
             if (category === 'ventas_extras') {
                 if (scopeOwner === 'admin') {
-                    return !p.owner || p.owner === 'admin' || p.owner === 'Administrador (Global)';
+                    // Solo las ventas de vendedores de ventas extras
+                    return p.owner && p.owner !== 'admin' && p.owner !== 'Administrador (Global)';
                 } else {
                     return p.owner === scopeOwner;
                 }
@@ -614,6 +632,15 @@ function updateCartUI() {
     cartBadge.innerText = cart.length;
     let stats = processCartDiscounts();
     cartTotalLabel.innerText = `$${stats.total.toLocaleString()}`;
+
+    const customContainer = document.getElementById('seller-custom-client-price-container');
+    if (customContainer) {
+        if (isSellerMode && cart.length > 0) {
+            customContainer.style.display = 'block';
+        } else {
+            customContainer.style.display = 'none';
+        }
+    }
 }
 
 function renderCartItems() {
@@ -637,12 +664,23 @@ function renderCartItems() {
 }
 
 function setupEventListeners() {
+    // Tabs Menu Toggle
+    const tabsMenuBtn = document.getElementById('tabs-menu-btn');
+    const categoryTabs = document.getElementById('category-tabs');
+
+    if (tabsMenuBtn && categoryTabs) {
+        tabsMenuBtn.addEventListener('click', () => {
+            categoryTabs.classList.toggle('show-menu');
+        });
+    }
+
     // Tabs
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             tabBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             renderProducts(btn.dataset.tab);
+            if (categoryTabs) categoryTabs.classList.remove('show-menu');
         });
     });
 
@@ -1128,6 +1166,14 @@ function setupEventListeners() {
 
         let stats = processCartDiscounts();
         let total = stats.total;
+
+        const customPriceInput = document.getElementById('seller-custom-client-price');
+        let customClientPrice = null;
+        if (isSellerMode && customPriceInput && customPriceInput.value) {
+            customClientPrice = parseInt(customPriceInput.value);
+            total = customClientPrice;
+        }
+
         let individualCount = cart.filter(p => p.category === 'individual').length;
         let message = `🚀 *Nuevo Pedido - Streaming DPC*\n\n`;
 
@@ -1169,7 +1215,12 @@ function setupEventListeners() {
             }
         }
 
-        message += `\n💰 *Total a pagar:* $${total.toLocaleString()}\n\n`;
+        if (customClientPrice) {
+            message += `\n💰 *Total cobrado al cliente:* $${customClientPrice.toLocaleString()}\n`;
+            message += `💼 *Valor Mayorista (Para el Admin):* $${stats.total.toLocaleString()}\n\n`;
+        } else {
+            message += `\n💰 *Total a pagar:* $${total.toLocaleString()}\n\n`;
+        }
 
         // Guardar venta en base de datos
         if (!isRecurrent) {
@@ -1225,7 +1276,24 @@ function setupEventListeners() {
             let finalSellerDestination = isSellerMode ? currentSellerName : 'Página Web Oficial';
             if (publicSellerRef) finalSellerDestination = publicSellerRef;
 
-            if (isSellerMode || publicSellerRef) {
+            // NEW LOGIC: Si no es modo vendedor ni link público, verificar si hay un producto de ventas extras
+            let extrasOriginalOwner = null;
+            if (!isSellerMode && !publicSellerRef) {
+                const extrasCartItem = stats.processedCart.find(i => {
+                    const pDb = products.find(p => p.id === i.id);
+                    return pDb && pDb.category === 'ventas_extras' && pDb.owner && pDb.owner !== 'admin' && pDb.owner !== 'Administrador (Global)';
+                });
+                if (extrasCartItem) {
+                    const pDb = products.find(p => p.id === extrasCartItem.id);
+                    extrasOriginalOwner = pDb.owner;
+                }
+            }
+
+            if (extrasOriginalOwner) {
+                finalSellerDestination = extrasOriginalOwner;
+            }
+
+            if (isSellerMode || publicSellerRef || extrasOriginalOwner) {
                 db.ref(`sellerSales/${finalSellerDestination}`).push(saleData);
             }
 
@@ -1273,8 +1341,9 @@ function setupEventListeners() {
             if (cartModal) cartModal.style.display = 'none';
         };
 
-        if (publicSellerRef) {
-            db.ref(`sellerStores/${publicSellerRef}`).once('value').then(snap => {
+        if (publicSellerRef || (extrasOriginalOwner && !isSellerMode && !publicSellerRef)) {
+            const destToFetch = publicSellerRef || extrasOriginalOwner;
+            db.ref(`sellerStores/${destToFetch}`).once('value').then(snap => {
                 finalizeCheckout(snap.val());
             }).catch(() => finalizeCheckout(null));
         } else {

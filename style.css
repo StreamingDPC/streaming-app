@@ -344,16 +344,43 @@ header {
     margin: 0 auto;
 }
 
+/* Tabs Container */
+.tabs-container {
+    position: relative;
+    padding: 0 1rem;
+    margin-bottom: 2.5rem;
+}
+
+.tabs-menu-btn {
+    display: none;
+    width: 100%;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(10px);
+    transition: var(--transition);
+}
+
+.tabs-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
 /* Tabs */
 .tabs {
     display: flex;
     overflow-x: auto;
-    padding: 0 1rem;
-    gap: 0.8rem;
-    margin-bottom: 2.5rem;
+    gap: 0.5rem;
     scrollbar-width: none;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    transition: var(--transition);
 }
 
 .tabs::-webkit-scrollbar {
@@ -362,14 +389,14 @@ header {
 
 .tab-btn {
     flex: 0 0 auto;
-    padding: 0.6rem 1.6rem;
-    border-radius: 30px;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
     border: 1px solid var(--glass-border);
     background: var(--glass);
     color: var(--text-secondary);
     cursor: pointer;
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 500;
     transition: var(--transition);
     backdrop-filter: blur(10px);
@@ -386,6 +413,37 @@ header {
     font-weight: 700;
     border-color: var(--text-primary);
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 768px) {
+    .tabs-menu-btn {
+        display: flex;
+    }
+    .tabs {
+        flex-direction: column;
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 1rem;
+        right: 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 1rem;
+        z-index: 100;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .tabs.show-menu {
+        display: flex;
+    }
+    .tab-btn {
+        width: 100%;
+        text-align: left;
+        padding: 0.8rem 1rem;
+        border-radius: 12px;
+        font-size: 0.95rem;
+    }
 }
 
 /* Modern Inputs Configs */
