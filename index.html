@@ -139,72 +139,77 @@
             </div>
 
             <!-- Checkout forms for new customers -->
-            <div class="cart-client-info" style="padding: 1rem; border-top: 1px solid var(--glass-border);">
+            <div class="cart-client-info" style="padding: 0.5rem; border-top: 1px solid var(--glass-border);">
                 <!-- Es renovación -->
-                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; cursor: pointer;">
+                <label
+                    style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.9rem;">
                     <input type="checkbox" id="is-renewal" style="width: auto;">
                     <span style="color: #4cd137; font-weight: 600;">🔄 Es una Renovación</span>
                 </label>
 
                 <div id="recurrent-client-container">
                     <label
-                        style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer;">
+                        style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.4rem; cursor: pointer; font-size: 0.9rem;">
                         <input type="checkbox" id="recurrent-client" style="width: auto;">
                         <span>Soy cliente ya registrado (Omitir datos)</span>
                     </label>
                 </div>
 
                 <div id="new-client-form">
-                    <div id="seller-client-selector" style="display: none; margin-bottom: 1rem;">
+                    <div id="seller-client-selector" style="display: none; margin-bottom: 0.4rem;">
                         <label
-                            style="font-size: 0.85rem; color: var(--accent-primary); display: block; margin-bottom:0.3rem;"><i
+                            style="font-size: 0.8rem; color: var(--accent-primary); display: block; margin-bottom:0.1rem;"><i
                                 class="fa-solid fa-address-book"></i> Autocompletar con Cliente Guardado:</label>
-                        <select id="seller-clients-dropdown" class="input-modern" style="padding-right: 2rem;">
+                        <select id="seller-clients-dropdown" class="input-modern"
+                            style="padding-right: 2rem; padding: 0.4rem;">
                             <option value="">-- Nuevo Cliente / Escribir Manual --</option>
                         </select>
                     </div>
 
-                    <div style="margin-bottom: 0.8rem;">
+                    <div style="margin-bottom: 0.4rem;">
                         <input type="text" id="client-name" class="input-modern"
-                            placeholder="* Nombre del Cliente o Apodo">
+                            placeholder="* Nombre del Cliente o Apodo" style="padding: 0.4rem;">
                     </div>
-                    <div style="margin-bottom: 0.8rem;">
+                    <div style="margin-bottom: 0.4rem;">
                         <input type="text" id="client-phone" class="input-modern"
-                            placeholder="📱 Celular del Cliente (Opcional)">
+                            placeholder="📱 Celular del Cliente (Opcional)" style="padding: 0.4rem;">
                     </div>
-                    <div style="margin-bottom: 0.8rem;">
-                        <input type="text" id="client-city" class="input-modern" placeholder="* Ciudad">
+                    <div style="margin-bottom: 0.4rem;">
+                        <input type="text" id="client-city" class="input-modern" placeholder="* Ciudad"
+                            style="padding: 0.4rem;">
                     </div>
-                    <div style="margin-bottom: 1rem;">
+                    <div style="margin-bottom: 0.4rem;">
                         <label
-                            style="font-size: 0.9rem; color: var(--text-secondary); display: block; margin-bottom:0.5rem;">Dispositivo
+                            style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom:0.2rem;">Dispositivo
                             donde lo usarás (Máx. 2):</label>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="client-devices">
-                            <label><input type="checkbox" value="TV"> Smart TV</label>
-                            <label><input type="checkbox" value="Celular"> Celular</label>
-                            <label><input type="checkbox" value="PC"> PC / Laptop</label>
-                            <label><input type="checkbox" value="Tablet"> Tablet</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem; font-size: 0.85rem;"
+                            id="client-devices">
+                            <label><input type="checkbox" value="TV" style="margin: 0;"> Smart TV</label>
+                            <label><input type="checkbox" value="Celular" style="margin: 0;"> Celular</label>
+                            <label><input type="checkbox" value="PC" style="margin: 0;"> PC / Laptop</label>
+                            <label><input type="checkbox" value="Tablet" style="margin: 0;"> Tablet</label>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="cart-footer">
+            <div class="cart-footer" style="padding: 0.5rem 1rem;">
                 <div id="seller-custom-client-price-container"
-                    style="display:none; padding: 0.5rem 0; margin-bottom:0.5rem; border-bottom: 1px solid var(--glass-border);">
+                    style="display:none; padding: 0.2rem 0; margin-bottom:0.2rem; border-bottom: 1px solid var(--glass-border);">
                     <label
-                        style="color:var(--text-secondary); font-size: 0.85rem; display:block; margin-bottom:0.3rem;">Monto
+                        style="color:var(--text-secondary); font-size: 0.8rem; display:block; margin-bottom:0.1rem;">Monto
                         a cobrar a mi cliente ($):</label>
                     <input type="number" id="seller-custom-client-price" class="input-modern" placeholder="Ej: 13000"
-                        style="margin-bottom:0.3rem;">
-                    <p style="font-size:0.7rem; color:#a0a0a0; margin:0;">(Opcional) Sobrescribe el valor Total que
+                        style="margin-bottom:0.1rem; padding: 0.3rem;">
+                    <p style="font-size:0.65rem; color:#a0a0a0; margin:0; line-height: 1;">(Opcional) Sobrescribe el
+                        valor Total que
                         registrará la compra para tu cliente.</p>
                 </div>
-                <div class="total-row">
+                <div class="total-row" style="margin-bottom: 0.2rem; font-size: 1.1rem;">
                     <span>Total:</span>
                     <span id="cart-total">$0</span>
                 </div>
-                <button id="checkout-btn" class="checkout-btn">
+                <button id="checkout-btn" class="checkout-btn" style="padding: 0.5rem; font-size: 1rem;">
                     <i class="fa-brands fa-whatsapp"></i> Realizar Pedido
                 </button>
             </div>

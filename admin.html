@@ -281,6 +281,13 @@
                         <label>Cantidad en Stock (Opcional, 0 = Sin límite)</label>
                         <input type="number" id="new-stock" placeholder="Ej: 5" value="0">
                     </div>
+                    <div class="form-col" style="grid-column: 1 / -1;">
+                        <label>Habilitar para Renovación (Incluso Agotado)</label>
+                        <select id="new-allow-exhausted-seller">
+                            <option value="">-- Ninguno --</option>
+                        </select>
+                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">El vendedor seleccionado podrá ver y comprar esta pantalla aunque esté marcada como [AGOTADO].</p>
+                    </div>
                 </div>
 
                 <button class="save-btn" onclick="saveProduct()">Guardar Producto</button>
@@ -1471,20 +1478,39 @@
 
         function populateOwnerSelect() {
             const ownerSelect = document.getElementById('new-owner');
-            if (!ownerSelect) return;
-            const currentVal = ownerSelect.value;
-            ownerSelect.innerHTML = '<option value="admin">Administrador (Global)</option>';
-            const sellers = storeConfig.sellers || [];
-            sellers.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.name;
-                opt.text = 'Vendedor: ' + s.name;
-                ownerSelect.appendChild(opt);
-            });
-            if (currentVal && Array.from(ownerSelect.options).some(o => o.value === currentVal)) {
-                ownerSelect.value = currentVal;
-            } else {
-                ownerSelect.value = 'admin';
+            if (ownerSelect) {
+                const currentVal = ownerSelect.value;
+                ownerSelect.innerHTML = '<option value="admin">Administrador (Global)</option>';
+                const sellers = storeConfig.sellers || [];
+                sellers.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.name;
+                    opt.text = 'Vendedor: ' + s.name;
+                    ownerSelect.appendChild(opt);
+                });
+                if (currentVal && Array.from(ownerSelect.options).some(o => o.value === currentVal)) {
+                    ownerSelect.value = currentVal;
+                } else {
+                    ownerSelect.value = 'admin';
+                }
+            }
+
+            const allowSelect = document.getElementById('new-allow-exhausted-seller');
+            if (allowSelect) {
+                const currentAllow = allowSelect.value;
+                allowSelect.innerHTML = '<option value="">-- Ninguno --</option>';
+                const sellers = storeConfig.sellers || [];
+                sellers.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.name;
+                    opt.text = s.name;
+                    allowSelect.appendChild(opt);
+                });
+                if (currentAllow && Array.from(allowSelect.options).some(o => o.value === currentAllow)) {
+                    allowSelect.value = currentAllow;
+                } else {
+                    allowSelect.value = '';
+                }
             }
         }
 
@@ -1594,6 +1620,9 @@
             document.getElementById('new-image').value = p.image || '';
             document.getElementById('new-desc').value = p.desc || '';
             document.getElementById('new-stock').value = p.stock || 0;
+            if (document.getElementById('new-allow-exhausted-seller')) {
+                document.getElementById('new-allow-exhausted-seller').value = p.allowExhaustedSeller || '';
+            }
 
             document.getElementById('form-title').innerText = "Editar Producto";
             document.querySelector('.save-btn').innerText = "Actualizar Producto";
@@ -1611,6 +1640,9 @@
             document.getElementById('new-image').value = '';
             document.getElementById('new-desc').value = '';
             document.getElementById('new-stock').value = '0';
+            if (document.getElementById('new-allow-exhausted-seller')) {
+                document.getElementById('new-allow-exhausted-seller').value = '';
+            }
             document.getElementById('owner-col').style.display = 'none';
             document.getElementById('new-owner').value = 'admin';
 
@@ -1628,6 +1660,7 @@
             const brand = document.getElementById('new-brand').value;
             const desc = document.getElementById('new-desc').value.trim();
             const stock = parseInt(document.getElementById('new-stock').value) || 0;
+            const allowExhaustedSeller = document.getElementById('new-allow-exhausted-seller') ? document.getElementById('new-allow-exhausted-seller').value : '';
             let image = document.getElementById('new-image').value;
 
             if (!name || isNaN(price)) return alert('Completa los campos de Nombre y Precio');
@@ -1668,6 +1701,7 @@
                     brand,
                     desc,
                     stock,
+                    allowExhaustedSeller,
                     image,
                     active: true
                 };
@@ -1681,6 +1715,7 @@
                 dynamicProducts[editIndex].brand = brand;
                 dynamicProducts[editIndex].desc = desc;
                 dynamicProducts[editIndex].stock = stock;
+                dynamicProducts[editIndex].allowExhaustedSeller = allowExhaustedSeller;
                 dynamicProducts[editIndex].image = image;
                 // doesn't touch active status
                 cancelEdit();

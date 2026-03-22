@@ -406,9 +406,9 @@ window.openImageViewer = function (imgSrc) {
 
 function getPrice(product) {
     if (isSellerMode && product.sellerPrice) {
-        return product.sellerPrice;
+        return product.sellerPrice || 0;
     }
-    return product.price;
+    return product.price || 0;
 }
 
 function renderProducts(category) {
@@ -496,7 +496,13 @@ function renderProducts(category) {
         const displayPrice = getPrice(product);
 
         let sellerBadge = isSellerMode ? `<span style="background:#27ae60; color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:0.5rem">Precio Vendedor</span>` : '';
-        const inStock = product.inStock !== false;
+        let inStock = product.inStock !== false;
+
+        // Allow bypassing 'Agotado' status if the seller is specifically authorized 
+        // to renew this exhausted screen.
+        if (!inStock && isSellerMode && currentSellerName && product.allowExhaustedSeller === currentSellerName) {
+            inStock = true;
+        }
 
         let buttonHtml = inStock
             ? `<button class="btn-add" onclick="addToCart(${product.id})">Agregar</button>`
@@ -1163,6 +1169,7 @@ function setupEventListeners() {
         let customClientPrice = null;
         if (isSellerMode && customPriceInput && customPriceInput.value) {
             customClientPrice = parseInt(customPriceInput.value);
+            if (isNaN(customClientPrice)) customClientPrice = 0;
             total = customClientPrice;
         }
 
@@ -1202,7 +1209,8 @@ function setupEventListeners() {
         message += `\nHola, me gustaría adquirir las siguientes pantallas:\n\n`;
 
         stats.processedCart.forEach((item, i) => {
-            message += `${i + 1}. *${item.name}* - $${item.finalPrice.toLocaleString()}\n`;
+            let fp = isNaN(item.finalPrice) ? 0 : item.finalPrice;
+            message += `${i + 1}. *${item.name || 'Pantalla'}* - $${fp.toLocaleString()}\n`;
         });
 
         if (stats.promoDiscountTotal > 0) {
@@ -1219,9 +1227,11 @@ function setupEventListeners() {
 
         if (customClientPrice) {
             message += `\n💰 *Total cobrado al cliente:* $${customClientPrice.toLocaleString()}\n`;
-            message += `💼 *Valor Mayorista (Para el Admin):* $${stats.total.toLocaleString()}\n\n`;
+            let fTotal = isNaN(stats.total) ? 0 : stats.total;
+            message += `💼 *Valor Mayorista (Para el Admin):* $${fTotal.toLocaleString()}\n\n`;
         } else {
-            message += `\n💰 *Total a pagar:* $${total.toLocaleString()}\n\n`;
+            let fTotal = isNaN(total) ? 0 : total;
+            message += `\n💰 *Total a pagar:* $${fTotal.toLocaleString()}\n\n`;
         }
 
         // Guardar venta en base de datos
@@ -1261,16 +1271,16 @@ function setupEventListeners() {
             }
 
             const saleData = {
-                clientName: cName,
-                clientCity: cCity,
-                clientPhone: cPhone,
+                clientName: cName || '',
+                clientCity: cCity || '',
+                clientPhone: cPhone || '',
                 date: Date.now(),
                 expirationDate: Date.now() + (30 * 24 * 60 * 60 * 1000), // +30 days
-                items: stats.processedCart.map(item => ({ id: item.id, name: item.name, category: item.category, finalPrice: item.finalPrice })),
-                total: total,
-                sellerName: isSellerMode ? currentSellerName : 'Página Web Oficial',
-                incentiveEarned: incentiveEarned,
-                incentiveDetails: incentiveDetails,
+                items: stats.processedCart.map(item => ({ id: item.id || Date.now(), name: item.name || 'Pantalla', category: item.category || 'individual', finalPrice: isNaN(item.finalPrice) ? 0 : item.finalPrice })),
+                total: isNaN(total) ? 0 : total,
+                sellerName: (isSellerMode ? currentSellerName : 'Página Web Oficial') || 'Página Web Oficial',
+                incentiveEarned: isNaN(incentiveEarned) ? 0 : incentiveEarned,
+                incentiveDetails: incentiveDetails || [],
                 isPaid: false
             };
 

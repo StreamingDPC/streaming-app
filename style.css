@@ -419,6 +419,7 @@ header {
     .tabs-menu-btn {
         display: flex;
     }
+
     .tabs {
         flex-direction: column;
         display: none;
@@ -434,9 +435,11 @@ header {
         backdrop-filter: blur(20px);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
+
     .tabs.show-menu {
         display: flex;
     }
+
     .tab-btn {
         width: 100%;
         text-align: left;
@@ -800,5 +803,57 @@ footer {
     /* Keep hide-mobile text visible but slightly smaller */
     .hide-mobile {
         display: inline;
+    }
+
+    /* Modal como tipo "Panel Inferior" al 75% de la pantalla */
+    .modal {
+        overflow: hidden;
+    }
+
+    .modal-content {
+        position: absolute;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        transform: none;
+        height: 75vh;
+        max-height: 75vh;
+        width: 100%;
+        margin: 0;
+        border-radius: 24px 24px 0 0;
+        overflow-y: auto;
+        display: block;
+    }
+
+    .cart-items {
+        max-height: none;
+        overflow-y: visible;
+        padding: 0.8rem;
+    }
+
+    .cart-client-info {
+        padding: 0.8rem !important;
+    }
+
+    .cart-footer {
+        padding: 1rem;
+    }
+
+    .modal-header {
+        padding: 1rem;
+    }
+
+    #new-client-form div {
+        margin-bottom: 0.5rem !important;
+    }
+
+    .input-modern {
+        padding: 10px;
+        font-size: 0.95rem;
+    }
+
+    .checkout-btn {
+        padding: 1rem;
+        font-size: 1rem;
     }
 }
