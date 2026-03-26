@@ -508,6 +508,14 @@
                             <input type="text" id="edit-client-city">
                         </div>
                         <div class="form-col" style="margin-bottom: 1rem;">
+                            <label>Fecha de Inicio (Última Compra):</label>
+                            <input type="date" id="edit-client-start-date">
+                        </div>
+                        <div class="form-col" style="margin-bottom: 1rem;">
+                            <label>Fecha de Fin (Última Compra):</label>
+                            <input type="date" id="edit-client-end-date">
+                        </div>
+                        <div class="form-col" style="margin-bottom: 1rem;">
                             <label>PIN de Acceso (4 dígitos):</label>
                             <input type="text" id="edit-client-pin" placeholder="No asignado aún">
                         </div>
@@ -2671,9 +2679,21 @@
                 }
 
                 // Get the most recent details
-                let latestSale = Object.values(sales).sort((a, b) => b.date - a.date)[0];
+                const sortedKeys = Object.keys(sales).sort((k1, k2) => sales[k2].date - sales[k1].date);
+                window.currentEditingSaleKey = sortedKeys[0];
+                let latestSale = sales[window.currentEditingSaleKey];
                 document.getElementById('edit-client-name').value = latestSale.clientName || '';
                 document.getElementById('edit-client-city').value = latestSale.clientCity || '';
+
+                if (latestSale.date) {
+                    const sd = new Date(latestSale.date);
+                    document.getElementById('edit-client-start-date').value = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}-${String(sd.getDate()).padStart(2, '0')}`;
+                } else document.getElementById('edit-client-start-date').value = '';
+
+                if (latestSale.expirationDate) {
+                    const ed = new Date(latestSale.expirationDate);
+                    document.getElementById('edit-client-end-date').value = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
+                } else document.getElementById('edit-client-end-date').value = '';
 
                 // Fetch PIN if any
                 const pinSnap = await db.ref(`clientProfiles/${phone}/pin`).once('value');
@@ -2718,6 +2738,20 @@
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientName`] = newName;
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientCity`] = newCity;
                     });
+                    
+                    if (window.currentEditingSaleKey) {
+                        const startVal = document.getElementById('edit-client-start-date').value;
+                        if (startVal) {
+                            const [sYear, sMo, sDa] = startVal.split('-');
+                            updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/date`] = new Date(sYear, sMo - 1, sDa, 12, 0, 0).getTime();
+                        }
+                        const endVal = document.getElementById('edit-client-end-date').value;
+                        if (endVal) {
+                            const [eYear, eMo, eDa] = endVal.split('-');
+                            updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/expirationDate`] = new Date(eYear, eMo - 1, eDa, 12, 0, 0).getTime();
+                        }
+                    }
+
                     await db.ref('/').update(updates);
 
                     // Update PIN
