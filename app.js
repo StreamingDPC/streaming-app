@@ -500,8 +500,11 @@ function renderProducts(category) {
 
         // Allow bypassing 'Agotado' status if the seller is specifically authorized 
         // to renew this exhausted screen.
-        if (!inStock && isSellerMode && currentSellerName && product.allowExhaustedSeller === currentSellerName) {
-            inStock = true;
+        if (!inStock && isSellerMode && currentSellerName && product.allowExhaustedSeller) {
+            const allowedList = product.allowExhaustedSeller.split(',').map(x => x.trim());
+            if (allowedList.includes(currentSellerName)) {
+                inStock = true;
+            }
         }
 
         let buttonHtml = inStock
