@@ -531,13 +531,16 @@
                 <span class="close-modal client-dash-close">&times;</span>
             </div>
             <div class="code-body" style="padding: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <p style="color: var(--text-secondary); margin: 0;">Aquí puedes ver tus compras y fechas de corte
-                        (30 días de vigencia).</p>
-                    <button id="logout-client-btn"
-                        style="background: rgba(255, 77, 77, 0.2); border: 1px solid #ff4d4d; color: #ff4d4d; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: bold;">
-                        <i class="fa-solid fa-right-from-bracket"></i> Salir
-                    </button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+                    <p style="color: var(--text-secondary); margin: 0; flex: 1;">Aquí puedes ver tus compras y fechas de corte (30 días de vigencia).</p>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="change-client-pin-btn" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: bold;">
+                            <i class="fa-solid fa-key"></i> Cambiar PIN
+                        </button>
+                        <button id="logout-client-btn" style="background: rgba(255, 77, 77, 0.2); border: 1px solid #ff4d4d; color: #ff4d4d; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; font-weight: bold;">
+                            <i class="fa-solid fa-right-from-bracket"></i> Salir
+                        </button>
+                    </div>
                 </div>
 
                 <div

@@ -920,6 +920,32 @@ function setupEventListeners() {
         });
     }
 
+    const changeClientPinBtn = document.getElementById('change-client-pin-btn');
+    if (changeClientPinBtn) {
+        changeClientPinBtn.addEventListener('click', () => {
+            const currentPin = prompt('Por seguridad, ingresa tu PIN ACTUAL (4 dígitos):');
+            if (currentPin === null) return;
+            
+            if (currentPin !== windowTempClientPin) {
+                return alert('❌ El PIN actual ingresado no coincide.');
+            }
+
+            const newPin = prompt('Ingresa tu NUEVO PIN (4 dígitos numéricos):');
+            if (newPin === null) return;
+
+            if (!/^\d{4}$/.test(newPin.trim())) {
+                return alert('❌ El nuevo PIN debe contener exactamente 4 números. Inténtalo de nuevo.');
+            }
+
+            db.ref(`clientProfiles/${clientPhoneLoggedIn}/pin`).set(newPin.trim()).then(() => {
+                windowTempClientPin = newPin.trim();
+                alert('¡Éxito! Tu PIN ha sido actualizado correctamente. A partir de ahora deberás usar tu nuevo PIN para ingresar.');
+            }).catch(err => {
+                alert('Error al actualizar el PIN: ' + err.message);
+            });
+        });
+    }
+
     if (logoutClientBtn) {
         logoutClientBtn.addEventListener('click', () => {
             localStorage.removeItem('clientPhone');
