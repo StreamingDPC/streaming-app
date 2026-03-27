@@ -1394,6 +1394,7 @@
             if (data) {
                 dynamicProducts = data.products || [];
                 storeConfig = data.storeConfig || storeConfig;
+                window.allClientProfiles = data.clientProfiles || {};
 
                 if (!adminInitialized) {
                     adminInitialized = true;
