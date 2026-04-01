@@ -65,6 +65,7 @@
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyBscP8FT1dcnHlSFMXc3DlfXSgRO9ET9s4",
@@ -80,17 +81,19 @@
 
         function checkPass() {
             const pass = document.getElementById('admin-pass').value;
-            db.ref('storeConfig/adminPassword').once('value').then(snap => {
-                const dbPass = snap.val() || 'admin123';
-                if (pass === dbPass) {
+            const email = 'admin@streamingdpc.com'; // Fixed admin email
+            
+            // Firebase Auth Login
+            firebase.auth().signInWithEmailAndPassword(email, pass)
+                .then((userCredential) => {
                     localStorage.setItem('adminLoggedIn', 'true');
                     window.location.href = 'admin.html';
-                } else {
+                })
+                .catch((error) => {
+                    console.error("Auth Error:", error);
                     document.getElementById('error').style.display = 'block';
-                }
-            }).catch(err => {
-                alert("Error de conexión, intenta de nuevo.");
-            });
+                    document.getElementById('error').innerText = "Contraseña incorrecta o usuario no creado en Firebase";
+                });
         }
     </script>
 </body>

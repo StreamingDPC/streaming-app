@@ -1,0 +1,604 @@
+<!-- TAB CONFIGURACIÓN -->
+<div id="tab-configuracion" class="tab-content">
+    <div class="admin-form" style="padding-bottom: 2rem;">
+        <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-gear" style="color:var(--accent-primary);"></i> Panel
+            de Configuración</h2>
+
+        <!-- Sub Tabs Bar -->
+        <div
+            style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; overflow-x: auto;">
+            <button class="save-btn sub-conf-btn" id="btn-conf-general" onclick="showSubConf('general', this)"
+                style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:white; color:black;">Generales</button>
+            <button class="save-btn sub-conf-btn" id="btn-conf-clientes" onclick="showSubConf('clientes', this)"
+                style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Clientes
+                (Solo Administrador)</button>
+            <button class="save-btn sub-conf-btn" id="btn-conf-ventas" onclick="showSubConf('ventas', this)"
+                style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Ventas
+                (Solo Vendedores)</button>
+            <button class="save-btn sub-conf-btn" id="btn-conf-total" onclick="showSubConf('total', this)"
+                style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Total
+                Ventas (Mes)</button>
+            <button class="save-btn sub-conf-btn" id="btn-conf-seguridad" onclick="showSubConf('seguridad', this)"
+                style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Accesos
+                / Seguridad</button>
+        </div>
+
+        <!-- SUB TAB: GENERAL -->
+        <div id="sub-conf-general" class="sub-conf-content" style="display:block;">
+            <h3>Ajustes Generales de la Tienda</h3>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom:1rem;">
+                <div class="form-col">
+                    <label>Modo Mantenimiento (Apagar tienda visible)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-maintenanceEnabled" style="flex:1;">
+                            <option value="false">Inactivo / En Línea</option>
+                            <option value="true">Activo / En Mantenimiento</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <label>Mensaje de Mantenimiento</label>
+                    <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                        <textarea id="conf-maintenanceMessage" rows="2" style="flex:1;"
+                            placeholder="Ej: Estamos actualizando nuestros servicios, volvemos pronto."></textarea>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-col" style="margin-bottom: 1rem;">
+                <label>Número de WhatsApp (Ej: 573155182545)</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" id="conf-whatsapp" style="flex:1;">
+                    <button class="save-btn" onclick="saveConfig()"
+                        style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                        title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Link de Facebook (Opcional)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" id="conf-facebook" placeholder="Ej: https://facebook.com/pagina"
+                            style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Link de Instagram (Opcional)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" id="conf-instagram" placeholder="Ej: https://instagram.com/pagina"
+                            style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Link de TikTok (Opcional)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" id="conf-tiktok" placeholder="Ej: https://tiktok.com/@tu_perfil"
+                            style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Link de Kwai (Opcional)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" id="conf-kwai" placeholder="Ej: https://kwai.com/@tu_perfil" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Link de YouTube (Opcional)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" id="conf-youtube" placeholder="Ej: https://youtube.com/@tu_canal"
+                            style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col"></div>
+            </div>
+
+            <div class="form-col" style="margin-bottom: 1rem;">
+                <label>Información de Pagos (Mensaje de WhatsApp)</label>
+                <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                    <textarea id="conf-paymentInfo" style="flex:1;"></textarea>
+                    <button class="save-btn" onclick="saveConfig()"
+                        style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                        title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-list"
+                            style="color:#f39c12;"></i> Orden de Pestañas</h3>
+                    <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Define el orden en el que quieres
+                        que aparezcan las pestañas. Separa cada una por comas. (Valores:
+                        individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all)</p>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="text" id="conf-tabOrder" style="flex:1;"
+                            placeholder="Ej: individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB TAB: CLIENTES -->
+        <div id="sub-conf-clientes" class="sub-conf-content" style="display:none;">
+            <h3>Configuración Exclusiva para Clientes</h3>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Descuento CLIENTES FINALES (Múltiples pantallas)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-discountEnabled" style="flex:1;">
+                            <option value="true">Activo / Habilitado</option>
+                            <option value="false">Inactivo / Apagado</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Valor a descontar ($) Clientes</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-discountAmount" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col">
+                    <label>Anuncio Flotante para CLIENTES</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-clientBannerEnabled" style="flex:1;">
+                            <option value="true">Activo / Visible</option>
+                            <option value="false">Inactivo / Oculto</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <label>Texto Anuncio Clientes</label>
+                    <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                        <textarea id="conf-clientBannerText" rows="2" style="flex:1;"
+                            placeholder="Ej: ¡Lleva 2 pantallas y ahorra $1000!"></textarea>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Valor descuento PROMOCIÓN Clientes ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-clientPromoDiscount" placeholder="Ej: 1000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Límite de pantallas (P/Cliente)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-clientPromoLimit" placeholder="Ej: 2" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                    <span style="font-size:0.75rem; color:#ccc;">Las que excedan este límite se cobrarán a precio normal
+                        sin descuento.</span>
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                <div class="form-col">
+                    <label>Botón Obtener Código Netflix</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-netflixEnabled" style="flex:1;">
+                            <option value="true">Mostrar Visible</option>
+                            <option value="false">Ocultar</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Botón Obtener Código Disney</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-disneyEnabled" style="flex:1;">
+                            <option value="true">Mostrar Visible</option>
+                            <option value="false">Ocultar</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-col"
+                style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <label>Mensaje Recordatorio Renovación (Usa {cliente} y {pantallas} para autocompletar)</label>
+                <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                    <textarea id="conf-reminderTemplate" style="height: 150px; padding: 10px; flex:1;"></textarea>
+                    <button class="save-btn" onclick="saveConfig()"
+                        style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                        title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                </div>
+                <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Este mensaje se mandará por WhatsApp
+                    para los que vencen HOY.</p>
+            </div>
+
+            <div class="form-col" style="margin-bottom: 2rem;">
+                <label>Mensaje Vencimiento MAÑANA (Aviso Previo)</label>
+                <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                    <textarea id="conf-reminderTomorrowTemplate"
+                        style="height: 100px; padding: 10px; flex:1;"></textarea>
+                    <button class="save-btn" onclick="saveConfig()"
+                        style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                        title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                </div>
+                <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Mensaje suave que se manda 1 día
+                    antes.</p>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Asistente Automático Vencimiento HOY</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-autoReminderEnabled" style="flex:1;">
+                            <option value="true">Activo / Encendido</option>
+                            <option value="false">Apagado</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                    <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de WhatsApp de los
+                        que vencen hoy.</p>
+                </div>
+                <div class="form-col">
+                    <label>Asistente Automático Aviso MAÑANA</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-autoReminderTomorrowEnabled" style="flex:1;">
+                            <option value="true">Activo / Encendido</option>
+                            <option value="false">Apagado</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                    <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de WhatsApp para
+                        los que vencen mañana.</p>
+                </div>
+            </div>
+
+            <div class="form-col" style="margin-bottom: 1rem;">
+                <label>Hora de Activación (Formato 24h: 0 a 23)</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="number" id="conf-autoReminderHour" min="0" max="23" placeholder="Ej: 8 para 8:00 AM"
+                        style="margin-bottom: 5px; flex:1;">
+                    <button class="save-btn" onclick="saveConfig()"
+                        style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                        title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                </div>
+                <button class="save-btn" onclick="checkDailyAutoReminders(true)"
+                    style="background:#f39c12; margin-top:5px; width:auto; padding: 8px 15px; font-size:0.8rem;"><i
+                        class="fa-solid fa-play"></i> Forzar Envíos de Hoy AHORA</button>
+            </div>
+        </div>
+
+        <!-- SUB TAB: VENTAS / VENDEDORES -->
+        <div id="sub-conf-ventas" class="sub-conf-content" style="display:none;">
+            <h3>Configuración Exclusiva Vendedores</h3>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Descuento EXCLUSIVO VENDEDORES (Múltiples pantallas)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-sellerDiscountEnabled" style="flex:1;">
+                            <option value="true">Activo / Habilitado</option>
+                            <option value="false">Inactivo / Apagado</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Valor a descontar ($) Vendedores</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-sellerDiscountAmount" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col">
+                    <label>Anuncio Flotante EXCLUSIVO VENDEDORES</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <select id="conf-sellerBannerEnabled" style="flex:1;">
+                            <option value="true">Activo / Visible</option>
+                            <option value="false">Inactivo / Oculto</option>
+                        </select>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <label>Texto Anuncio Vendedores</label>
+                    <div style="display:flex; gap:0.5rem; align-items:flex-start;">
+                        <textarea id="conf-sellerBannerText" rows="2" style="flex:1;"
+                            placeholder="Ej: ¡Aprovecha el descuento mayorista hoy!"></textarea>
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Valor descuento PROMOCIÓN Vendedores ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-sellerPromoDiscount" placeholder="Ej: 2000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Límite de pantallas (P/Vendedor)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-sellerPromoLimit" placeholder="Ej: 5" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                    <span style="font-size:0.75rem; color:#ccc;">Al habilitar el anuncio, este descuento reemplazará al
+                        descuento múltiple común y corriente.</span>
+                </div>
+            </div>
+
+            <h4 style="margin-top: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">Incentivos
+                Individuales Vendedores</h4>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono Netflix ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveNetflix" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono Disney+ ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveDisney" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono HBO Max ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveHbo" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono Prime Video ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentivePrime" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono Paramount+ ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveParamount" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono Vix ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveVix" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono IPTV ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveIptv" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono Crunchyroll ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveCrunchyroll" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono Apple TV ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveApple" placeholder="Ej: 500" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+            <h4 style="margin-top: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">Incentivos por
+                Combos Vendedores</h4>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono x Combo 2 P. ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveCombo2" placeholder="Ej: 2000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono x Combo 3 P. ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveCombo3" placeholder="Ej: 3000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono x Combo 4 P. ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveCombo4" placeholder="Ej: 4000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono x Combo 5+ P. ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveCombo5" placeholder="Ej: 5000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono x Promo Fin de Semana ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveFinde" placeholder="Ej: 6000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+                <div class="form-col">
+                    <label>Bono x Promo del Mes ($)</label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <input type="number" id="conf-incentiveMes" placeholder="Ej: 8000" style="flex:1;">
+                        <button class="save-btn" onclick="saveConfig()"
+                            style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                            title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB TAB: TOTAL VENTAS -->
+        <div id="sub-conf-total" class="sub-conf-content" style="display:none;">
+            <h3><i class="fa-solid fa-chart-pie"></i> Total Ventas Mensuales</h3>
+            <p style="font-size:0.9rem; color:#a0a0a0; margin-bottom: 1.5rem;">Concentrado de las ventas aprobadas con
+                sus totales separadas por mes.</p>
+
+            <div id="monthly-sales-report"
+                style="background: var(--glass); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--glass-border);">
+                <p style="color:#ccc; text-align:center;">Cargando concentrado de ventas...</p>
+            </div>
+            <button class="save-btn" onclick="loadMonthlySalesReport()" style="margin-top:1rem; width:100%;"><i
+                    class="fa-solid fa-rotate-right"></i> Actualizar Reporte</button>
+        </div>
+
+        <!-- SUB TAB: SEGURIDAD Y ACCESOS -->
+        <div id="sub-conf-seguridad" class="sub-conf-content" style="display:none;">
+            <h3>Contraseñas de Sistema</h3>
+
+            <div class="form-col"
+                style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <label>Contraseña Acceso Vendedores</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" id="conf-sellerPassword" placeholder="Ej: misvendedores123" style="flex:1;">
+                    <button class="save-btn" onclick="saveConfig()"
+                        style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                        title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                </div>
+                <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en la tienda
+                    verá los Precios de Vendedor.</p>
+            </div>
+
+            <div class="form-col" style="margin-bottom: 2rem;">
+                <label>Contraseña de Acceso Administrador (Este Panel)</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" id="conf-adminPassword" placeholder="Ej: admin123" style="flex:1;">
+                    <button class="save-btn" onclick="saveConfig()"
+                        style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                        title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                </div>
+                <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en el login de
+                    administradores podrá acceder y modificar toda la tienda.</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
+            <button class="save-btn" onclick="saveConfig()" style="width: 100%;"><i class="fa-solid fa-check"></i>
+                Guardar Todos los Cambios Locales en la Nube</button>
+        </div>
+    </div>
+</div>

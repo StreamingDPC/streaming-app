@@ -1222,6 +1222,9 @@ function setupEventListeners() {
             }
 
             const cleanPhone = cPhone ? cPhone.replace(/\D/g, '') : '';
+            if (!cleanPhone || cleanPhone.length < 5) {
+                return alert('Por favor, indica un número de celular válido para registrar la compra.');
+            }
             if (cleanPhone && storeConfig.blockedClients && storeConfig.blockedClients.includes(cleanPhone)) {
                 return alert('⚠️ Este número de celular ha sido bloqueado por el administrador. Contacta con soporte.');
             }
@@ -1381,12 +1384,18 @@ function setupEventListeners() {
                 window.renewalSource = null;
             } else {
                 // NUEVA VENTA
-                if (isSellerMode || publicSellerRef || extrasOriginalOwner) {
+                // For admin or direct purchases when no seller is attached, track under 'Página Web Oficial'
+                if (!isSellerMode && !publicSellerRef && !extrasOriginalOwner) {
+                    db.ref(`sellerSales/Página Web Oficial`).push(saleData);
+                } else if (isSellerMode || publicSellerRef || extrasOriginalOwner) {
                     db.ref(`sellerSales/${finalSellerDestination}`).push(saleData);
                 }
 
                 if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
                     db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
+                    db.ref(`clientProfiles/${cleanPhoneTracking}`).update({
+                        name: cName || 'Cliente'
+                    });
                 }
             }
 

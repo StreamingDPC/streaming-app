@@ -206,36 +206,6 @@
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
-    <script>
-        // Init firebase only for auth check at the head
-        const fwConfig = {
-            apiKey: "AIzaSyBscP8FT1dcnHlSFMXc3DlfXSgRO9ET9s4",
-            authDomain: "streamingdpc-7e7fa.firebaseapp.com",
-            databaseURL: "https://streamingdpc-7e7fa-default-rtdb.firebaseio.com",
-            projectId: "streamingdpc-7e7fa",
-            storageBucket: "streamingdpc-7e7fa.firebasestorage.app",
-            messagingSenderId: "831116907849",
-            appId: "1:831116907849:web:ee8e744db342970fd0b698"
-        };
-        if (!firebase.apps.length) {
-            firebase.initializeApp(fwConfig);
-        }
-        
-        firebase.auth().onAuthStateChanged((user) => {
-            if (!user) {
-                // Kick out unauthenticated access
-                window.location.href = 'login.html';
-            }
-        });
-
-        // Ensure original logout overrides clear firebase session
-        window.logout = function() {
-            firebase.auth().signOut().then(() => {
-                window.location.href = 'login.html';
-            });
-        };
-    </script>
 </head>
 
 <body>
@@ -311,27 +281,6 @@
                         <label>Cantidad en Stock (Opcional, 0 = Sin límite)</label>
                         <input type="number" id="new-stock" placeholder="Ej: 5" value="0">
                     </div>
-                    <div class="form-col" style="grid-column: 1 / -1; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                        <label>Habilitar para Renovación (Incluso Agotado)</label>
-                        <input type="text" id="search-allow-exhausted" placeholder="🔍 Buscar vendedor o cliente..." oninput="filterAllowExhausted()" style="margin-bottom: 0.5rem; background: var(--glass); color: white;">
-                        <select id="new-allow-exhausted-seller" multiple style="height: auto; min-height: 120px;">
-                            <option value="">-- Ninguno --</option>
-                        </select>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Mantén presionado 'Ctrl' o 'Cmd' para seleccionar varios.</p>
-                        
-                        <div style="display:flex; gap:1rem; margin-top: 1rem; align-items:flex-start; flex-wrap:wrap;">
-                            <div style="flex:1; min-width: 120px;">
-                                <label style="font-size: 0.85rem; color:white;">Stock Reservado (Cant. por usuario)</label>
-                                <input type="number" id="new-allow-exhausted-stock" placeholder="Ej: 1" style="margin-top:0.3rem;">
-                                <small style="color:#ccc;">Vacío para ilimitado, o ingresa el límite.</small>
-                            </div>
-                            <div style="flex:1; min-width: 150px;">
-                                <label style="font-size: 0.85rem; color:white;">Fecha de Vencimiento de este stock</label>
-                                <input type="date" id="new-allow-exhausted-date" style="margin-top:0.3rem;">
-                                <small style="color:#ccc;">El stock se reiniciará si supera esta fecha.</small>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <button class="save-btn" onclick="saveProduct()">Guardar Producto</button>
@@ -365,29 +314,9 @@
         <div id="tab-estrenos" class="tab-content">
             <div class="admin-form">
                 <h3 id="estreno-form-title">Agregar Película / Estreno</h3>
-                <div class="form-grid">
-                    <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Título de la Película</label>
-                        <input type="text" id="new-estreno-title" placeholder="Ej: Deadpool 3">
-                    </div>
-                    <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Mes de Estreno</label>
-                        <select id="new-estreno-month">
-                            <option value="Enero">Enero</option>
-                            <option value="Febrero">Febrero</option>
-                            <option value="Marzo">Marzo</option>
-                            <option value="Abril">Abril</option>
-                            <option value="Mayo">Mayo</option>
-                            <option value="Junio">Junio</option>
-                            <option value="Julio">Julio</option>
-                            <option value="Agosto">Agosto</option>
-                            <option value="Septiembre">Septiembre</option>
-                            <option value="Octubre">Octubre</option>
-                            <option value="Noviembre">Noviembre</option>
-                            <option value="Diciembre">Diciembre</option>
-                            <option value="Otros">Otros</option>
-                        </select>
-                    </div>
+                <div class="form-col" style="margin-bottom: 1rem;">
+                    <label>Título de la Película</label>
+                    <input type="text" id="new-estreno-title" placeholder="Ej: Deadpool 3">
                 </div>
                 <div class="form-col" style="margin-bottom: 1rem;">
                     <label>Enlace del Tráiler (YouTube URL embed o link de video Mp4)</label>
@@ -513,12 +442,9 @@
                         <p style="font-size:0.85rem; color:#a0a0a0; margin-top:0.3rem;">Visualiza las ventas de cada
                             vendedor y envíales un recordatorio de vencimiento para que contacten a sus clientes.</p>
                     </div>
-                    <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
-                        <input type="text" id="search-ventas-vendedores" placeholder="🔍 Buscar vendedor o cliente..." class="input-modern" style="margin-bottom:0; min-width: 250px;" oninput="renderSellerSalesStats()">
-                        <button class="save-btn" onclick="deleteSelectedSellerSales()"
-                            style="background:#ff4d4d; margin:0; width:auto; padding: 8px 15px; font-size:0.9rem;"><i
-                                class="fa-solid fa-trash"></i> Eliminar Selección</button>
-                    </div>
+                    <button class="save-btn" onclick="deleteSelectedSellerSales()"
+                        style="background:#ff4d4d; margin:0; width:auto; padding: 8px 15px; font-size:0.9rem;"><i
+                            class="fa-solid fa-trash"></i> Eliminar Selección</button>
                 </div>
                 <div id="admin-list-sellers-stats" class="admin-list"></div>
             </div>
@@ -550,18 +476,6 @@
                         <div class="form-col" style="margin-bottom: 1rem;">
                             <label>Ciudad Guardada:</label>
                             <input type="text" id="edit-client-city">
-                        </div>
-                        <div class="form-col" style="margin-bottom: 1rem; grid-column: 1 / -1;">
-                            <label>Seleccionar Producto/Venta a Editar Fechas:</label>
-                            <select id="edit-client-select-sale" style="width: 100%; padding: 0.5rem; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white; border-radius: 8px;" onchange="onEditClientSaleChange()"></select>
-                        </div>
-                        <div class="form-col" style="margin-bottom: 1rem;">
-                            <label>Fecha de Inicio:</label>
-                            <input type="date" id="edit-client-start-date">
-                        </div>
-                        <div class="form-col" style="margin-bottom: 1rem;">
-                            <label>Fecha de Fin:</label>
-                            <input type="date" id="edit-client-end-date">
                         </div>
                         <div class="form-col" style="margin-bottom: 1rem;">
                             <label>PIN de Acceso (4 dígitos):</label>
@@ -611,651 +525,382 @@
 
         <!-- TAB CONFIGURACIÓN -->
         <div id="tab-configuracion" class="tab-content">
-            <div class="admin-form" style="padding-bottom: 2rem;">
-                <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-gear" style="color:var(--accent-primary);"></i>
-                    Panel
-                    de Configuración</h2>
+            <div class="admin-form">
+                <h3>Ajustes Generales de la Tienda</h3>
 
-                <!-- Sub Tabs Bar -->
-                <div
-                    style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; overflow-x: auto;">
-                    <button class="save-btn sub-conf-btn" id="btn-conf-general" onclick="showSubConf('general', this)"
-                        style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:white; color:black;">Generales</button>
-                    <button class="save-btn sub-conf-btn" id="btn-conf-clientes" onclick="showSubConf('clientes', this)"
-                        style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Clientes
-                        (Solo Administrador)</button>
-                    <button class="save-btn sub-conf-btn" id="btn-conf-ventas" onclick="showSubConf('ventas', this)"
-                        style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Ventas
-                        (Solo Vendedores)</button>
-                    <button class="save-btn sub-conf-btn" id="btn-conf-total" onclick="showSubConf('total', this)"
-                        style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Total
-                        Ventas (Mes)</button>
-                    <button class="save-btn sub-conf-btn" id="btn-conf-seguridad"
-                        onclick="showSubConf('seguridad', this)"
-                        style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Accesos
-                        / Seguridad</button>
-                </div>
-
-                <!-- SUB TAB: GENERAL -->
-                <div id="sub-conf-general" class="sub-conf-content" style="display:block;">
-                    <h3>Ajustes Generales de la Tienda</h3>
-
-                    <div class="form-grid"
-                        style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom:1rem;">
-                        <div class="form-col">
-                            <label>Modo Mantenimiento (Apagar tienda visible)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-maintenanceEnabled" style="flex:1;">
-                                    <option value="false">Inactivo / En Línea</option>
-                                    <option value="true">Activo / En Mantenimiento</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col" style="grid-column: 1 / -1;">
-                            <label>Mensaje de Mantenimiento</label>
-                            <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                                <textarea id="conf-maintenanceMessage" rows="2" style="flex:1;"
-                                    placeholder="Ej: Estamos actualizando nuestros servicios, volvemos pronto."></textarea>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom:1rem;">
+                    <div class="form-col">
+                        <label>Modo Mantenimiento (Apagar tienda visible)</label>
+                        <select id="conf-maintenanceEnabled">
+                            <option value="false">Inactivo / En Línea</option>
+                            <option value="true">Activo / En Mantenimiento</option>
+                        </select>
                     </div>
-
-                    <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Número de WhatsApp (Ej: 573155182545)</label>
-                        <div style="display:flex; gap:0.5rem; align-items:center;">
-                            <input type="text" id="conf-whatsapp" style="flex:1;">
-                            <button class="save-btn" onclick="saveConfig()"
-                                style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Link de Facebook (Opcional)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="text" id="conf-facebook" placeholder="Ej: https://facebook.com/pagina"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Link de Instagram (Opcional)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="text" id="conf-instagram" placeholder="Ej: https://instagram.com/pagina"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Link de TikTok (Opcional)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="text" id="conf-tiktok" placeholder="Ej: https://tiktok.com/@tu_perfil"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Link de Kwai (Opcional)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="text" id="conf-kwai" placeholder="Ej: https://kwai.com/@tu_perfil"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Link de YouTube (Opcional)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="text" id="conf-youtube" placeholder="Ej: https://youtube.com/@tu_canal"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col"></div>
-                    </div>
-
-                    <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Información de Pagos (Mensaje de WhatsApp)</label>
-                        <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                            <textarea id="conf-paymentInfo" style="flex:1;"></textarea>
-                            <button class="save-btn" onclick="saveConfig()"
-                                style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="form-grid"
-                        style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <div class="form-col" style="grid-column: 1 / -1;">
-                            <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-list"
-                                    style="color:#f39c12;"></i> Orden de Pestañas</h3>
-                            <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Define el orden en el que
-                                quieres
-                                que aparezcan las pestañas. Separa cada una por comas. (Valores:
-                                individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all)
-                            </p>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="text" id="conf-tabOrder" style="flex:1;"
-                                    placeholder="Ej: individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
+                    <div class="form-col" style="grid-column: 1 / -1;">
+                        <label>Mensaje de Mantenimiento</label>
+                        <textarea id="conf-maintenanceMessage" rows="2"
+                            placeholder="Ej: Estamos actualizando nuestros servicios, volvemos pronto."></textarea>
                     </div>
                 </div>
 
-                <!-- SUB TAB: CLIENTES -->
-                <div id="sub-conf-clientes" class="sub-conf-content" style="display:none;">
-                    <h3>Configuración Exclusiva para Clientes</h3>
+                <div class="form-col" style="margin-bottom: 1rem;">
+                    <label>Número de WhatsApp (Ej: 573155182545)</label>
+                    <input type="text" id="conf-whatsapp">
+                </div>
 
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Descuento CLIENTES FINALES (Múltiples pantallas)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-discountEnabled" style="flex:1;">
-                                    <option value="true">Activo / Habilitado</option>
-                                    <option value="false">Inactivo / Apagado</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Valor a descontar ($) Clientes</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-discountAmount" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Link de Facebook (Opcional)</label>
+                        <input type="text" id="conf-facebook" placeholder="Ej: https://facebook.com/pagina">
                     </div>
-
-                    <div class="form-grid"
-                        style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <div class="form-col">
-                            <label>Anuncio Flotante para CLIENTES</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-clientBannerEnabled" style="flex:1;">
-                                    <option value="true">Activo / Visible</option>
-                                    <option value="false">Inactivo / Oculto</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col" style="grid-column: 1 / -1;">
-                            <label>Texto Anuncio Clientes</label>
-                            <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                                <textarea id="conf-clientBannerText" rows="2" style="flex:1;"
-                                    placeholder="Ej: ¡Lleva 2 pantallas y ahorra $1000!"></textarea>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Valor descuento PROMOCIÓN Clientes ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-clientPromoDiscount" placeholder="Ej: 1000"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Límite de pantallas (P/Cliente)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-clientPromoLimit" placeholder="Ej: 2" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                            <span style="font-size:0.75rem; color:#ccc;">Las que excedan este límite se cobrarán a
-                                precio normal
-                                sin descuento.</span>
-                        </div>
-                    </div>
-
-                    <div class="form-grid"
-                        style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
-                        <div class="form-col">
-                            <label>Botón Obtener Código Netflix</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-netflixEnabled" style="flex:1;">
-                                    <option value="true">Mostrar Visible</option>
-                                    <option value="false">Ocultar</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Botón Obtener Código Disney</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-disneyEnabled" style="flex:1;">
-                                    <option value="true">Mostrar Visible</option>
-                                    <option value="false">Ocultar</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-col"
-                        style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <label>Mensaje Recordatorio Renovación (Usa {cliente} y {pantallas} para autocompletar)</label>
-                        <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                            <textarea id="conf-reminderTemplate"
-                                style="height: 150px; padding: 10px; flex:1;"></textarea>
-                            <button class="save-btn" onclick="saveConfig()"
-                                style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Este mensaje se mandará por
-                            WhatsApp
-                            para los que vencen HOY.</p>
-                    </div>
-
-                    <div class="form-col" style="margin-bottom: 2rem;">
-                        <label>Mensaje Vencimiento MAÑANA (Aviso Previo)</label>
-                        <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                            <textarea id="conf-reminderTomorrowTemplate"
-                                style="height: 100px; padding: 10px; flex:1;"></textarea>
-                            <button class="save-btn" onclick="saveConfig()"
-                                style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Mensaje suave que se manda 1
-                            día
-                            antes.</p>
-                    </div>
-
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Asistente Automático Vencimiento HOY</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-autoReminderEnabled" style="flex:1;">
-                                    <option value="true">Activo / Encendido</option>
-                                    <option value="false">Apagado</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                            <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de
-                                WhatsApp de los
-                                que vencen hoy.</p>
-                        </div>
-                        <div class="form-col">
-                            <label>Asistente Automático Aviso MAÑANA</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-autoReminderTomorrowEnabled" style="flex:1;">
-                                    <option value="true">Activo / Encendido</option>
-                                    <option value="false">Apagado</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                            <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de
-                                WhatsApp para
-                                los que vencen mañana.</p>
-                        </div>
-                    </div>
-
-                    <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Hora de Activación (Formato 24h: 0 a 23)</label>
-                        <div style="display:flex; gap:0.5rem; align-items:center;">
-                            <input type="number" id="conf-autoReminderHour" min="0" max="23"
-                                placeholder="Ej: 8 para 8:00 AM" style="margin-bottom: 5px; flex:1;">
-                            <button class="save-btn" onclick="saveConfig()"
-                                style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                        <button class="save-btn" onclick="checkDailyAutoReminders(true)"
-                            style="background:#f39c12; margin-top:5px; width:auto; padding: 8px 15px; font-size:0.8rem;"><i
-                                class="fa-solid fa-play"></i> Forzar Envíos de Hoy AHORA</button>
+                    <div class="form-col">
+                        <label>Link de Instagram (Opcional)</label>
+                        <input type="text" id="conf-instagram" placeholder="Ej: https://instagram.com/pagina">
                     </div>
                 </div>
 
-                <!-- SUB TAB: VENTAS / VENDEDORES -->
-                <div id="sub-conf-ventas" class="sub-conf-content" style="display:none;">
-                    <h3>Configuración Exclusiva Vendedores</h3>
-
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Descuento EXCLUSIVO VENDEDORES (Múltiples pantallas)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-sellerDiscountEnabled" style="flex:1;">
-                                    <option value="true">Activo / Habilitado</option>
-                                    <option value="false">Inactivo / Apagado</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Valor a descontar ($) Vendedores</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-sellerDiscountAmount" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Link de TikTok (Opcional)</label>
+                        <input type="text" id="conf-tiktok" placeholder="Ej: https://tiktok.com/@tu_perfil">
                     </div>
-
-                    <div class="form-grid"
-                        style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <div class="form-col">
-                            <label>Anuncio Flotante EXCLUSIVO VENDEDORES</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <select id="conf-sellerBannerEnabled" style="flex:1;">
-                                    <option value="true">Activo / Visible</option>
-                                    <option value="false">Inactivo / Oculto</option>
-                                </select>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col" style="grid-column: 1 / -1;">
-                            <label>Texto Anuncio Vendedores</label>
-                            <div style="display:flex; gap:0.5rem; align-items:flex-start;">
-                                <textarea id="conf-sellerBannerText" rows="2" style="flex:1;"
-                                    placeholder="Ej: ¡Aprovecha el descuento mayorista hoy!"></textarea>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Valor descuento PROMOCIÓN Vendedores ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-sellerPromoDiscount" placeholder="Ej: 2000"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Límite de pantallas (P/Vendedor)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-sellerPromoLimit" placeholder="Ej: 5" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                            <span style="font-size:0.75rem; color:#ccc;">Al habilitar el anuncio, este descuento
-                                reemplazará al
-                                descuento múltiple común y corriente.</span>
-                        </div>
-                    </div>
-
-                    <h4 style="margin-top: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                        Incentivos
-                        Individuales Vendedores</h4>
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Bono Netflix ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveNetflix" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono Disney+ ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveDisney" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono HBO Max ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveHbo" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono Prime Video ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentivePrime" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono Paramount+ ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveParamount" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono Vix ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveVix" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono IPTV ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveIptv" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono Crunchyroll ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveCrunchyroll" placeholder="Ej: 500"
-                                    style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono Apple TV ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveApple" placeholder="Ej: 500" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                    <h4 style="margin-top: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                        Incentivos por
-                        Combos Vendedores</h4>
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Bono x Combo 2 P. ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveCombo2" placeholder="Ej: 2000" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono x Combo 3 P. ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveCombo3" placeholder="Ej: 3000" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono x Combo 4 P. ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveCombo4" placeholder="Ej: 4000" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono x Combo 5+ P. ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveCombo5" placeholder="Ej: 5000" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-grid" style="margin-bottom: 1rem;">
-                        <div class="form-col">
-                            <label>Bono x Promo Fin de Semana ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveFinde" placeholder="Ej: 6000" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <label>Bono x Promo del Mes ($)</label>
-                            <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <input type="number" id="conf-incentiveMes" placeholder="Ej: 8000" style="flex:1;">
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                        </div>
+                    <div class="form-col">
+                        <label>Link de Kwai (Opcional)</label>
+                        <input type="text" id="conf-kwai" placeholder="Ej: https://kwai.com/@tu_perfil">
                     </div>
                 </div>
 
-                <!-- SUB TAB: TOTAL VENTAS -->
-                <div id="sub-conf-total" class="sub-conf-content" style="display:none;">
-                    <h3><i class="fa-solid fa-chart-pie"></i> Total Ventas Mensuales</h3>
-                    <p style="font-size:0.9rem; color:#a0a0a0; margin-bottom: 1.5rem;">Concentrado de las ventas
-                        aprobadas con
-                        sus totales separadas por mes.</p>
-
-                    <div id="monthly-sales-report"
-                        style="background: var(--glass); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--glass-border);">
-                        <p style="color:#ccc; text-align:center;">Cargando concentrado de ventas...</p>
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Link de YouTube (Opcional)</label>
+                        <input type="text" id="conf-youtube" placeholder="Ej: https://youtube.com/@tu_canal">
                     </div>
-                    <button class="save-btn" onclick="loadMonthlySalesReport()" style="margin-top:1rem; width:100%;"><i
-                            class="fa-solid fa-rotate-right"></i> Actualizar Reporte</button>
+                    <div class="form-col"></div>
                 </div>
 
-                <!-- SUB TAB: SEGURIDAD Y ACCESOS -->
-                <div id="sub-conf-seguridad" class="sub-conf-content" style="display:none;">
-                    <h3>Contraseñas de Sistema</h3>
+                <div class="form-col" style="margin-bottom: 1rem;">
+                    <label>Información de Pagos (Mensaje de WhatsApp)</label>
+                    <textarea id="conf-paymentInfo"></textarea>
+                </div>
 
-                    <div class="form-col"
-                        style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <label>Contraseña Acceso Vendedores</label>
-                        <div style="display:flex; gap:0.5rem; align-items:center;">
-                            <input type="text" id="conf-sellerPassword" placeholder="Ej: misvendedores123"
-                                style="flex:1;">
-                            <button class="save-btn" onclick="saveConfig()"
-                                style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en la
-                            tienda
-                            verá los Precios de Vendedor.</p>
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Descuento CLIENTES FINALES (Múltiples pantallas)</label>
+                        <select id="conf-discountEnabled">
+                            <option value="true">Activo / Habilitado</option>
+                            <option value="false">Inactivo / Apagado</option>
+                        </select>
                     </div>
-
-                    <div class="form-col" style="margin-bottom: 2rem;">
-                        <label>Contraseña de Acceso Administrador (Este Panel)</label>
-                        <div style="display:flex; gap:0.5rem; align-items:center;">
-                            <input type="text" id="conf-adminPassword" placeholder="Ej: admin123" style="flex:1;">
-                            <button class="save-btn" onclick="saveConfig()"
-                                style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
-                                title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en el
-                            login de
-                            administradores podrá acceder y modificar toda la tienda.</p>
-                    </div>
-
-                    <div class="form-col"
-                        style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <label>Respaldo de Sistema Completo</label>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-bottom: 0.8rem;">Descarga una copia de
-                            seguridad o restaura un respaldo previo. Cuando descargues, guárdalo en tu carpeta
-                            <strong>F:\Resp Antigravity</strong>.
-                        </p>
-                        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                            <button class="save-btn" onclick="downloadBackup()"
-                                style="margin:0; flex:1; min-width:200px; background:#2980b9;"><i
-                                    class="fa-solid fa-download"></i> Realizar Respaldo</button>
-                            <button class="save-btn" onclick="triggerRestoreBackup()"
-                                style="margin:0; flex:1; min-width:200px; background:#8e44ad;"><i
-                                    class="fa-solid fa-upload"></i> Restaurar desde Respaldo</button>
-                            <input type="file" id="restore-backup-file" accept=".json" style="display:none;"
-                                onchange="handleRestoreBackup(event)">
-                        </div>
+                    <div class="form-col">
+                        <label>Valor a descontar ($) Clientes</label>
+                        <input type="number" id="conf-discountAmount">
                     </div>
                 </div>
 
-                <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                    <button class="save-btn" onclick="saveConfig()" style="width: 100%;"><i
-                            class="fa-solid fa-check"></i>
-                        Guardar Todos los Cambios Locales en la Nube</button>
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Descuento EXCLUSIVO VENDEDORES (Múltiples pantallas)</label>
+                        <select id="conf-sellerDiscountEnabled">
+                            <option value="true">Activo / Habilitado</option>
+                            <option value="false">Inactivo / Apagado</option>
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label>Valor a descontar ($) Vendedores</label>
+                        <input type="number" id="conf-sellerDiscountAmount">
+                    </div>
+                </div>
+
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                    <div class="form-col">
+                        <label>Anuncio Flotante para CLIENTES</label>
+                        <select id="conf-clientBannerEnabled">
+                            <option value="true">Activo / Visible</option>
+                            <option value="false">Inactivo / Oculto</option>
+                        </select>
+                    </div>
+                    <div class="form-col" style="grid-column: 1 / -1;">
+                        <label>Texto Anuncio Clientes</label>
+                        <textarea id="conf-clientBannerText" rows="2"
+                            placeholder="Ej: ¡Lleva 2 pantallas y ahorra $1000!"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Valor descuento PROMOCIÓN Clientes ($)</label>
+                        <input type="number" id="conf-clientPromoDiscount" placeholder="Ej: 1000">
+                    </div>
+                    <div class="form-col">
+                        <label>Límite de pantallas (P/Cliente)</label>
+                        <input type="number" id="conf-clientPromoLimit" placeholder="Ej: 2">
+                        <span style="font-size:0.75rem; color:#ccc;">Las que excedan este límite se cobrarán a precio
+                            normal sin descuento.</span>
+                    </div>
+                </div>
+
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                    <div class="form-col">
+                        <label>Anuncio Flotante EXCLUSIVO VENDEDORES</label>
+                        <select id="conf-sellerBannerEnabled">
+                            <option value="true">Activo / Visible</option>
+                            <option value="false">Inactivo / Oculto</option>
+                        </select>
+                    </div>
+                    <div class="form-col" style="grid-column: 1 / -1;">
+                        <label>Texto Anuncio Vendedores</label>
+                        <textarea id="conf-sellerBannerText" rows="2"
+                            placeholder="Ej: ¡Aprovecha el descuento mayorista hoy!"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 1rem;">
+                    <div class="form-col">
+                        <label>Valor descuento PROMOCIÓN Vendedores ($)</label>
+                        <input type="number" id="conf-sellerPromoDiscount" placeholder="Ej: 2000">
+                    </div>
+                    <div class="form-col">
+                        <label>Límite de pantallas (P/Vendedor)</label>
+                        <input type="number" id="conf-sellerPromoLimit" placeholder="Ej: 5">
+                        <span style="font-size:0.75rem; color:#ccc;">Al habilitar el anuncio, este descuento reemplazará
+                            al descuento múltiple común y corriente.</span>
+                    </div>
+                </div>
+
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                    <div class="form-col">
+                        <label>Botón Obtener Código Netflix</label>
+                        <select id="conf-netflixEnabled">
+                            <option value="true">Mostrar Visible</option>
+                            <option value="false">Ocultar</option>
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label>Botón Obtener Código Disney</label>
+                        <select id="conf-disneyEnabled">
+                            <option value="true">Mostrar Visible</option>
+                            <option value="false">Ocultar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-col" style="margin-bottom: 2rem;">
+                    <label>Mensaje Recordatorio Renovación (Usa {cliente} y {pantallas} para autocompletar)</label>
+                    <textarea id="conf-reminderTemplate" style="height: 150px; padding: 10px;"></textarea>
+                    <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Este mensaje se mandará por
+                        WhatsApp para los que vencen HOY.</p>
+                </div>
+
+                <div class="form-col" style="margin-bottom: 2rem;">
+                    <label>Mensaje Vencimiento MAÑANA (Aviso Previo)</label>
+                    <textarea id="conf-reminderTomorrowTemplate" style="height: 100px; padding: 10px;"></textarea>
+                    <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Mensaje suave que se manda 1 día
+                        antes.</p>
+                </div>
+
+                <div class="form-grid"
+                    style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                    <div class="form-col">
+                        <label>Asistente Automático Vencimiento HOY</label>
+                        <select id="conf-autoReminderEnabled">
+                            <option value="true">Activo / Encendido</option>
+                            <option value="false">Apagado</option>
+                        </select>
+                        <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de WhatsApp de
+                            los que vencen hoy.</p>
+                    </div>
+                    <div class="form-col">
+                        <label>Asistente Automático Aviso MAÑANA</label>
+                        <select id="conf-autoReminderTomorrowEnabled">
+                            <option value="true">Activo / Encendido</option>
+                            <option value="false">Apagado</option>
+                        </select>
+                        <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de WhatsApp
+                            para los que vencen mañana.</p>
+                    </div>
+                </div>
+
+                <div class="form-col" style="margin-bottom: 1rem;">
+                    <label>Hora de Activación (Formato 24h: 0 a 23)</label>
+                    <input type="number" id="conf-autoReminderHour" min="0" max="23" placeholder="Ej: 8 para 8:00 AM"
+                        style="margin-bottom: 5px;">
+                    <button class="save-btn" onclick="checkDailyAutoReminders(true)"
+                        style="background:#f39c12; margin-top:5px; width:auto; padding: 8px 15px; font-size:0.8rem;"><i
+                            class="fa-solid fa-play"></i> Forzar Envíos de Hoy AHORA</button>
                 </div>
             </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-list"
+                            style="color:#f39c12;"></i> Orden de Pestañas</h3>
+                    <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Define el orden en el que quieres
+                        que aparezcan las pestañas. Separa cada una por comas. (Valores:
+                        individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all)</p>
+                    <input type="text" id="conf-tabOrder"
+                        placeholder="Ej: individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all">
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-credit-card"
+                            style="color:#f39c12;"></i> Logos de Métodos de Pago</h3>
+                </div>
+                <!-- Nequi / Daviplata -->
+                <div class="form-col">
+                    <label>Habilitar Logo 1 (Nequi/Daviplata)</label>
+                    <select id="conf-nequiEnabled">
+                        <option value="true">Activo</option>
+                        <option value="false">Apagado</option>
+                    </select>
+                </div>
+                <div class="form-col">
+                    <label>Texto Logo 1</label>
+                    <input type="text" id="conf-nequiLabel" placeholder="Nequi / Daviplata">
+                </div>
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <label>Enlace de Imagen Logo 1</label>
+                    <input type="text" id="conf-nequiImg" placeholder="Ej: assets/nequi_daviplata.png">
+                </div>
+
+                <!-- Nu / Bre b -->
+                <div class="form-col" style="margin-top: 1rem;">
+                    <label>Habilitar Logo 2 (Nu / Bre b)</label>
+                    <select id="conf-nuEnabled">
+                        <option value="true">Activo</option>
+                        <option value="false">Apagado</option>
+                    </select>
+                </div>
+                <div class="form-col" style="margin-top: 1rem;">
+                    <label>Texto Logo 2</label>
+                    <input type="text" id="conf-nuLabel" placeholder="Nu / Bre b">
+                </div>
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <label>Enlace de Imagen Logo 2</label>
+                    <input type="text" id="conf-nuImg" placeholder="Ej: assets/nu_bre.jpg">
+                </div>
+            </div>
+
+            <div class="form-grid"
+                style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <div class="form-col" style="grid-column: 1 / -1;">
+                    <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-trophy"
+                            style="color:#f39c12;"></i> Sistema de Incentivos para Vendedores</h3>
+                    <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Motiva a tus vendedores
+                        dándoles bonos de plata digital acumulables por las ventas de pantallas y combos. Ellos
+                        verán este saldo en su panel.</p>
+                </div>
+                <div class="form-col">
+                    <label>Activar Incentivos</label>
+                    <select id="conf-incentiveEnabled">
+                        <option value="true">Activo / Encendido</option>
+                        <option value="false">Apagado</option>
+                    </select>
+                </div>
+                <div class="form-col">
+                    <label>Mensaje Motivacional (Semanal/Mensual)</label>
+                    <input type="text" id="conf-incentiveMessage"
+                        placeholder="Ej: ¡Gana $50,000 extra al llegar a la meta!">
+                </div>
+            </div>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono Netflix ($)</label>
+                    <input type="number" id="conf-incentiveNetflix" placeholder="Ej: 500">
+                </div>
+                <div class="form-col">
+                    <label>Bono Disney+ ($)</label>
+                    <input type="number" id="conf-incentiveDisney" placeholder="Ej: 500">
+                </div>
+                <div class="form-col">
+                    <label>Bono HBO Max ($)</label>
+                    <input type="number" id="conf-incentiveMax" placeholder="Ej: 500">
+                </div>
+            </div>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono Prime Video ($)</label>
+                    <input type="number" id="conf-incentivePrime" placeholder="Ej: 500">
+                </div>
+                <div class="form-col">
+                    <label>Bono Paramount+ ($)</label>
+                    <input type="number" id="conf-incentiveParamount" placeholder="Ej: 500">
+                </div>
+                <div class="form-col">
+                    <label>Bono Vix ($)</label>
+                    <input type="number" id="conf-incentiveVix" placeholder="Ej: 500">
+                </div>
+            </div>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono IPTV ($)</label>
+                    <input type="number" id="conf-incentiveIptv" placeholder="Ej: 500">
+                </div>
+                <div class="form-col">
+                    <label>Bono Crunchyroll ($)</label>
+                    <input type="number" id="conf-incentiveCrunchyroll" placeholder="Ej: 500">
+                </div>
+                <div class="form-col">
+                    <label>Bono Apple TV ($)</label>
+                    <input type="number" id="conf-incentiveApple" placeholder="Ej: 500">
+                </div>
+            </div>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono x Combo 2 P. ($)</label>
+                    <input type="number" id="conf-incentiveCombo2" placeholder="Ej: 2000">
+                </div>
+                <div class="form-col">
+                    <label>Bono x Combo 3 P. ($)</label>
+                    <input type="number" id="conf-incentiveCombo3" placeholder="Ej: 3000">
+                </div>
+                <div class="form-col">
+                    <label>Bono x Combo 4 P. ($)</label>
+                    <input type="number" id="conf-incentiveCombo4" placeholder="Ej: 4000">
+                </div>
+                <div class="form-col">
+                    <label>Bono x Combo 5+ P. ($)</label>
+                    <input type="number" id="conf-incentiveCombo5" placeholder="Ej: 5000">
+                </div>
+            </div>
+            <div class="form-grid" style="margin-bottom: 1rem;">
+                <div class="form-col">
+                    <label>Bono x Promo Fin de Semana ($)</label>
+                    <input type="number" id="conf-incentiveFinde" placeholder="Ej: 6000">
+                </div>
+                <div class="form-col">
+                    <label>Bono x Promo del Mes ($)</label>
+                    <input type="number" id="conf-incentiveMes" placeholder="Ej: 8000">
+                </div>
+            </div>
+
+            <div class="form-col"
+                style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <label>Contraseña Acceso Vendedores</label>
+                <input type="text" id="conf-sellerPassword" placeholder="Ej: misvendedores123">
+                <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en la
+                    tienda verá los Precios de Vendedor.</p>
+            </div>
+
+            <div class="form-col"
+                style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
+                <label>Contraseña de Acceso Administrador (Este Panel)</label>
+                <input type="text" id="conf-adminPassword" placeholder="Ej: admin123">
+                <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en el login de
+                    administradores podrá acceder y modificar toda la tienda.</p>
+            </div>
+
+            <button class="save-btn" onclick="saveConfig()">Guardar Configuración</button>
         </div>
     </div>
-    </div>
+
     </div>
 
     <script>
@@ -1264,128 +909,7 @@
             window.location.href = 'login.html';
         }
 
-        function showSubConf(subTabId, btn) {
-            document.querySelectorAll('.sub-conf-content').forEach(el => el.style.display = 'none');
-            document.getElementById('sub-conf-' + subTabId).style.display = 'block';
-
-            document.querySelectorAll('.sub-conf-btn').forEach(b => {
-                b.style.background = 'var(--glass)';
-                b.style.color = 'var(--text-secondary)';
-            });
-            btn.style.background = 'white';
-            btn.style.color = 'black';
-
-            if (subTabId === 'total') {
-                loadMonthlySalesReport();
-            }
-        }
-
-        async function loadMonthlySalesReport() {
-            const reportDiv = document.getElementById('monthly-sales-report');
-            if (!reportDiv) return;
-
-            reportDiv.innerHTML = '<p style="color:#ccc; text-align:center;">Cargando concentrado de ventas...</p>';
-
-            try {
-                const sellerSnap = await db.ref('sellerSales').once('value');
-                const sSales = sellerSnap.val() || {};
-
-                const monthlyTotals = {};
-                const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
-                Object.keys(sSales).forEach(sellerName => {
-                    const sellerSalesObj = sSales[sellerName];
-                    Object.keys(sellerSalesObj).forEach(saleKey => {
-                        const sale = sellerSalesObj[saleKey];
-                        if (sale.isPaid !== false) {
-                            const d = new Date(sale.date);
-                            const monthKey = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-                            // Use timestamp for sorting later
-                            const sortKey = d.getFullYear() * 100 + d.getMonth();
-
-                            if (!monthlyTotals[sortKey]) {
-                                monthlyTotals[sortKey] = { label: monthKey, total: 0 };
-                            }
-                            monthlyTotals[sortKey].total += (sale.total || 0);
-                        }
-                    });
-                });
-
-                let html = '<ul style="list-style:none; padding:0; margin:0;">';
-                const keys = Object.keys(monthlyTotals).map(Number).sort((a, b) => b - a);
-
-                if (keys.length === 0) {
-                    html += '<li style="color:#a0a0a0;">No hay ventas registradas o aprobadas aún.</li>';
-                } else {
-                    keys.forEach(k => {
-                        const data = monthlyTotals[k];
-                        html += `<li style="padding: 10px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between;">
-                            <span style="color:white; font-weight:bold;">${data.label}</span>
-                            <span style="color:#4cd137; font-weight:bold; font-size:1.1rem;">$${data.total.toLocaleString()}</span>
-                        </li>`;
-                    });
-                }
-                html += '</ul>';
-                reportDiv.innerHTML = html;
-            } catch (e) {
-                console.error(e);
-                reportDiv.innerHTML = '<p style="color:#ff4d4d; text-align:center;">Error cargando el reporte.</p>';
-            }
-        }
-
         let editIndex = -1;
-
-        async function downloadBackup() {
-            try {
-                const snap = await db.ref('/').once('value');
-                const data = snap.val();
-
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-
-                const d = new Date();
-                const dd = String(d.getDate()).padStart(2, '0');
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const yyyy = d.getFullYear();
-
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${dd}${mm}${yyyy}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                alert('Copia de seguridad realizada con éxito. Guarda el archivo en la carpeta "F:\\Resp Antigravity".');
-            } catch (e) {
-                alert('Error al realizar el respaldo: ' + e.message);
-            }
-        }
-
-        function triggerRestoreBackup() {
-            if (confirm('⚠️ ADVERTENCIA: Restaurar un respaldo SOBREESCRIBIRÁ TODA la base de datos actual y perderás todos los clientes, ventas y configuraciones más recientes. ¿Estás seguro de continuar?')) {
-                document.getElementById('restore-backup-file').click();
-            }
-        }
-
-        function handleRestoreBackup(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    await db.ref('/').set(data);
-                    alert('¡Base de datos restaurada con éxito! La página se recargará.');
-                    window.location.reload();
-                } catch (err) {
-                    alert('Error al procesar el archivo. Asegúrate de que es un archivo JSON de respaldo válido.');
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = ''; // Reset
-        }
         let dynamicProducts = [];
         let storeConfig = {
             whatsappNumber: "573155182545",
@@ -1424,7 +948,6 @@
             if (data) {
                 dynamicProducts = data.products || [];
                 storeConfig = data.storeConfig || storeConfig;
-                window.allClientProfiles = data.clientProfiles || {};
 
                 if (!adminInitialized) {
                     adminInitialized = true;
@@ -1496,7 +1019,7 @@
             if (document.getElementById('conf-incentiveMessage')) document.getElementById('conf-incentiveMessage').value = storeConfig.incentiveMessage || '';
             if (document.getElementById('conf-incentiveNetflix')) document.getElementById('conf-incentiveNetflix').value = storeConfig.incentiveNetflix || 0;
             if (document.getElementById('conf-incentiveDisney')) document.getElementById('conf-incentiveDisney').value = storeConfig.incentiveDisney || 0;
-            if (document.getElementById('conf-incentiveHbo')) document.getElementById('conf-incentiveHbo').value = storeConfig.incentiveHbo || storeConfig.incentiveMax || 0;
+            if (document.getElementById('conf-incentiveMax')) document.getElementById('conf-incentiveMax').value = storeConfig.incentiveMax || 0;
             if (document.getElementById('conf-incentivePrime')) document.getElementById('conf-incentivePrime').value = storeConfig.incentivePrime || 0;
             if (document.getElementById('conf-incentiveParamount')) document.getElementById('conf-incentiveParamount').value = storeConfig.incentiveParamount || 0;
             if (document.getElementById('conf-incentiveVix')) document.getElementById('conf-incentiveVix').value = storeConfig.incentiveVix || 0;
@@ -1538,60 +1061,20 @@
 
         function populateOwnerSelect() {
             const ownerSelect = document.getElementById('new-owner');
-            if (ownerSelect) {
-                const currentVal = ownerSelect.value;
-                ownerSelect.innerHTML = '<option value="admin">Administrador (Global)</option>';
-                const sellers = storeConfig.sellers || [];
-                sellers.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.name;
-                    opt.text = 'Vendedor: ' + s.name;
-                    ownerSelect.appendChild(opt);
-                });
-                if (currentVal && Array.from(ownerSelect.options).some(o => o.value === currentVal)) {
-                    ownerSelect.value = currentVal;
-                } else {
-                    ownerSelect.value = 'admin';
-                }
-            }
-
-            const allowSelect = document.getElementById('new-allow-exhausted-seller');
-            if (allowSelect) {
-                const currentAllows = Array.from(allowSelect.selectedOptions).map(o => o.value);
-                allowSelect.innerHTML = '<option value="">-- Ninguno --</option>';
-                const sellers = storeConfig.sellers || [];
-                sellers.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.name;
-                    opt.text = "👔 " + s.name;
-                    if (currentAllows.includes(s.name)) {
-                        opt.selected = true;
-                    }
-                    allowSelect.appendChild(opt);
-                });
-                if (window.allClientProfiles) {
-                    Object.keys(window.allClientProfiles).forEach(phone => {
-                        const name = window.allClientProfiles[phone].name || phone;
-                        const opt = document.createElement('option');
-                        opt.value = phone;
-                        opt.text = "👥 " + name + " (" + phone + ")";
-                        if (currentAllows.includes(phone)) {
-                            opt.selected = true;
-                        }
-                        allowSelect.appendChild(opt);
-                    });
-                }
-            }
-        }
-        
-        function filterAllowExhausted() {
-            const term = document.getElementById('search-allow-exhausted').value.toLowerCase();
-            const sel = document.getElementById('new-allow-exhausted-seller');
-            if (sel) {
-                Array.from(sel.options).forEach(opt => {
-                    if (opt.value === '') return;
-                    opt.style.display = opt.text.toLowerCase().includes(term) ? 'block' : 'none';
-                });
+            if (!ownerSelect) return;
+            const currentVal = ownerSelect.value;
+            ownerSelect.innerHTML = '<option value="admin">Administrador (Global)</option>';
+            const sellers = storeConfig.sellers || [];
+            sellers.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                opt.text = 'Vendedor: ' + s.name;
+                ownerSelect.appendChild(opt);
+            });
+            if (currentVal && Array.from(ownerSelect.options).some(o => o.value === currentVal)) {
+                ownerSelect.value = currentVal;
+            } else {
+                ownerSelect.value = 'admin';
             }
         }
 
@@ -1701,29 +1184,6 @@
             document.getElementById('new-image').value = p.image || '';
             document.getElementById('new-desc').value = p.desc || '';
             document.getElementById('new-stock').value = p.stock || 0;
-            if (document.getElementById('new-allow-exhausted-seller')) {
-                const sel = document.getElementById('new-allow-exhausted-seller');
-                document.getElementById('search-allow-exhausted').value = '';
-                Array.from(sel.options).forEach(opt => opt.style.display = 'block'); // reset
-
-                const allows = Object.keys(p.reserveRules || {});
-                if (allows.length === 0 && p.allowExhaustedSeller) { // fallback
-                    p.allowExhaustedSeller.split(',').map(x=>x.trim()).forEach(a=> {
-                       if (a) allows.push(a); 
-                    });
-                }
-                
-                Array.from(sel.options).forEach(opt => opt.selected = allows.includes(opt.value));
-                
-                let defaultStock = '';
-                let defaultDate = '';
-                if (allows.length > 0 && p.reserveRules && p.reserveRules[allows[0]]) {
-                   defaultStock = p.reserveRules[allows[0]].stock !== undefined && p.reserveRules[allows[0]].stock !== null ? p.reserveRules[allows[0]].stock : '';
-                   defaultDate = p.reserveRules[allows[0]].date || '';
-                }
-                document.getElementById('new-allow-exhausted-stock').value = defaultStock;
-                document.getElementById('new-allow-exhausted-date').value = defaultDate;
-            }
 
             document.getElementById('form-title').innerText = "Editar Producto";
             document.querySelector('.save-btn').innerText = "Actualizar Producto";
@@ -1741,13 +1201,6 @@
             document.getElementById('new-image').value = '';
             document.getElementById('new-desc').value = '';
             document.getElementById('new-stock').value = '0';
-            if (document.getElementById('new-allow-exhausted-seller')) {
-                const sel = document.getElementById('new-allow-exhausted-seller');
-                Array.from(sel.options).forEach(opt => opt.selected = false);
-                document.getElementById('new-allow-exhausted-stock').value = '';
-                document.getElementById('new-allow-exhausted-date').value = '';
-                document.getElementById('search-allow-exhausted').value = '';
-            }
             document.getElementById('owner-col').style.display = 'none';
             document.getElementById('new-owner').value = 'admin';
 
@@ -1765,23 +1218,6 @@
             const brand = document.getElementById('new-brand').value;
             const desc = document.getElementById('new-desc').value.trim();
             const stock = parseInt(document.getElementById('new-stock').value) || 0;
-            const allowExhaustedSeller = document.getElementById('new-allow-exhausted-seller') ? Array.from(document.getElementById('new-allow-exhausted-seller').selectedOptions).map(o => o.value).filter(v => v !== '').join(',') : '';
-            
-            let reserveRules = {};
-            const stockValStr = document.getElementById('new-allow-exhausted-stock').value;
-            const dateValStr = document.getElementById('new-allow-exhausted-date').value;
-            const reqStock = stockValStr ? parseInt(stockValStr) : null;
-            
-            if (document.getElementById('new-allow-exhausted-seller')) {
-                const selNodes = Array.from(document.getElementById('new-allow-exhausted-seller').selectedOptions).map(o => o.value).filter(v => v !== '');
-                selNodes.forEach(user => {
-                    reserveRules[user] = {
-                        stock: reqStock,
-                        date: dateValStr
-                    };
-                });
-            }
-
             let image = document.getElementById('new-image').value;
 
             if (!name || isNaN(price)) return alert('Completa los campos de Nombre y Precio');
@@ -1822,8 +1258,6 @@
                     brand,
                     desc,
                     stock,
-                    allowExhaustedSeller,
-                    reserveRules,
                     image,
                     active: true
                 };
@@ -1837,8 +1271,6 @@
                 dynamicProducts[editIndex].brand = brand;
                 dynamicProducts[editIndex].desc = desc;
                 dynamicProducts[editIndex].stock = stock;
-                dynamicProducts[editIndex].allowExhaustedSeller = allowExhaustedSeller;
-                dynamicProducts[editIndex].reserveRules = reserveRules;
                 dynamicProducts[editIndex].image = image;
                 // doesn't touch active status
                 cancelEdit();
@@ -1911,26 +1343,23 @@
             storeConfig.sellerPassword = document.getElementById('conf-sellerPassword').value;
             storeConfig.adminPassword = document.getElementById('conf-adminPassword').value || 'admin123';
 
-            if (document.getElementById('conf-incentiveEnabled')) storeConfig.incentiveEnabled = document.getElementById('conf-incentiveEnabled').value === 'true';
-            if (document.getElementById('conf-incentiveMessage')) storeConfig.incentiveMessage = document.getElementById('conf-incentiveMessage').value;
-            if (document.getElementById('conf-incentiveNetflix')) {
-                storeConfig.incentiveNetflix = parseInt(document.getElementById('conf-incentiveNetflix').value) || 0;
-                storeConfig.incentiveDisney = parseInt(document.getElementById('conf-incentiveDisney').value) || 0;
-                storeConfig.incentiveHbo = parseInt(document.getElementById('conf-incentiveHbo').value) || 0;
-                storeConfig.incentiveMax = storeConfig.incentiveHbo;
-                storeConfig.incentivePrime = parseInt(document.getElementById('conf-incentivePrime').value) || 0;
-                storeConfig.incentiveParamount = parseInt(document.getElementById('conf-incentiveParamount').value) || 0;
-                storeConfig.incentiveVix = parseInt(document.getElementById('conf-incentiveVix').value) || 0;
-                storeConfig.incentiveIptv = parseInt(document.getElementById('conf-incentiveIptv').value) || 0;
-                storeConfig.incentiveCrunchyroll = parseInt(document.getElementById('conf-incentiveCrunchyroll').value) || 0;
-                storeConfig.incentiveApple = parseInt(document.getElementById('conf-incentiveApple').value) || 0;
-                storeConfig.incentiveCombo2 = parseInt(document.getElementById('conf-incentiveCombo2').value) || 0;
-                storeConfig.incentiveCombo3 = parseInt(document.getElementById('conf-incentiveCombo3').value) || 0;
-                storeConfig.incentiveCombo4 = parseInt(document.getElementById('conf-incentiveCombo4').value) || 0;
-                storeConfig.incentiveCombo5 = parseInt(document.getElementById('conf-incentiveCombo5').value) || 0;
-                storeConfig.incentiveFinde = parseInt(document.getElementById('conf-incentiveFinde').value) || 0;
-                storeConfig.incentiveMes = parseInt(document.getElementById('conf-incentiveMes').value) || 0;
-            }
+            storeConfig.incentiveEnabled = document.getElementById('conf-incentiveEnabled').value === 'true';
+            storeConfig.incentiveMessage = document.getElementById('conf-incentiveMessage').value;
+            storeConfig.incentiveNetflix = parseInt(document.getElementById('conf-incentiveNetflix').value) || 0;
+            storeConfig.incentiveDisney = parseInt(document.getElementById('conf-incentiveDisney').value) || 0;
+            storeConfig.incentiveMax = parseInt(document.getElementById('conf-incentiveMax').value) || 0;
+            storeConfig.incentivePrime = parseInt(document.getElementById('conf-incentivePrime').value) || 0;
+            storeConfig.incentiveParamount = parseInt(document.getElementById('conf-incentiveParamount').value) || 0;
+            storeConfig.incentiveVix = parseInt(document.getElementById('conf-incentiveVix').value) || 0;
+            storeConfig.incentiveIptv = parseInt(document.getElementById('conf-incentiveIptv').value) || 0;
+            storeConfig.incentiveCrunchyroll = parseInt(document.getElementById('conf-incentiveCrunchyroll').value) || 0;
+            storeConfig.incentiveApple = parseInt(document.getElementById('conf-incentiveApple').value) || 0;
+            storeConfig.incentiveCombo2 = parseInt(document.getElementById('conf-incentiveCombo2').value) || 0;
+            storeConfig.incentiveCombo3 = parseInt(document.getElementById('conf-incentiveCombo3').value) || 0;
+            storeConfig.incentiveCombo4 = parseInt(document.getElementById('conf-incentiveCombo4').value) || 0;
+            storeConfig.incentiveCombo5 = parseInt(document.getElementById('conf-incentiveCombo5').value) || 0;
+            storeConfig.incentiveFinde = parseInt(document.getElementById('conf-incentiveFinde').value) || 0;
+            storeConfig.incentiveMes = parseInt(document.getElementById('conf-incentiveMes').value) || 0;
 
             if (document.getElementById('conf-tabOrder')) {
                 const arr = document.getElementById('conf-tabOrder').value.split(',').map(s => s.trim()).filter(s => s);
@@ -1962,8 +1391,7 @@
                 div.innerHTML = `
                     <div></div>
                     <div>
-                        <strong style="color: white">${e.title}</strong> 
-                        <span style="font-size: 0.7rem; background: var(--accent-primary); color: white; padding: 2px 5px; border-radius: 4px; margin-left: 5px;">${e.month || 'Sin mes'}</span><br>
+                        <strong style="color: white">${e.title}</strong><br>
                         <span style="font-size: 0.8rem; color: #a0a0a0; word-break: break-all;">${e.url}</span>
                     </div>
                     <div class="item-actions">
@@ -1984,7 +1412,6 @@
             const e = storeConfig.estrenos[index];
             document.getElementById('new-estreno-title').value = e.title;
             document.getElementById('new-estreno-url').value = e.url;
-            if (e.month) document.getElementById('new-estreno-month').value = e.month;
 
             document.getElementById('estreno-form-title').innerText = "Editar Película / Estreno";
             document.getElementById('btn-save-estreno').innerText = "Actualizar Estreno";
@@ -1996,7 +1423,6 @@
             editEstrenoIndex = -1;
             document.getElementById('new-estreno-title').value = '';
             document.getElementById('new-estreno-url').value = '';
-            document.getElementById('new-estreno-month').value = 'Enero';
             document.getElementById('estreno-form-title').innerText = "Agregar Película / Estreno";
             document.getElementById('btn-save-estreno').innerText = "Guardar Estreno";
             document.getElementById('btn-cancel-estreno').style.display = 'none';
@@ -2005,15 +1431,14 @@
         function saveEstreno() {
             const title = document.getElementById('new-estreno-title').value.trim();
             const url = document.getElementById('new-estreno-url').value.trim();
-            const month = document.getElementById('new-estreno-month').value;
             if (!title || !url) return alert('Completa título y enlace.');
 
             if (!storeConfig.estrenos) storeConfig.estrenos = [];
 
             if (editEstrenoIndex !== -1) {
-                storeConfig.estrenos[editEstrenoIndex] = { title, url, month };
+                storeConfig.estrenos[editEstrenoIndex] = { title, url };
             } else {
-                storeConfig.estrenos.unshift({ title, url, month });
+                storeConfig.estrenos.unshift({ title, url });
             }
 
             db.ref('storeConfig').set(storeConfig);
@@ -2242,19 +1667,17 @@
             }
         }
 
-        let globalSellerSalesDataStore = {};
         function fetchSellerSalesStats() {
             const statsDiv = document.getElementById('admin-list-sellers-stats');
             if (statsDiv) statsDiv.innerHTML = '<p style="color:#ccc;">Cargando estadísticas...</p>';
 
             db.ref('sellerSales').once('value').then(snap => {
-                globalSellerSalesDataStore = snap.val() || {};
-                renderSellerSalesStats();
+                const data = snap.val() || {};
+                renderSellerSalesStats(data);
             });
         }
 
-        function renderSellerSalesStats() {
-            const data = globalSellerSalesDataStore;
+        function renderSellerSalesStats(data) {
             const statsDiv = document.getElementById('admin-list-sellers-stats');
             if (!statsDiv) return;
             statsDiv.innerHTML = '';
@@ -2273,21 +1696,7 @@
                 let screensSold = 0;
                 let totalAccumulated = 0;
 
-                let salesArray = Object.keys(sales).map(k => ({ id: k, ...sales[k] })).sort((a, b) => b.date - a.date);
-
-                const searchInputText = document.getElementById('search-ventas-vendedores') ? document.getElementById('search-ventas-vendedores').value.toLowerCase() : '';
-                if (searchInputText) {
-                    salesArray = salesArray.filter(sale => {
-                        const clientInfo = ((sale.clientName || '') + ' ' + (sale.clientPhone || '')).toLowerCase();
-                        return clientInfo.includes(searchInputText) || sName.toLowerCase().includes(searchInputText);
-                    });
-                }
-
-                if (searchInputText && salesArray.length === 0 && !sName.toLowerCase().includes(searchInputText)) {
-                     // Empty search match string for this seller: skip it entirely
-                    // Wait, we can't 'continue' inside a forEach natively, but we can return to emulate 'continue'.
-                    return;
-                }
+                const salesArray = Object.keys(sales).map(k => ({ id: k, ...sales[k] })).sort((a, b) => b.date - a.date);
 
                 salesArray.forEach(sale => {
                     if (sale.isPaid !== false) {
@@ -2379,10 +1788,10 @@
                                 </button>
                             </div>
                             <p style="font-size:0.8rem; color:#ccc; margin-bottom:0.8rem; line-height:1.4;">
+                                📺 ${itemsStr}<br>
+                                💰 Valor pagado: ${totalDisp}<br>
                                 📱 ${sale.clientPhone || 'N/A'} | 📍 ${sale.clientCity || 'N/A'}<br>
-                                📅 Inicio: ${startDate} | ⏳ Fin: ${endDate}<br>
-                                📺 Compra: ${itemsStr}<br>
-                                💰 Valor pagado: ${totalDisp}
+                                📅 Inicio: ${startDate} | ⏳ Fin: ${endDate}
                             </p>
                             <div style="display:flex; gap:0.5rem;">
                                 <button onclick="sendAdminReminderToSeller('${safeSeller}', '${safeClient}', '${encodeURIComponent(itemsStr)}', '${sale.clientPhone || ''}', ${sale.total || 0})" 
@@ -2437,7 +1846,7 @@
             }
         }
 
-        async function sendAdminReminderToSeller(sellerName, clientName, itemsEncoded, clientPhone, saleTotal) {
+        function sendAdminReminderToSeller(sellerName, clientName, itemsEncoded, clientPhone, saleTotal) {
             const itemsStr = decodeURIComponent(itemsEncoded);
             let msg = `Hola *${sellerName}* 👋\n\nTe recuerdo que la cuenta de tu cliente *${clientName}* (📱 ${clientPhone})\n\nCon: ${itemsStr}\n👉 *FINALIZA PRONTO o YA VENCIÓ* 👈\n\nPor favor contáctalo para gestionar su renovación.`;
 
@@ -2448,18 +1857,6 @@
             if (storeConfig.paymentInfo) {
                 msg += `\n\n*Medios de Pago Autorizados:*\n${storeConfig.paymentInfo}`;
             }
-
-            let clientPin = "No asignado";
-            if (clientPhone) {
-                let cleanPhone = clientPhone.replace(/\D/g, '');
-                try {
-                    const snap = await db.ref(`clientProfiles/${cleanPhone}/pin`).once('value');
-                    if (snap.exists() && snap.val()) {
-                        clientPin = snap.val();
-                    }
-                } catch(e) {}
-            }
-            msg += `\n\nCelular: ${clientPhone || 'N/A'} y Pin: ${clientPin}`;
 
             const encodedMsg = encodeURIComponent(msg);
             window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
@@ -2756,7 +2153,7 @@
             }
         }
 
-        async function sendAdminReminderToDirectClient(clientName, itemsEncoded, clientPhone, saleTotal) {
+        function sendAdminReminderToDirectClient(clientName, itemsEncoded, clientPhone, saleTotal) {
             const itemsStr = decodeURIComponent(itemsEncoded);
             let template = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️";
             let msg = template.replace(/{cliente}/g, clientName).replace(/{pantallas}/g, itemsStr);
@@ -2771,18 +2168,6 @@
                 msg += `\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*`;
             }
 
-            let clientPin = "No asignado";
-            if (clientPhone) {
-                let cleanPhone = clientPhone.replace(/\D/g, '');
-                try {
-                    const snap = await db.ref(`clientProfiles/${cleanPhone}/pin`).once('value');
-                    if (snap.exists() && snap.val()) {
-                        clientPin = snap.val();
-                    }
-                } catch(e) {}
-            }
-            msg += `\n\nCelular: ${clientPhone || 'N/A'} y Pin: ${clientPin}`;
-
             const encodedMsg = encodeURIComponent(msg);
 
             // Add country code if it looks like a local Colombian number
@@ -2793,27 +2178,6 @@
 
             window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
         }
-
-        function updateEditClientDatesUI(saleObj) {
-            if (saleObj.date) {
-                const sd = new Date(saleObj.date);
-                document.getElementById('edit-client-start-date').value = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}-${String(sd.getDate()).padStart(2, '0')}`;
-            } else document.getElementById('edit-client-start-date').value = '';
-
-            if (saleObj.expirationDate) {
-                const ed = new Date(saleObj.expirationDate);
-                document.getElementById('edit-client-end-date').value = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, '0')}-${String(ed.getDate()).padStart(2, '0')}`;
-            } else document.getElementById('edit-client-end-date').value = '';
-        }
-
-        window.onEditClientSaleChange = function() {
-            const selectElement = document.getElementById('edit-client-select-sale');
-            const selectedKey = selectElement.value;
-            if (window.currentClientSales && selectedKey && window.currentClientSales[selectedKey]) {
-                window.currentEditingSaleKey = selectedKey;
-                updateEditClientDatesUI(window.currentClientSales[selectedKey]);
-            }
-        };
 
         function clickEditClient(phone) {
             document.getElementById('search-client-phone').value = phone;
@@ -2835,33 +2199,9 @@
                 }
 
                 // Get the most recent details
-                const sortedKeys = Object.keys(sales).sort((k1, k2) => sales[k2].date - sales[k1].date);
-                window.currentClientSales = sales;
-
-                const selectElement = document.getElementById('edit-client-select-sale');
-                if (selectElement) {
-                    selectElement.innerHTML = '';
-                    sortedKeys.forEach(k => {
-                        const s = sales[k];
-                        const opt = document.createElement('option');
-                        opt.value = k;
-                        const itemsText = s.items ? s.items.map(i => i.name).join(', ') : 'Pantalla';
-                        const dateText = s.date ? new Date(s.date).toLocaleDateString() : 'N/A';
-                        let fName = itemsText;
-                        if (fName.length > 50) fName = fName.substring(0, 47) + '...';
-                        opt.text = `${fName} (Comprado: ${dateText})`;
-                        selectElement.appendChild(opt);
-                    });
-                }
-
-                window.currentEditingSaleKey = sortedKeys[0];
-                if (selectElement) selectElement.value = window.currentEditingSaleKey;
-
-                let latestSale = sales[window.currentEditingSaleKey];
+                let latestSale = Object.values(sales).sort((a, b) => b.date - a.date)[0];
                 document.getElementById('edit-client-name').value = latestSale.clientName || '';
                 document.getElementById('edit-client-city').value = latestSale.clientCity || '';
-
-                updateEditClientDatesUI(latestSale);
 
                 // Fetch PIN if any
                 const pinSnap = await db.ref(`clientProfiles/${phone}/pin`).once('value');
@@ -2906,20 +2246,6 @@
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientName`] = newName;
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientCity`] = newCity;
                     });
-                    
-                    if (window.currentEditingSaleKey) {
-                        const startVal = document.getElementById('edit-client-start-date').value;
-                        if (startVal) {
-                            const [sYear, sMo, sDa] = startVal.split('-');
-                            updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/date`] = new Date(sYear, sMo - 1, sDa, 12, 0, 0).getTime();
-                        }
-                        const endVal = document.getElementById('edit-client-end-date').value;
-                        if (endVal) {
-                            const [eYear, eMo, eDa] = endVal.split('-');
-                            updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/expirationDate`] = new Date(eYear, eMo - 1, eDa, 12, 0, 0).getTime();
-                        }
-                    }
-
                     await db.ref('/').update(updates);
 
                     // Update PIN
@@ -3110,7 +2436,7 @@
             `;
         }
 
-        async function startAutoRemindersQueue() {
+        function startAutoRemindersQueue() {
             if (globalReminderQueue.length === 0) {
                 alert('Todos los recordatorios fueron revisados.');
                 dismissAutoReminders();
@@ -3132,35 +2458,10 @@
                     let msgSeller = `Hola *${r.seller}* 👋\n\nTe damos Aviso Previo que la cuenta de tu cliente *${r.name}* (📱 ${r.phone})\n\nCon: ${itemsStr}\n👉 *FINALIZA MAÑANA* 👈\n\nPor favor contáctalo para gestionar su renovación y evitar cortes.`;
                     if (r.sale.total > 0) msgSeller += `\n💰 *Total a Renovar con Administrador:* $${r.sale.total.toLocaleString()}`;
                     if (storeConfig.paymentInfo) msgSeller += `\n\n*Medios de Pago Autorizados:*\n${storeConfig.paymentInfo}`;
-
-                    let clientPin = "No asignado";
-                    if (r.phone) {
-                        let cleanPhone = r.phone.replace(/\D/g, '');
-                        try {
-                            const snap = await db.ref(`clientProfiles/${cleanPhone}/pin`).once('value');
-                            if (snap.exists() && snap.val()) {
-                                clientPin = snap.val();
-                            }
-                        } catch(e) {}
-                    }
-                    msgSeller += `\n\nCelular: ${r.phone || 'N/A'} y Pin: ${clientPin}`;
-
                     window.open(`https://wa.me/?text=${encodeURIComponent(msgSeller)}`, '_blank');
                 } else {
                     if (r.sale.total > 0) msg += `\n\n💰 *Total a Renovar:* $${r.sale.total.toLocaleString()}`;
                     if (storeConfig.paymentInfo) msg += `\n\n*Medios de Pago:*\n${storeConfig.paymentInfo}`;
-
-                    let clientPin = "No asignado";
-                    if (r.phone) {
-                        let cleanPhone = r.phone.replace(/\D/g, '');
-                        try {
-                            const snap = await db.ref(`clientProfiles/${cleanPhone}/pin`).once('value');
-                            if (snap.exists() && snap.val()) {
-                                clientPin = snap.val();
-                            }
-                        } catch(e) {}
-                    }
-                    msg += `\n\nCelular: ${r.phone || 'N/A'} y Pin: ${clientPin}`;
 
                     let waPhone = r.phone.replace(/\D/g, '');
                     if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
