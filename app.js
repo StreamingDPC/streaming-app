@@ -581,7 +581,7 @@ function renderProducts(category) {
 
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
-    cart.push(product);
+    if (product) cart.push({ ...product });
     updateCartUI();
 
     // Simple toast or feedback
@@ -688,15 +688,24 @@ function renderCartItems() {
         const div = document.createElement('div');
         div.className = 'cart-item';
         div.innerHTML = `
-            <div>
-                <p style="font-weight:600">${item.name} ${item.discountNote}</p>
-                <p style="font-size:0.8rem; color:#a0a0a0">$${item.finalPrice.toLocaleString()}</p>
+            <div style="flex: 1;">
+                <p style="font-weight:600; margin-bottom: 0.2rem;">${item.name} ${item.discountNote}</p>
+                <input type="text" class="input-modern cart-custom-name" data-index="${index}" placeholder="Nombre o Alias (Ej: Para María)" value="${item.customName || ''}" style="padding: 0.3rem; font-size: 0.8rem; width: 100%; border: 1px solid var(--glass-border); border-radius: 4px; background: rgba(0,0,0,0.2);">
+                <p style="font-size:0.8rem; color:#a0a0a0; margin-top: 0.3rem;">$${item.finalPrice.toLocaleString()}</p>
             </div>
-            <button onclick="removeFromCart(${index})" style="background:none; border:none; color:#ff4d00; cursor:pointer">
+            <button onclick="removeFromCart(${index})" style="background:none; border:none; color:#ff4d00; cursor:pointer; padding: 0.5rem;">
                 <i class="fa-solid fa-trash"></i>
             </button>
         `;
         cartItemsContainer.appendChild(div);
+    });
+
+    // Add event listeners for custom names
+    document.querySelectorAll('.cart-custom-name').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const idx = parseInt(e.target.getAttribute('data-index'));
+            if (cart[idx]) cart[idx].customName = e.target.value.trim();
+        });
     });
 }
 
@@ -1278,7 +1287,8 @@ function setupEventListeners() {
 
         stats.processedCart.forEach((item, i) => {
             let fp = isNaN(item.finalPrice) ? 0 : item.finalPrice;
-            message += `${i + 1}. *${item.name || 'Pantalla'}* - $${fp.toLocaleString()}\n`;
+            let displayItemName = item.customName ? `${item.name} (${item.customName})` : item.name;
+            message += `${i + 1}. *${displayItemName || 'Pantalla'}* - $${fp.toLocaleString()}\n`;
         });
 
         if (stats.promoDiscountTotal > 0) {
@@ -1344,7 +1354,13 @@ function setupEventListeners() {
                 clientPhone: cPhone || '',
                 date: Date.now(),
                 expirationDate: Date.now() + (30 * 24 * 60 * 60 * 1000), // +30 days
-                items: stats.processedCart.map(item => ({ id: item.id || Date.now(), name: item.name || 'Pantalla', category: item.category || 'individual', finalPrice: isNaN(item.finalPrice) ? 0 : item.finalPrice })),
+                items: stats.processedCart.map(item => ({ 
+                    id: item.id || Date.now(), 
+                    name: item.customName ? `${item.name} (${item.customName})` : (item.name || 'Pantalla'), 
+                    customName: item.customName || null,
+                    category: item.category || 'individual', 
+                    finalPrice: isNaN(item.finalPrice) ? 0 : item.finalPrice 
+                })),
                 total: isNaN(total) ? 0 : total,
                 sellerName: (isSellerMode ? currentSellerName : 'Página Web Oficial') || 'Página Web Oficial',
                 incentiveEarned: isNaN(incentiveEarned) ? 0 : incentiveEarned,
@@ -1593,8 +1609,10 @@ window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded, saleId 
 
         cart = [];
         itemsToRenew.forEach(i => {
-            const found = products.find(p => p.name === i.name || p.id === i.id);
-            if (found) cart.push(found);
+            let found = products.find(p => p.id === i.id) || products.find(p => i.name && i.name.includes(p.name));
+            if (found) {
+                cart.push({ ...found, customName: i.customName || null });
+            }
         });
 
         if (cart.length === 0) {
@@ -1713,10 +1731,16 @@ function renderClientDashboard() {
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:1rem;">📺 ${itemsStr}</p>
                 <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+                    ${daysLeft >= 0 ? `
                     <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
                         style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                         <i class="fa-solid fa-redo"></i> Renovar mis pantallas
                     </button>
+                    ` : `
+                    <button disabled style="width: 100%; padding:0.6rem; border-radius:8px; cursor:not-allowed; font-weight:bold; border:none; background: rgba(255, 255, 255, 0.1); color:#a0a0a0;">
+                        <i class="fa-solid fa-history"></i> Historial (Vencido)
+                    </button>
+                    `}
                 </div>
             `;
             clientSalesList.appendChild(div);
