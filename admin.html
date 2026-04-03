@@ -2339,11 +2339,12 @@
 
                     salesArray.forEach(sale => {
                         const now = Date.now();
+                        const isExpired = now >= sale.expirationDate;
                         const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
 
                         let statusColor = '#4cd137';
-                        if (daysLeft <= 3 && daysLeft >= 0) statusColor = '#f39c12';
-                        if (daysLeft < 0) statusColor = '#ff4d4d';
+                        if (!isExpired && daysLeft <= 3) statusColor = '#f39c12';
+                        if (isExpired) statusColor = '#ff4d4d';
 
                         const itemsStr = sale.items ? sale.items.map(i => {
                             let formatName = i.name;
@@ -2369,7 +2370,7 @@
                                     ${safeClient}
                                 </strong>
                                 <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
-                                    ${daysLeft >= 0 ? `Vence en ${daysLeft} días` : 'Vencida'}
+                                    ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
                                 </span>
                             </div>
                             <div style="margin-bottom:0.5rem; display:flex;">
@@ -2640,11 +2641,12 @@
 
                     salesArray.forEach(sale => {
                         const now = Date.now();
+                        const isExpired = now >= sale.expirationDate;
                         const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
 
                         let statusColor = '#4cd137';
-                        if (daysLeft <= 3 && daysLeft >= 0) statusColor = '#f39c12';
-                        if (daysLeft < 0) statusColor = '#ff4d4d';
+                        if (!isExpired && daysLeft <= 3) statusColor = '#f39c12';
+                        if (isExpired) statusColor = '#ff4d4d';
 
                         const itemsStr = sale.items ? sale.items.map(i => {
                             let formatName = i.name;
@@ -2669,7 +2671,7 @@
                                     ${new Date(sale.date).toLocaleDateString()}
                                 </span>
                                 <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
-                                    ${daysLeft >= 0 ? `Vence en ${daysLeft} d` : 'Vencida'}
+                                    ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
                                 </span>
                             </div>
                             <div style="margin-bottom:0.5rem; display:flex;">
