@@ -2339,7 +2339,7 @@
 
                     salesArray.forEach(sale => {
                         const now = Date.now();
-                        const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999);
+                        const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
                         const isExpired = now > expEndOfDay;
                         const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
 
@@ -2642,7 +2642,7 @@
 
                     salesArray.forEach(sale => {
                         const now = Date.now();
-                        const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999);
+                        const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
                         const isExpired = now > expEndOfDay;
                         const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
 

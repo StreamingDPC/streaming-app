@@ -50,6 +50,7 @@ const sellerDashboardModal = document.getElementById('seller-dashboard-modal');
 const closeSellerDashBtn = document.querySelector('.dash-close');
 const logoutSellerBtn = document.getElementById('logout-seller-btn');
 const sellerSalesList = document.getElementById('seller-sales-list');
+const sellerSearchSales = document.getElementById('seller-search-sales');
 
 const reminderEditorModal = document.getElementById('reminder-editor-modal');
 const closeReminderBtn = document.querySelector('.reminder-close');
@@ -710,6 +711,9 @@ function renderCartItems() {
 }
 
 function setupEventListeners() {
+    if (sellerSearchSales) {
+        sellerSearchSales.addEventListener('input', renderSellerDashboard);
+    }
     // Tabs Menu Toggle
     const tabsMenuBtn = document.getElementById('tabs-menu-btn');
     const categoryTabs = document.getElementById('category-tabs');
@@ -1550,9 +1554,18 @@ function renderSellerDashboard() {
             return;
         }
 
-        salesArray.forEach(sale => {
+        let displayedSalesArray = salesArray;
+        if (sellerSearchSales && sellerSearchSales.value.trim() !== '') {
+            const query = sellerSearchSales.value.trim().toLowerCase();
+            displayedSalesArray = salesArray.filter(sale => {
+                const cInfo = ((sale.clientName || '') + ' ' + (sale.clientPhone || '')).toLowerCase();
+                return cInfo.includes(query);
+            });
+        }
+
+        displayedSalesArray.forEach(sale => {
             const now = Date.now();
-            const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999);
+            const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
             const isExpired = now > expEndOfDay;
             const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
 
@@ -1691,7 +1704,7 @@ function renderClientDashboard() {
 
         salesArray.forEach(sale => {
             const now = Date.now();
-            const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999);
+            const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
             const isExpired = now > expEndOfDay;
             const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
 
