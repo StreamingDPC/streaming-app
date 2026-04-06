@@ -1552,8 +1552,9 @@ function renderSellerDashboard() {
 
         salesArray.forEach(sale => {
             const now = Date.now();
-            const isExpired = now >= sale.expirationDate;
-            const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
+            const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999);
+            const isExpired = now > expEndOfDay;
+            const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
 
             let statusColor = '#4cd137'; // Active
             if (!isExpired && daysLeft <= 3) statusColor = '#f39c12'; // Ending soon
@@ -1690,8 +1691,9 @@ function renderClientDashboard() {
 
         salesArray.forEach(sale => {
             const now = Date.now();
-            const isExpired = now >= sale.expirationDate;
-            const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
+            const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999);
+            const isExpired = now > expEndOfDay;
+            const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
 
             let statusColor = '#4cd137'; // Active
             if (!isExpired && daysLeft <= 3) statusColor = '#f39c12'; // Ending soon
