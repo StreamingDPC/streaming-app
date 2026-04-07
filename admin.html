@@ -2546,30 +2546,59 @@
             if (autoRenew) {
                 try {
                     const cleanPhone = clientPhone.replace(/\D/g, '');
-                    let pathsToUpdate = [];
-                    if (sourceType === 'seller') {
-                        pathsToUpdate.push(`sellerSales/${sourceName}/${saleId}`);
-                        pathsToUpdate.push(`clientSales/${cleanPhone}/${saleId}`);
-                    } else {
-                        pathsToUpdate.push(`clientSales/${cleanPhone}/${saleId}`);
-                    }
+                    // Obtenemos todos los datos para encontrar la venta correspondiente en sellerSales
+                    const allDataSnap = await db.ref('/').once('value');
+                    const allData = allDataSnap.val();
+                    const clientSales = allData.clientSales || {};
+                    const sellerSales = allData.sellerSales || {};
 
-                    let updatedCount = 0;
-                    for (const path of pathsToUpdate) {
-                        const snapshot = await db.ref(path).once('value');
-                        const sale = snapshot.val();
-                        if (sale) {
-                            const currentExp = parseInt(sale.expirationDate) || Date.now();
-                            const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
-                            await db.ref(path).update({ expirationDate: newExp, isPaid: true });
-                            updatedCount++;
+                    let updates = {};
+                    
+                    // 1. Actualizar en clientSales (es directo si tenemos el saleId)
+                    if (clientSales[cleanPhone] && clientSales[cleanPhone][saleId]) {
+                        const s = clientSales[cleanPhone][saleId];
+                        const currentExp = parseInt(s.expirationDate) || Date.now();
+                        const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
+                        updates[`clientSales/${cleanPhone}/${saleId}/expirationDate`] = newExp;
+                        updates[`clientSales/${cleanPhone}/${saleId}/isPaid`] = true;
+                        
+                        // 2. Buscar en sellerSales donde coincida el telefono y la fecha original
+                        for (let sName in sellerSales) {
+                            for (let sid in sellerSales[sName]) {
+                                const ss = sellerSales[sName][sid];
+                                if (ss.clientPhone === cleanPhone && ss.date === s.date) {
+                                    updates[`sellerSales/${sName}/${sid}/expirationDate`] = newExp;
+                                    updates[`sellerSales/${sName}/${sid}/isPaid`] = true;
+                                }
+                            }
+                        }
+                    } else if (sourceType === 'seller' && sellerSales[sourceName] && sellerSales[sourceName][saleId]) {
+                        // Si no estaba en clientSales pero es una venta de vendedor
+                        const s = sellerSales[sourceName][saleId];
+                        const currentExp = parseInt(s.expirationDate) || Date.now();
+                        const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
+                        updates[`sellerSales/${sourceName}/${saleId}/expirationDate`] = newExp;
+                        updates[`sellerSales/${sourceName}/${saleId}/isPaid`] = true;
+                        
+                        // Intentar buscar en clientSales por fecha
+                        if (clientSales[cleanPhone]) {
+                            for (let cid in clientSales[cleanPhone]) {
+                                if (clientSales[cleanPhone][cid].date === s.date) {
+                                    updates[`clientSales/${cleanPhone}/${cid}/expirationDate`] = newExp;
+                                    updates[`clientSales/${cleanPhone}/${cid}/isPaid`] = true;
+                                }
+                            }
                         }
                     }
-                    if (updatedCount > 0) alert("¡Sistema Actualizado! Fecha extendida y pago registrado.");
-                    else alert("Aviso: No se encontró el registro en la base de datos para actualizar.");
-                    
-                    fetchSellerSalesStats();
-                    fetchClientSalesHistory();
+
+                    if (Object.keys(updates).length > 0) {
+                        await db.ref('/').update(updates);
+                        alert("¡Sistema Actualizado con éxito! Fecha extendida y pago registrado.");
+                        fetchSellerSalesStats();
+                        fetchClientSalesHistory();
+                    } else {
+                        alert("No se encontró el registro para actualizar en la base de datos.");
+                    }
                 } catch (e) {
                     console.error(e);
                     alert("Error al actualizar sistema: " + e.message);
@@ -2980,7 +3009,9 @@
             const selectedKey = selectElement.value;
             if (window.currentClientSales && selectedKey && window.currentClientSales[selectedKey]) {
                 window.currentEditingSaleKey = selectedKey;
-                updateEditClientDatesUI(window.currentClientSales[selectedKey]);
+                const s = window.currentClientSales[selectedKey];
+                window.currentEditingOriginalDate = s.date;
+                updateEditClientDatesUI(s);
             }
         };
 
@@ -3030,6 +3061,7 @@
                 document.getElementById('edit-client-name').value = latestSale.clientName || '';
                 document.getElementById('edit-client-city').value = latestSale.clientCity || '';
 
+                window.currentEditingOriginalDate = latestSale.date;
                 updateEditClientDatesUI(latestSale);
 
                 // Fetch PIN if any
@@ -3091,18 +3123,20 @@
                     }
                 }
 
-                // Update in Seller Sales where phone matches
+                // Update in Seller Sales where phone and date match
                 const sSnap = await db.ref(`sellerSales`).once('value');
                 const allSellers = sSnap.val();
                 if (allSellers) {
                     for (let sellerName in allSellers) {
                         for (let sId in allSellers[sellerName]) {
-                            if (allSellers[sellerName][sId].clientPhone === currentEditingClientPhone) {
+                            const sellerSale = allSellers[sellerName][sId];
+                            if (sellerSale.clientPhone === currentEditingClientPhone) {
+                                // Siempre actualizar nombre y ciudad por si acaso
                                 updates[`sellerSales/${sellerName}/${sId}/clientName`] = newName;
                                 updates[`sellerSales/${sellerName}/${sId}/clientCity`] = newCity;
                                 
-                                // Si es la misma venta que se está editando en fechas, sincronizar también en el panel del vendedor
-                                if (sId === window.currentEditingSaleKey) {
+                                // Si coincide la fecha original o el ID, es la misma venta: actualizar fechas
+                                if (sId === window.currentEditingSaleKey || sellerSale.date === window.currentEditingOriginalDate) {
                                     const startVal = document.getElementById('edit-client-start-date').value;
                                     if (startVal) {
                                         const [sYear, sMo, sDa] = startVal.split('-');
