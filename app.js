@@ -1704,6 +1704,47 @@ window.sendRenovadaFromDash = function (clientNameEnc, clientPhone, itemsEncoded
     const clientName = decodeURIComponent(clientNameEnc);
     const itemsStr = decodeURIComponent(itemsEncoded);
 
+    // Lógica de Renovación Automática PRIMERO
+    if (saleId && (typeof isSellerMode !== 'undefined' && isSellerMode)) {
+        if (confirm(`¿Deseas REGISTRAR esta RENOVACIÓN en tu panel ahora?\n\n- Se extenderán 30 días adicionales.\n- Se marcará como PAGADO.\n\n(Si pulsas Cancelar, solo se enviará el mensaje)`)) {
+            const cleanPhone = clientPhone.replace(/\D/g, '');
+            const sellerPath = `sellerSales/${currentSellerName}/${saleId}`;
+            const clientPath = `clientSales/${cleanPhone}/${saleId}`;
+
+            (async () => {
+                try {
+                    let updated = false;
+                    const snapSeller = await db.ref(sellerPath).once('value');
+                    const saleSeller = snapSeller.val();
+                    if (saleSeller) {
+                        const currentExp = parseInt(saleSeller.expirationDate) || Date.now();
+                        const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
+                        await db.ref(sellerPath).update({ expirationDate: newExp, isPaid: true });
+                        updated = true;
+                    }
+                    const snapClient = await db.ref(clientPath).once('value');
+                    if (snapClient.exists()) {
+                        const saleClient = snapClient.val();
+                        const currentExp = parseInt(saleClient.expirationDate) || Date.now();
+                        const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
+                        await db.ref(clientPath).update({ expirationDate: newExp, isPaid: true });
+                        updated = true;
+                    }
+
+                    if (updated) {
+                        alert("¡Sistema Actualizado con éxito!");
+                        if (typeof renderSellerDashboard === 'function') renderSellerDashboard();
+                    } else {
+                        alert("Aviso: No se encontró el registro para actualizar.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Error al actualizar base de datos.");
+                }
+            })();
+        }
+    }
+
     const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
     let monthText = 'el próximo mes';
     if (expirationDateTS && expirationDateTS !== 0) {
@@ -1722,58 +1763,8 @@ window.sendRenovadaFromDash = function (clientNameEnc, clientPhone, itemsEncoded
 
     const encodedMsg = encodeURIComponent(msg);
     let waPhone = clientPhone.toString().replace(/\D/g, '');
-    if (waPhone.length === 10 && waPhone.startsWith('3')) {
-        waPhone = '57' + waPhone;
-    }
-
+    if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
     window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
-
-    // Lógica de Renovación Automática
-    if (saleId && (typeof isSellerMode !== 'undefined' && isSellerMode)) {
-        setTimeout(async () => {
-            if (confirm(`¿Deseas registrar esta RENOVACIÓN automáticamente en tu panel?\n\n- Se extenderán 30 días a partir del vencimiento actual.\n- Se marcará como PAGADO.`)) {
-                try {
-                    const cleanPhone = clientPhone.replace(/\D/g, '');
-                    const sellerPath = `sellerSales/${currentSellerName}/${saleId}`;
-                    const clientPath = `clientSales/${cleanPhone}/${saleId}`;
-                    
-                    let updated = false;
-
-                    // Actualizar en panel de vendedor
-                    const snapSeller = await db.ref(sellerPath).once('value');
-                    const saleSeller = snapSeller.val();
-                    if (saleSeller) {
-                        const currentExp = parseInt(saleSeller.expirationDate) || Date.now();
-                        const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
-                        await db.ref(sellerPath).update({ expirationDate: newExp, isPaid: true });
-                        updated = true;
-                    }
-
-                    // Intentar actualizar en panel de histórico del cliente
-                    const snapClient = await db.ref(clientPath).once('value');
-                    if (snapClient.exists()) {
-                        const saleClient = snapClient.val();
-                        const currentExp = parseInt(saleClient.expirationDate) || Date.now();
-                        const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
-                        await db.ref(clientPath).update({ expirationDate: newExp, isPaid: true });
-                        updated = true;
-                    }
-
-                    if (updated) {
-                        alert("¡Sistema Actualizado con éxito!");
-                        // Refrescar dashboard
-                        if (typeof renderSellerDashboard === 'function') renderSellerDashboard();
-                    } else {
-                        alert("No se encontró el registro en el sistema para actualizar las fechas.");
-                    }
-
-                } catch (e) {
-                    console.error(e);
-                    alert("Error al actualizar la base de datos.");
-                }
-            }
-        }, 1000);
-    }
 }
 
 window.editClientFromDash = function (saleId, cName, cPhone, cCity) {

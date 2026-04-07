@@ -2540,7 +2540,43 @@
             const clientName = decodeURIComponent(clientNameEnc);
             const sourceName = decodeURIComponent(sourceNameEnc);
             const itemsStr = decodeURIComponent(itemsEncoded);
-            
+
+            const autoRenew = confirm(`¿Deseas REGISTRAR esta RENOVACIÓN en el sistema ahora?\n\n- Se extenderán 30 días adicionales.\n- Se marcará como PAGADO.\n\n(Si pulsas Cancelar, solo se enviará el mensaje de WhatsApp)`);
+
+            if (autoRenew) {
+                try {
+                    const cleanPhone = clientPhone.replace(/\D/g, '');
+                    let pathsToUpdate = [];
+                    if (sourceType === 'seller') {
+                        pathsToUpdate.push(`sellerSales/${sourceName}/${saleId}`);
+                        pathsToUpdate.push(`clientSales/${cleanPhone}/${saleId}`);
+                    } else {
+                        pathsToUpdate.push(`clientSales/${cleanPhone}/${saleId}`);
+                    }
+
+                    let updatedCount = 0;
+                    for (const path of pathsToUpdate) {
+                        const snapshot = await db.ref(path).once('value');
+                        const sale = snapshot.val();
+                        if (sale) {
+                            const currentExp = parseInt(sale.expirationDate) || Date.now();
+                            const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
+                            await db.ref(path).update({ expirationDate: newExp, isPaid: true });
+                            updatedCount++;
+                        }
+                    }
+                    if (updatedCount > 0) alert("¡Sistema Actualizado! Fecha extendida y pago registrado.");
+                    else alert("Aviso: No se encontró el registro en la base de datos para actualizar.");
+                    
+                    fetchSellerSalesStats();
+                    fetchClientSalesHistory();
+                } catch (e) {
+                    console.error(e);
+                    alert("Error al actualizar sistema: " + e.message);
+                }
+            }
+
+            // Preparar y enviar mensaje
             const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
             let monthText = 'el próximo mes';
             if (expirationDateTS && expirationDateTS !== 0) {
@@ -2559,58 +2595,8 @@
 
             const encodedMsg = encodeURIComponent(msg);
             let waPhone = clientPhone.toString().replace(/\D/g, '');
-            if (waPhone.length === 10 && waPhone.startsWith('3')) {
-                waPhone = '57' + waPhone;
-            }
-
+            if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
             window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
-
-            // Lógica de Renovación Automática
-            setTimeout(async () => {
-                if(confirm(`¿Deseas registrar esta RENOVACIÓN automáticamente en el sistema?\n\n- Se extenderán 30 días a partir del vencimiento actual.\n- Se marcará como PAGADO en todas las listas.`)) {
-                    try {
-                        const cleanPhone = clientPhone.replace(/\D/g, '');
-                        let pathsToUpdate = [];
-                        
-                        // Determinar los caminos de base de datos a actualizar
-                        if(sourceType === 'seller') {
-                            pathsToUpdate.push(`sellerSales/${sourceName}/${saleId}`);
-                            // Intentar actualizar también en clientSales si existe
-                            pathsToUpdate.push(`clientSales/${cleanPhone}/${saleId}`);
-                        } else {
-                            pathsToUpdate.push(`clientSales/${cleanPhone}/${saleId}`);
-                        }
-
-                        let updatedCount = 0;
-                        for(const path of pathsToUpdate) {
-                            const snapshot = await db.ref(path).once('value');
-                            const sale = snapshot.val();
-                            if(sale) {
-                                const currentExp = parseInt(sale.expirationDate) || Date.now();
-                                const newExp = currentExp + (30 * 24 * 60 * 60 * 1000);
-                                
-                                await db.ref(path).update({
-                                    expirationDate: newExp,
-                                    isPaid: true
-                                });
-                                updatedCount++;
-                            }
-                        }
-
-                        if(updatedCount > 0) {
-                            alert("¡Sistema Actualizado con éxito!");
-                            fetchSellerSalesStats();
-                            fetchClientSalesHistory();
-                        } else {
-                            alert("Aviso: No se encontró el registro original para actualizar las fechas, pero el mensaje fue enviado.");
-                        }
-
-                    } catch(e) {
-                        console.error(e);
-                        alert("Error técnico al actualizar la base de datos: " + e.message);
-                    }
-                }
-            }, 1000);
         }
 
         async function sendAdminReminderToSeller(sellerName, clientName, itemsEncoded, clientPhone, saleTotal) {
