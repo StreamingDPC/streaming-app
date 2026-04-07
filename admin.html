@@ -2446,6 +2446,11 @@
                                     onmouseover="this.style.background='rgba(76, 209, 55, 0.2)'" onmouseout="this.style.background='rgba(76, 209, 55, 0.1)'">
                                     <i class="fa-brands fa-whatsapp"></i> Recordar
                                 </button>
+                                <button onclick="sendAdminRenovadaMessage('${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0})" 
+                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem; transition: background 0.3s;"
+                                    onmouseover="this.style.background='rgba(243, 156, 18, 0.2)'" onmouseout="this.style.background='rgba(243, 156, 18, 0.1)'">
+                                    <i class="fa-brands fa-whatsapp"></i> Renovada
+                                </button>
                                 <button onclick="deleteSellerSale('${safeSeller}', '${sale.id}')" 
                                     style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
                                     <i class="fa-solid fa-trash"></i>
@@ -2491,6 +2496,32 @@
                     console.error(err);
                 }
             }
+        }
+
+        function sendAdminRenovadaMessage(clientPhone, itemsEncoded, isMultiple, expirationDateTS) {
+            if (!clientPhone) return alert('Este cliente no tiene número registrado.');
+            const itemsStr = decodeURIComponent(itemsEncoded);
+            const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+            let monthText = 'el próximo mes';
+            if (expirationDateTS && expirationDateTS !== 0) {
+                const d = new Date(parseInt(expirationDateTS));
+                monthText = months[d.getMonth()];
+            }
+
+            let msg = '';
+            if (isMultiple) {
+                msg = `♦️♦️♦️ ** Tus Pantallas de *${itemsStr}* han sido Renovadas* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence ${monthText}*`;
+            } else {
+                msg = `♦️♦️♦️ ** Tu Pantalla de *${itemsStr}* ha sido Renovada* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence ${monthText}*`;
+            }
+
+            const encodedMsg = encodeURIComponent(msg);
+            let waPhone = clientPhone.toString().replace(/\D/g, '');
+            if (waPhone.length === 10 && waPhone.startsWith('3')) {
+                waPhone = '57' + waPhone;
+            }
+
+            window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
         }
 
         async function sendAdminReminderToSeller(sellerName, clientName, itemsEncoded, clientPhone, saleTotal) {
@@ -2746,6 +2777,11 @@
                                     style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #2ab7ca; background: rgba(42, 183, 202, 0.1); color:#2ab7ca; font-size:0.8rem; transition: background 0.3s;"
                                     onmouseover="this.style.background='rgba(42, 183, 202, 0.2)'" onmouseout="this.style.background='rgba(42, 183, 202, 0.1)'">
                                     <i class="fa-brands fa-whatsapp"></i> Recordar
+                                </button>
+                                <button onclick="sendAdminRenovadaMessage('${c.phone}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0})" 
+                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem; transition: background 0.3s;"
+                                    onmouseover="this.style.background='rgba(243, 156, 18, 0.2)'" onmouseout="this.style.background='rgba(243, 156, 18, 0.1)'">
+                                    <i class="fa-brands fa-whatsapp"></i> Renovada
                                 </button>
                                 <button onclick="deleteClientSale('${c.phone}', '${sale.id}')" 
                                     style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
