@@ -1581,6 +1581,7 @@ function renderSellerDashboard() {
             div.style.padding = '1rem';
             div.style.borderRadius = '8px';
 
+            const safeClientName = (sale.clientName || 'Cliente').replace(/'/g, "");
             const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
 
             div.innerHTML = `
@@ -1607,11 +1608,11 @@ function renderSellerDashboard() {
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                         <i class="fa-solid fa-redo"></i> Renovar
                     </button>
-                    <button onclick="sendReminderFromDash('${sale.id}', '${sale.clientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}')" 
+                    <button onclick="sendReminderFromDash('${sale.id}', '${safeClientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}')" 
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
                         <i class="fa-brands fa-whatsapp"></i> Recordar
                     </button>
-                    <button onclick="sendRenovadaFromDash('${sale.clientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0})" 
+                    <button onclick="sendRenovadaFromDash('${safeClientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0})" 
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12;">
                         <i class="fa-brands fa-whatsapp"></i> Renovada
                     </button>
