@@ -1611,7 +1611,7 @@ function renderSellerDashboard() {
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
                         <i class="fa-brands fa-whatsapp"></i> Recordar
                     </button>
-                    <button onclick="sendRenovadaFromDash('${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0})" 
+                    <button onclick="sendRenovadaFromDash('${sale.clientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0})" 
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12;">
                         <i class="fa-brands fa-whatsapp"></i> Renovada
                     </button>
@@ -1698,7 +1698,7 @@ window.sendReminderFromDash = async function (saleId, cName, cPhone, itemsEncode
     reminderEditorModal.style.display = 'block';
 }
 
-window.sendRenovadaFromDash = function (clientPhone, itemsEncoded, isMultiple, expirationDateTS) {
+window.sendRenovadaFromDash = function (clientName, clientPhone, itemsEncoded, isMultiple, expirationDateTS) {
     if (!clientPhone) return alert('Este cliente no tiene número registrado.');
     const itemsStr = decodeURIComponent(itemsEncoded);
     const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -1711,10 +1711,10 @@ window.sendRenovadaFromDash = function (clientPhone, itemsEncoded, isMultiple, e
     let msg = '';
     if (isMultiple) {
         const template = storeConfig.renovadaPluralTemplate || "♦️♦️♦️ ** Tus Pantallas de *{pantallas}* han sido Renovadas* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence {mes}*";
-        msg = template.replace(/{pantallas}/g, itemsStr).replace(/{mes}/g, monthText);
+        msg = template.replace(/{cliente}/g, clientName).replace(/{pantallas}/g, itemsStr).replace(/{mes}/g, monthText);
     } else {
         const template = storeConfig.renovadaSingularTemplate || "♦️♦️♦️ ** Tu Pantalla de *{pantallas}* ha sido Renovada* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence {mes}*";
-        msg = template.replace(/{pantallas}/g, itemsStr).replace(/{mes}/g, monthText);
+        msg = template.replace(/{cliente}/g, clientName).replace(/{pantallas}/g, itemsStr).replace(/{mes}/g, monthText);
     }
 
     const encodedMsg = encodeURIComponent(msg);
