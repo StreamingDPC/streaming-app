@@ -300,8 +300,18 @@
                         <input type="text" id="new-desc" placeholder="Pantalla original premium con garantía.">
                     </div>
                     <div class="form-col" style="grid-column: span 2;">
-                        <label>Imagen Personalizada (opcional)</label>
-                        <input type="text" id="new-image" placeholder="Ruta local (assets/...) o URL">
+                        <label>Imagen Personalizada (Ruta, URL, o Archivo Local)</label>
+                        <div style="display:flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <input type="text" id="new-image" placeholder="Ruta local (assets/...) o URL" style="flex:1;">
+                            <input type="file" id="new-image-file" accept="image/*" style="display:none;" onchange="
+                                if(this.files && this.files[0]){
+                                    if(this.files[0].size > 500000) return alert('La imagen es muy pesada. Debe ser menor a 500KB.');
+                                    const r = new FileReader(); r.onload = e => document.getElementById('new-image').value = e.target.result;
+                                    r.readAsDataURL(this.files[0]);
+                                }
+                            ">
+                            <button type="button" class="btn-icon" style="width: auto; padding: 0 1rem; border-radius: 12px; font-size: 0.9rem;" onclick="document.getElementById('new-image-file').click()"><i class="fa-solid fa-upload"></i> Archivo Local</button>
+                        </div>
                         <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">
                             * Si dejas esto vacío, el sistema intentará asignar un logo automáticamente basado en la
                             Marca.
@@ -526,6 +536,25 @@
 
         <!-- TAB CLIENTES -->
         <div id="tab-clientes" class="tab-content">
+            <div class="admin-form">
+                <h3 style="color:var(--text-primary);"><i class="fa-solid fa-user-plus"></i> Crear Cliente Nuevo Manualmente</h3>
+                <div class="form-grid">
+                    <div class="form-col">
+                        <label>Nombre del Cliente</label>
+                        <input type="text" id="manual-client-name" placeholder="Ej: Juan Pérez">
+                    </div>
+                    <div class="form-col">
+                        <label>Teléfono Celular</label>
+                        <input type="text" id="manual-client-phone" placeholder="Ej: 3001234567">
+                    </div>
+                    <div class="form-col" style="grid-column: 1 / -1;">
+                        <label>Seleccionar Pantalla Inicial a Asignar</label>
+                        <select id="manual-client-product" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--bg-dark); color: white;"></select>
+                    </div>
+                </div>
+                <button class="save-btn" style="background:#4cd137;" onclick="createClientManual()">Crear Cliente y Asignar Pantalla</button>
+            </div>
+
             <div class="admin-form">
                 <h3>Buscar y Editar Cliente</h3>
                 <div class="form-grid">
@@ -1601,6 +1630,7 @@
         });
 
         function renderAdminList() {
+            if (window.renderManualClientProducts) window.renderManualClientProducts();
             populateOwnerSelect();
             const listDiv = document.getElementById('admin-list');
             const search = document.getElementById('search-prod').value.toLowerCase();
@@ -2901,11 +2931,12 @@
             if (!confirm(`¿Actualizar todos los registros de compras para ${currentEditingClientPhone} con este nuevo nombre y ciudad?`)) return;
 
             try {
+                const updates = {};
+                
                 // Update in Client Sales
                 const snap = await db.ref(`clientSales/${currentEditingClientPhone}`).once('value');
                 const sales = snap.val();
                 if (sales) {
-                    const updates = {};
                     Object.keys(sales).forEach(saleKey => {
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientName`] = newName;
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientCity`] = newCity;
@@ -2923,19 +2954,35 @@
                             updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/expirationDate`] = new Date(eYear, eMo - 1, eDa, 12, 0, 0).getTime();
                         }
                     }
-
-                    await db.ref('/').update(updates);
-
-                    // Update PIN
-                    const newPin = document.getElementById('edit-client-pin').value.trim();
-                    if (newPin) {
-                        await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).set(newPin);
-                    } else {
-                        await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).remove();
-                    }
-
-                    alert('Datos de cliente actualizados correctamente en su historial.');
                 }
+
+                // Update in Seller Sales where phone matches
+                const sSnap = await db.ref(`sellerSales`).once('value');
+                const allSellers = sSnap.val();
+                if (allSellers) {
+                    for (let sellerName in allSellers) {
+                        for (let sId in allSellers[sellerName]) {
+                            if (allSellers[sellerName][sId].clientPhone === currentEditingClientPhone) {
+                                updates[`sellerSales/${sellerName}/${sId}/clientName`] = newName;
+                                updates[`sellerSales/${sellerName}/${sId}/clientCity`] = newCity;
+                            }
+                        }
+                    }
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    await db.ref('/').update(updates);
+                }
+
+                // Update PIN
+                const newPin = document.getElementById('edit-client-pin').value.trim();
+                if (newPin) {
+                    await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).set(newPin);
+                } else {
+                    await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).remove();
+                }
+
+                alert('Datos de cliente actualizados correctamente en su historial y en registros de vendedores.');
             } catch (err) {
                 alert('Error conectando a la base de datos');
                 console.error(err);
@@ -3191,7 +3238,77 @@
             const elem = document.getElementById('auto-reminder-ui');
             if (elem) elem.style.display = 'none';
         }
+        window.renderManualClientProducts = function() {
+            const select = document.getElementById('manual-client-product');
+            if (select && dynamicProducts) {
+                select.innerHTML = '<option value="">-- No asignar pantalla inicial --</option>';
+                dynamicProducts.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.text = `${p.name} ($${p.price.toLocaleString()}) - ${p.category}`;
+                    select.appendChild(opt);
+                });
+            }
+        };
+
+        window.createClientManual = async function() {
+            const name = document.getElementById('manual-client-name').value.trim();
+            const phoneStr = document.getElementById('manual-client-phone').value.replace(/\D/g, '');
+            const prodId = document.getElementById('manual-client-product').value;
+
+            if (!name) return alert('Debes ingresar el nombre del cliente.');
+            if (!phoneStr || phoneStr.length < 5) return alert('Debes ingresar un número válido.');
+
+            try {
+                // Register Client Profile first
+                await db.ref(`clientProfiles/${phoneStr}`).update({ name: name });
+
+                const saleData = {
+                    clientName: name,
+                    clientCity: '',
+                    clientPhone: phoneStr,
+                    date: Date.now(),
+                    expirationDate: Date.now() + (30 * 24 * 60 * 60 * 1000),
+                    items: [],
+                    total: 0,
+                    sellerName: 'Página Web Oficial',
+                    isPaid: true
+                };
+
+                if (prodId) {
+                    const p = dynamicProducts.find(x => x.id.toString() === prodId);
+                    if (p) {
+                        saleData.items.push({
+                            id: p.id,
+                            name: p.name,
+                            customName: null,
+                            category: p.category,
+                            finalPrice: p.price
+                        });
+                        saleData.total = p.price;
+                    }
+                }
+
+                // Guardar como venta inicial si se seleccionó producto, o registro vacío si no
+                if (prodId) {
+                    await db.ref(`clientSales/${phoneStr}`).push(saleData);
+                    await db.ref(`sellerSales/Página Web Oficial`).push(saleData);
+                    alert(`¡Cliente '${name}' creado satisfactoriamente con su pantalla asignada!`);
+                } else {
+                    alert(`¡Cliente '${name}' registrado en la DB exitosamente sin compras activas!`);
+                }
+                
+                document.getElementById('manual-client-name').value = '';
+                document.getElementById('manual-client-phone').value = '';
+                document.getElementById('manual-client-product').value = '';
+
+                // Refrescar vistas si están activas
+                renderAllClientsList();
+
+            } catch(e) {
+                alert('Error al crear el cliente: ' + e.message);
+            }
+        };
     </script>
 </body>
-
 </html>

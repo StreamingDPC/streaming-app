@@ -1609,6 +1609,10 @@ function renderSellerDashboard() {
                         style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
                         <i class="fa-brands fa-whatsapp"></i> Recordar
                     </button>
+                    <button onclick="editClientFromDash('${sale.id}', '${sale.clientName}', '${sale.clientPhone || ''}', '${sale.clientCity || ''}')" 
+                        style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #c48dfc; background: rgba(196, 141, 252, 0.1); color:#c48dfc;">
+                        <i class="fa-solid fa-pen"></i> Editar
+                    </button>
                 </div>
             `;
             sellerSalesList.appendChild(div);
@@ -1687,6 +1691,46 @@ window.sendReminderFromDash = async function (saleId, cName, cPhone, itemsEncode
 
     reminderEditorModal.style.display = 'block';
 }
+
+window.editClientFromDash = function (saleId, cName, cPhone, cCity) {
+    const newName = prompt('Editar Nombre del Cliente:', cName);
+    if(newName === null) return;
+    const newPhone = prompt('Editar Celular del Cliente:', cPhone);
+    if(newPhone === null) return;
+    const newCity = prompt('Editar Ciudad del Cliente:', cCity);
+    if(newCity === null) return;
+    
+    // Update in Firebase sellerSales y clientSales
+    let updates = {};
+    updates[`sellerSales/${currentSellerName}/${saleId}/clientName`] = newName;
+    updates[`sellerSales/${currentSellerName}/${saleId}/clientPhone`] = newPhone;
+    updates[`sellerSales/${currentSellerName}/${saleId}/clientCity`] = newCity;
+
+    let cleanPhoneOld = cPhone ? cPhone.replace(/\D/g, '') : '';
+    let cleanPhoneNew = newPhone ? newPhone.replace(/\D/g, '') : '';
+
+    db.ref('/').update(updates).then(() => {
+        alert('Cliente editado correctamente.');
+        renderSellerDashboard();
+        
+        // Sincronizar en clientSales si era posible (opcional)
+        if (cleanPhoneOld && cleanPhoneOld === cleanPhoneNew) {
+            db.ref(`clientSales/${cleanPhoneOld}`).once('value').then(snap => {
+                const cSales = snap.val();
+                if (cSales) {
+                    let cUpd = {};
+                    Object.keys(cSales).forEach(k => {
+                        if (cSales[k].clientName === cName) {
+                            cUpd[`clientSales/${cleanPhoneOld}/${k}/clientName`] = newName;
+                            cUpd[`clientProfiles/${cleanPhoneOld}/name`] = newName;
+                        }
+                    });
+                    db.ref('/').update(cUpd);
+                }
+            });
+        }
+    });
+};
 
 function renderClientDashboard() {
     if (!clientSalesList || !clientPhoneLoggedIn) return;
