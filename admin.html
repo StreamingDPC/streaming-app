@@ -2808,12 +2808,6 @@
                 if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
                 window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
             }
-                } catch(e) {
-                    console.error(e);
-                }
-            }
-
-            window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
         }
 
         let _crmTargetClient = { name: '', phone: '' };
