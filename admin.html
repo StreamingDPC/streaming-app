@@ -719,10 +719,10 @@
         </div>
     </div>
     <div class="form-col" style="margin-bottom: 1rem;">
-        <label>Galería de Fotos y Texto</label>
-        <div id="msg-photo-gallery" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
-        <button class="save-btn" onclick="addPhotoTextToGallery()" style="margin-top:0.5rem; background:var(--accent-primary);">
-            <i class="fa-solid fa-plus"></i> Añadir Foto y Texto
+        <label>Contenido por Pantalla/Plataforma (Fotos y Textos CRM)</label>
+        <div id="crm-platforms-container" style="display:flex; flex-direction:column; gap:1.5rem;"></div>
+        <button class="save-btn" onclick="addCRMPlatform()" style="margin-top:1rem; background:var(--accent-primary); width:auto; align-self:flex-start;">
+            <i class="fa-solid fa-folder-plus"></i> Añadir Nueva Pantalla/Categoría
         </button>
     </div>
     <button class="save-btn" onclick="saveConfig()" style="margin-top:1rem; background:var(--accent-primary);">
@@ -1984,33 +1984,78 @@
         }
 
         // --- SECTION CRM MESSAGING ---
-        window.addPhotoTextToGallery = function(data = { photo: '', text: '' }) {
-            const gallery = document.getElementById('msg-photo-gallery');
-            if (!gallery) return;
+        window.addCRMPlatform = function(platformName = '', dataItems = []) {
+            const container = document.getElementById('crm-platforms-container');
+            if (!container) return;
+
+            const platformId = 'platform-' + Date.now() + Math.floor(Math.random()*1000);
             const div = document.createElement('div');
-            div.className = 'gallery-item';
-            div.style = 'border: 1px solid var(--glass-border); padding: 0.8rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.6rem; background: rgba(255,255,255,0.03); margin-bottom: 0.5rem;';
+            div.className = 'crm-platform-section';
+            div.dataset.platformId = platformId;
+            div.style = 'background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 12px;';
             div.innerHTML = `
-                <div style="display:flex; gap:0.5rem; align-items:center;">
-                    <div style="background:var(--accent-primary); color:black; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:bold;">
-                        <i class="fa-solid fa-image"></i>
+                <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem;">
+                    <div style="background:var(--accent-primary); color:black; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                        <i class="fa-solid fa-tv"></i>
                     </div>
-                    <input type="text" class="gallery-photo" placeholder="URL de la Foto (Ej: https://...)" style="flex:1; border-radius:6px;" value="${data.photo}">
-                    <button class="btn-icon" style="color:#ff4d4d; border:1px solid rgba(255,77,77,0.3); padding:4px; border-radius:4px;" onclick="this.parentElement.parentElement.remove()" title="Eliminar">
-                        <i class="fa-solid fa-trash"></i>
+                    <input type="text" class="platform-name-input" placeholder="Nombre (Ej: Netflix, Disney, etc)" style="flex:1; font-weight:bold; font-size:1.1rem; border:none; background:transparent; color:white;" value="${platformName}">
+                    <button class="btn-icon" style="color:#ff4d4d; border:1px solid rgba(255,77,77,0.3); padding:6px; border-radius:6px;" onclick="this.parentElement.parentElement.remove()" title="Eliminar Pantalla Completa">
+                        <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
-                <textarea class="gallery-text" rows="2" placeholder="Texto descriptivo o copy para esta foto..." style="width:100%; border-radius:6px; padding:8px; font-size:0.85rem;">${data.text}</textarea>
+                <div class="platform-photos-list" style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.8rem;"></div>
+                <button class="save-btn" style="background:rgba(255,255,255,0.1); border:1px dashed rgba(255,255,255,0.3); font-size:0.85rem; padding:8px 12px; width:auto; text-align:left;" onclick="addPhotoTextToPlatform('${platformId}')">
+                    <i class="fa-solid fa-plus"></i> Añadir Foto/Texto a esta Pantalla
+                </button>
             `;
-            gallery.appendChild(div);
+            container.appendChild(div);
+
+            const photosList = div.querySelector('.platform-photos-list');
+            dataItems.forEach(item => addPhotoTextToPlatform(platformId, item));
+        }
+
+        window.addPhotoTextToPlatform = function(platformId, data = { photo: '', text: '' }) {
+            const platformDiv = document.querySelector(`[data-platform-id="${platformId}"]`);
+            if (!platformDiv) return;
+            const photosList = platformDiv.querySelector('.platform-photos-list');
+            
+            const div = document.createElement('div');
+            div.className = 'gallery-item';
+            div.style = 'border: 1px solid rgba(255,255,255,0.08); padding: 0.8rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.6rem; background: rgba(0,0,0,0.2);';
+            div.innerHTML = `
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <i class="fa-solid fa-image" style="color:rgba(255,255,255,0.4); font-size:0.8rem;"></i>
+                    <input type="text" class="gallery-photo" placeholder="URL de la Foto" style="flex:1; border-radius:6px; font-size:0.85rem;" value="${data.photo}">
+                    <button class="btn-icon" style="color:#ff4d4d; padding:4px;" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <textarea class="gallery-text" rows="2" placeholder="Texto o Copy..." style="width:100%; border-radius:6px; padding:6px; font-size:0.85rem;">${data.text}</textarea>
+            `;
+            photosList.appendChild(div);
         }
 
         function renderMsgPhotoGallery() {
-            const gallery = document.getElementById('msg-photo-gallery');
-            if (!gallery) return;
-            gallery.innerHTML = '';
-            const items = storeConfig.crmGallery || [];
-            items.forEach(item => addPhotoTextToGallery(item));
+            const container = document.getElementById('crm-platforms-container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const dict = storeConfig.crmGalleryDict || {};
+            // Soporte para formato antiguo (array) si existe
+            if (Array.isArray(storeConfig.crmGallery)) {
+                if (storeConfig.crmGallery.length > 0) {
+                    addCRMPlatform('General', storeConfig.crmGallery);
+                }
+            } else {
+                for (let platformName in dict) {
+                    addCRMPlatform(platformName, dict[platformName]);
+                }
+            }
+            
+            // Si está vacío, añadir uno de sugerencia
+            if (container.children.length === 0) {
+                addCRMPlatform('Netflix', []);
+            }
         }
 
         function deleteProduct(index) {
@@ -2121,16 +2166,22 @@
             if (document.getElementById('conf-sendOnlyStep1')) storeConfig.sendOnlyStep1 = document.getElementById('conf-sendOnlyStep1').value === 'true';
             if (document.getElementById('conf-msgDiscountAmount')) storeConfig.msgDiscountAmount = parseInt(document.getElementById('conf-msgDiscountAmount').value) || 0;
 
-            const galleryItems = [];
-            const galleryContainer = document.getElementById('msg-photo-gallery');
-            if (galleryContainer) {
-                galleryContainer.querySelectorAll('.gallery-item').forEach(item => {
-                    const photo = item.querySelector('.gallery-photo').value.trim();
-                    const text = item.querySelector('.gallery-text').value.trim();
-                    if (photo || text) galleryItems.push({ photo, text });
+            const newCrmDict = {};
+            const platformsContainer = document.getElementById('crm-platforms-container');
+            if (platformsContainer) {
+                platformsContainer.querySelectorAll('.crm-platform-section').forEach(section => {
+                    const name = section.querySelector('.platform-name-input').value.trim() || 'Sin Nombre';
+                    const items = [];
+                    section.querySelectorAll('.gallery-item').forEach(item => {
+                        const photo = item.querySelector('.gallery-photo').value.trim();
+                        const text = item.querySelector('.gallery-text').value.trim();
+                        if (photo || text) items.push({ photo, text });
+                    });
+                    newCrmDict[name] = items;
                 });
             }
-            storeConfig.crmGallery = galleryItems;
+            storeConfig.crmGalleryDict = newCrmDict;
+            storeConfig.crmGallery = []; // Limpiar formato antiguo
 
             db.ref('storeConfig').set(storeConfig).then(() => {
                 alert('¡Configuración guardada exitosamente!');
