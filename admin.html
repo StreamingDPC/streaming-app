@@ -1645,6 +1645,13 @@
             if (document.getElementById('conf-nuEnabled')) document.getElementById('conf-nuEnabled').value = storeConfig.nuEnabled !== false ? 'true' : 'false';
             if (document.getElementById('conf-nuLabel')) document.getElementById('conf-nuLabel').value = storeConfig.nuLabel || '';
             if (document.getElementById('conf-nuImg')) document.getElementById('conf-nuImg').value = storeConfig.nuImg || '';
+            
+            // CRM Messaging config
+            if (document.getElementById('conf-msgTemplate1')) document.getElementById('conf-msgTemplate1').value = storeConfig.msgTemplate1 || '';
+            if (document.getElementById('conf-msgTemplate2')) document.getElementById('conf-msgTemplate2').value = storeConfig.msgTemplate2 || '';
+            if (document.getElementById('conf-sendOnlyStep1')) document.getElementById('conf-sendOnlyStep1').value = storeConfig.sendOnlyStep1 === true ? 'true' : 'false';
+            if (document.getElementById('conf-msgDiscountAmount')) document.getElementById('conf-msgDiscountAmount').value = storeConfig.msgDiscountAmount || 0;
+            renderMsgPhotoGallery();
 
             fetchClientSalesHistory();
             fetchSellerSalesStats();
@@ -1976,6 +1983,36 @@
             if (editIndex === -1) cancelEdit(); // clear forms
         }
 
+        // --- SECTION CRM MESSAGING ---
+        window.addPhotoTextToGallery = function(data = { photo: '', text: '' }) {
+            const gallery = document.getElementById('msg-photo-gallery');
+            if (!gallery) return;
+            const div = document.createElement('div');
+            div.className = 'gallery-item';
+            div.style = 'border: 1px solid var(--glass-border); padding: 0.8rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.6rem; background: rgba(255,255,255,0.03); margin-bottom: 0.5rem;';
+            div.innerHTML = `
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <div style="background:var(--accent-primary); color:black; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:bold;">
+                        <i class="fa-solid fa-image"></i>
+                    </div>
+                    <input type="text" class="gallery-photo" placeholder="URL de la Foto (Ej: https://...)" style="flex:1; border-radius:6px;" value="${data.photo}">
+                    <button class="btn-icon" style="color:#ff4d4d; border:1px solid rgba(255,77,77,0.3); padding:4px; border-radius:4px;" onclick="this.parentElement.parentElement.remove()" title="Eliminar">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <textarea class="gallery-text" rows="2" placeholder="Texto descriptivo o copy para esta foto..." style="width:100%; border-radius:6px; padding:8px; font-size:0.85rem;">${data.text}</textarea>
+            `;
+            gallery.appendChild(div);
+        }
+
+        function renderMsgPhotoGallery() {
+            const gallery = document.getElementById('msg-photo-gallery');
+            if (!gallery) return;
+            gallery.innerHTML = '';
+            const items = storeConfig.crmGallery || [];
+            items.forEach(item => addPhotoTextToGallery(item));
+        }
+
         function deleteProduct(index) {
             if (confirm(`¿Estás seguro de que quieres eliminar "${dynamicProducts[index].name}"?`)) {
                 dynamicProducts.splice(index, 1);
@@ -2077,6 +2114,23 @@
                 storeConfig.nuLabel = document.getElementById('conf-nuLabel').value.trim();
                 storeConfig.nuImg = document.getElementById('conf-nuImg').value.trim();
             }
+
+            // Save CRM Messaging Config
+            if (document.getElementById('conf-msgTemplate1')) storeConfig.msgTemplate1 = document.getElementById('conf-msgTemplate1').value;
+            if (document.getElementById('conf-msgTemplate2')) storeConfig.msgTemplate2 = document.getElementById('conf-msgTemplate2').value;
+            if (document.getElementById('conf-sendOnlyStep1')) storeConfig.sendOnlyStep1 = document.getElementById('conf-sendOnlyStep1').value === 'true';
+            if (document.getElementById('conf-msgDiscountAmount')) storeConfig.msgDiscountAmount = parseInt(document.getElementById('conf-msgDiscountAmount').value) || 0;
+
+            const galleryItems = [];
+            const galleryContainer = document.getElementById('msg-photo-gallery');
+            if (galleryContainer) {
+                galleryContainer.querySelectorAll('.gallery-item').forEach(item => {
+                    const photo = item.querySelector('.gallery-photo').value.trim();
+                    const text = item.querySelector('.gallery-text').value.trim();
+                    if (photo || text) galleryItems.push({ photo, text });
+                });
+            }
+            storeConfig.crmGallery = galleryItems;
 
             db.ref('storeConfig').set(storeConfig).then(() => {
                 alert('¡Configuración guardada exitosamente!');
