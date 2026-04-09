@@ -2230,15 +2230,25 @@
             const newCrmDict = {};
             const platformsContainer = document.getElementById('crm-platforms-container');
             if (platformsContainer) {
-                platformsContainer.querySelectorAll('.crm-platform-section').forEach(section => {
-                    const name = section.querySelector('.platform-name-input').value.trim() || 'Sin Nombre';
+                platformsContainer.querySelectorAll('.crm-platform-section').forEach((section, index) => {
+                    let name = section.querySelector('.platform-name-input').value.trim();
+                    if (!name) name = "Carpeta " + (index + 1);
+                    
+                    // Asegurar nombre único
+                    let finalName = name;
+                    let counter = 1;
+                    while (newCrmDict[finalName]) {
+                        finalName = name + " (" + counter + ")";
+                        counter++;
+                    }
+
                     const items = [];
                     section.querySelectorAll('.gallery-item').forEach(item => {
                         const photo = item.querySelector('.gallery-photo').value.trim();
                         const text = item.querySelector('.gallery-text').value.trim();
                         if (photo || text) items.push({ photo, text });
                     });
-                    newCrmDict[name] = items;
+                    newCrmDict[finalName] = items;
                 });
             }
             storeConfig.crmGalleryDict = newCrmDict;
