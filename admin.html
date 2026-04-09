@@ -2076,18 +2076,19 @@
             container.innerHTML = '';
             
             const dict = storeConfig.crmGalleryDict || {};
-            // Soporte para formato antiguo (array) si existe
-            if (Array.isArray(storeConfig.crmGallery)) {
-                if (storeConfig.crmGallery.length > 0) {
-                    addCRMPlatform('General', storeConfig.crmGallery);
-                }
-            } else {
+            const keys = Object.keys(dict);
+
+            if (keys.length > 0) {
+                // Nuevo formato por plataformas
                 for (let platformName in dict) {
                     addCRMPlatform(platformName, dict[platformName]);
                 }
+            } else if (Array.isArray(storeConfig.crmGallery) && storeConfig.crmGallery.length > 0) {
+                // Formato antiguo (compatibilidad)
+                addCRMPlatform('General', storeConfig.crmGallery);
             }
             
-            // Si está vacío, añadir uno de sugerencia
+            // Si está vacío, añadir uno de sugerencia para que el usuario pueda empezar
             if (container.children.length === 0) {
                 addCRMPlatform('Netflix', []);
             }
