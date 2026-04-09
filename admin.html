@@ -2810,9 +2810,15 @@
             }
         }
 
-        let _crmTargetClient = { name: '', phone: '' };
-        window.openCRMPlatformSelector = function(nameEnc, phone) {
-            _crmTargetClient = { name: decodeURIComponent(nameEnc), phone: phone };
+        let _crmTargetClient = { name: '', phone: '', start: '', end: '', pin: '' };
+        window.openCRMPlatformSelector = function(nameEnc, phone, start, end, pin) {
+            _crmTargetClient = { 
+                name: decodeURIComponent(nameEnc), 
+                phone: phone,
+                start: start,
+                end: end,
+                pin: pin
+            };
             const modal = document.getElementById('crm-selector-modal');
             const list = document.getElementById('crm-platforms-selection-list');
             if (!modal || !list) return;
@@ -2846,19 +2852,28 @@
 
         window.sendCRMStep1Message = function(platformName) {
             closeCRMSelector();
-            const { name, phone } = _crmTargetClient;
+            const { name, phone, start, end, pin } = _crmTargetClient;
             const dict = storeConfig.crmGalleryDict || {};
             const items = dict[platformName] || [];
 
             let template = storeConfig.msgTemplate1 || "¡Hola {cliente}! Aquí tienes los datos de tu pantalla de {pantalla}:";
-            let msg = template.replace(/{cliente}/ig, name).replace(/{pantalla}/ig, platformName);
+            let msg = template
+                .replace(/{cliente}/ig, name)
+                .replace(/{nombre}/ig, name)
+                .replace(/{pantalla}/ig, platformName)
+                .replace(/{inicio}/ig, start)
+                .replace(/{Fin}/ig, end)
+                .replace(/{pin}/ig, pin || 'N/A');
             
             // Añadir fotos y sus textos
             if (items.length > 0) {
-                msg += "\n\n🚀 *GUÍA DE ACCESO:*";
+                msg += "\n\n🚀 *DETALLES Y GUÍA:*";
                 items.forEach((item, index) => {
                     if (item.text) msg += `\n\n📌 *Paso ${index+1}:* ${item.text}`;
-                    if (item.photo) msg += `\n🔗 Foto guía: ${item.photo}`;
+                    if (item.photo) {
+                        const urls = item.photo.split(/[,,;]/).map(u => u.trim()).filter(u => u);
+                        urls.forEach(url => msg += `\n🔗 Foto guía: ${url}`);
+                    }
                 });
             }
 
@@ -2949,9 +2964,12 @@
             });
         }
 
+        let allClientProfiles = {};
         function fetchClientSalesHistory() {
-            db.ref('clientSales').once('value').then(snap => {
-                allClientSalesMap = snap.val() || {};
+            db.ref('/').once('value').then(snap => {
+                const data = snap.val() || {};
+                allClientSalesMap = data.clientSales || {};
+                allClientProfiles = data.clientProfiles || {};
                 renderAllClientsList();
             });
         }
@@ -3129,7 +3147,7 @@
                                     <i class="fa-brands fa-whatsapp"></i> Renovada
                                 </button>
                                 ${(!sale.sellerName || sale.sellerName === 'Página Web Oficial' || sale.sellerName === 'Admin') ? `
-                                <button onclick="openCRMPlatformSelector('${encodeURIComponent(c.name)}', '${c.phone}')" 
+                                <button onclick="openCRMPlatformSelector('${encodeURIComponent(c.name)}', '${c.phone}', '${startDate}', '${endDate}', '${(allClientProfiles[c.phone] ? allClientProfiles[c.phone].pin : '')}')" 
                                     style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #9b59b6; background: rgba(155, 89, 182, 0.1); color:#9b59b6; font-size:0.8rem; transition: background 0.3s;"
                                     onmouseover="this.style.background='rgba(155, 89, 182, 0.2)'" onmouseout="this.style.background='rgba(155, 89, 182, 0.1)'">
                                     <i class="fa-solid fa-paper-plane"></i> CRM
