@@ -726,7 +726,15 @@
         </div>
     </div>
     <div class="form-col" style="margin-bottom: 1rem;">
-        <label>Contenido por Pantalla/Plataforma (Fotos y Textos CRM)</label>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; gap:1rem; flex-wrap:wrap;">
+            <label style="margin:0;">Contenido por Pantalla/Plataforma (Fotos y Textos CRM)</label>
+            <div style="position:relative; flex:1; max-width:300px;">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:#666;"></i>
+                <input type="text" id="crm-admin-search" placeholder="Filtrar carpetas por nombre..." 
+                    style="width:100%; padding:8px 10px 8px 30px; font-size:0.85rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:white;"
+                    onkeyup="filterCRMAdminPlatforms(this.value)">
+            </div>
+        </div>
         <div id="crm-platforms-container" style="display:flex; flex-direction:column; gap:1.5rem;"></div>
         <button class="save-btn" onclick="addCRMPlatform()" style="margin-top:1rem; background:var(--accent-primary); width:auto; align-self:flex-start;">
             <i class="fa-solid fa-folder-plus"></i> Añadir Nueva Pantalla/Categoría
@@ -2092,6 +2100,20 @@
             if (container.children.length === 0) {
                 addCRMPlatform('Netflix', []);
             }
+        }
+
+        window.filterCRMAdminPlatforms = function(val) {
+            const filter = val.toLowerCase();
+            const sections = document.querySelectorAll('.crm-platform-section');
+            sections.forEach(sec => {
+                const input = sec.querySelector('.platform-name-input');
+                const name = input ? input.value.toLowerCase() : '';
+                if (name.includes(filter)) {
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
         }
 
         function deleteProduct(index) {
