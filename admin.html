@@ -1374,6 +1374,25 @@
     </div>
     </div>
 
+    <!-- MODAL PARA SELECCIONAR PANTALLA CRM -->
+    <div id="crm-selector-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:var(--bg-secondary); border: 1px solid var(--glass-border); max-width:500px; width:100%; border-radius:16px; padding:2rem; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+            <button onclick="closeCRMSelector()" style="position:absolute; top:1rem; right:1rem; background:transparent; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            <h2 style="color:var(--accent-primary); margin-bottom:1rem; display:flex; align-items:center; gap:0.8rem;">
+                <i class="fa-solid fa-paper-plane"></i> Enviar Mensaje CRM
+            </h2>
+            <p style="color:#ccc; font-size:0.9rem; margin-bottom:1.5rem;">Selecciona la plataforma que el cliente está comprando para incluir sus fotos y datos en el mensaje:</p>
+            
+            <div id="crm-platforms-selection-list" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; max-height:300px; overflow-y:auto; padding-right:5px;">
+                <!-- Botones se generan aqui -->
+            </div>
+            
+            <div style="margin-top:2rem; display:flex; justify-content:flex-end;">
+                <button class="save-btn" onclick="closeCRMSelector()" style="background:transparent; border:1px solid #555; width:auto;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Protcción de página
         if (localStorage.getItem('adminLoggedIn') !== 'true') {
@@ -2789,6 +2808,71 @@
                 if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
                 window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
             }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+
+            window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
+        }
+
+        let _crmTargetClient = { name: '', phone: '' };
+        window.openCRMPlatformSelector = function(nameEnc, phone) {
+            _crmTargetClient = { name: decodeURIComponent(nameEnc), phone: phone };
+            const modal = document.getElementById('crm-selector-modal');
+            const list = document.getElementById('crm-platforms-selection-list');
+            if (!modal || !list) return;
+
+            list.innerHTML = '';
+            const dict = storeConfig.crmGalleryDict || {};
+            const keys = Object.keys(dict);
+
+            if (keys.length === 0) {
+                alert('No tienes categorías configuradas en Mensajes / CRM.');
+                return;
+            }
+
+            keys.forEach(k => {
+                const btn = document.createElement('button');
+                btn.className = 'save-btn';
+                btn.style = 'margin:0; background:rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); font-size:0.9rem; padding:15px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:5px; height:auto; transition: all 0.2s;';
+                btn.innerHTML = `<i class="fa-solid fa-tv" style="color:var(--accent-primary);"></i> <span>${k}</span>`;
+                btn.onclick = () => sendCRMStep1Message(k);
+                btn.onmouseover = () => { btn.style.background='var(--accent-primary)'; btn.style.color='black'; btn.querySelector('i').style.color='black'; };
+                btn.onmouseout = () => { btn.style.background='rgba(255,255,255,0.05)'; btn.style.color='white'; btn.querySelector('i').style.color='var(--accent-primary)'; };
+                list.appendChild(btn);
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        window.closeCRMSelector = function() {
+            document.getElementById('crm-selector-modal').style.display = 'none';
+        }
+
+        window.sendCRMStep1Message = function(platformName) {
+            closeCRMSelector();
+            const { name, phone } = _crmTargetClient;
+            const dict = storeConfig.crmGalleryDict || {};
+            const items = dict[platformName] || [];
+
+            let template = storeConfig.msgTemplate1 || "¡Hola {cliente}! Aquí tienes los datos de tu pantalla de {pantalla}:";
+            let msg = template.replace(/{cliente}/ig, name).replace(/{pantalla}/ig, platformName);
+            
+            // Añadir fotos y sus textos
+            if (items.length > 0) {
+                msg += "\n\n🚀 *GUÍA DE ACCESO:*";
+                items.forEach((item, index) => {
+                    if (item.text) msg += `\n\n📌 *Paso ${index+1}:* ${item.text}`;
+                    if (item.photo) msg += `\n🔗 Foto guía: ${item.photo}`;
+                });
+            }
+
+            const encodedMsg = encodeURIComponent(msg);
+            let waPhone = phone.replace(/\D/g, '');
+            if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
+            
+            window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
         }
 
         async function sendAdminReminderToSeller(sellerName, clientName, itemsEncoded, clientPhone, saleTotal) {
@@ -3050,6 +3134,13 @@
                                     onmouseover="this.style.background='rgba(243, 156, 18, 0.2)'" onmouseout="this.style.background='rgba(243, 156, 18, 0.1)'">
                                     <i class="fa-brands fa-whatsapp"></i> Renovada
                                 </button>
+                                ${(!sale.sellerName || sale.sellerName === 'Página Web Oficial' || sale.sellerName === 'Admin') ? `
+                                <button onclick="openCRMPlatformSelector('${encodeURIComponent(c.name)}', '${c.phone}')" 
+                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #9b59b6; background: rgba(155, 89, 182, 0.1); color:#9b59b6; font-size:0.8rem; transition: background 0.3s;"
+                                    onmouseover="this.style.background='rgba(155, 89, 182, 0.2)'" onmouseout="this.style.background='rgba(155, 89, 182, 0.1)'">
+                                    <i class="fa-solid fa-paper-plane"></i> CRM
+                                </button>
+                                ` : ''}
                                 <button onclick="deleteClientSale('${c.phone}', '${sale.id}')" 
                                     style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
                                     <i class="fa-solid fa-trash"></i>
