@@ -1941,7 +1941,27 @@ function renderSaleItem(sale, isExpired, container) {
         </div>
         <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '1rem'};">📺 ${itemsStr}</p>
         ${!isExpired ? `
-        <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+        <div style="display:flex; flex-direction:column; gap: 0.5rem;">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                ${(sale.items || []).map(item => {
+                    const platformNameRaw = item.name.split(' ')[0].toLowerCase().replace(/\W/g, '');
+                    const crmPlatforms = storeConfig ? (storeConfig.crmPlatforms || {}) : {};
+                    const matchingConfig = Object.values(crmPlatforms).find(conf => 
+                        (conf.name && platformNameRaw.includes(conf.name.toLowerCase().replace(/\W/g, ''))) ||
+                        (conf.description && platformNameRaw.includes(conf.description.toLowerCase().replace(/\W/g, '')))
+                    );
+                    
+                    if (matchingConfig && matchingConfig.manualUrl) {
+                        return `
+                        <button onclick="window.open('${matchingConfig.manualUrl}', '_blank')" 
+                            style="flex:1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #2ab7ca; background: rgba(42, 183, 202, 0.1); color:#2ab7ca; font-size:0.8rem;">
+                            <i class="fa-solid fa-eye"></i> Guía ${item.name.split(' ')[0]}
+                        </button>
+                        `;
+                    }
+                    return '';
+                }).join('')}
+            </div>
             <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
                 style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                 <i class="fa-solid fa-redo"></i> Renovar mis pantallas
