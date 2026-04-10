@@ -1369,8 +1369,9 @@ function setupEventListeners() {
             console.log("Checking incentives... Enabled:", storeConfig.incentiveEnabled);
             if (storeConfig.incentiveEnabled) {
                 stats.processedCart.forEach(item => {
-                    console.log("Analyzing item for incentive:", item.name, "Category:", item.category);
-                    if (item.category === 'individual' || item.category === 'ventas_extras') {
+                    const cat = (item.category || '').toLowerCase();
+                    console.log("Analyzing item for incentive:", item.name, "Category:", cat);
+                    if (cat.includes('individual') || cat.includes('ventas_extras')) {
                         let b = 0; let name = '';
                         // Usar tanto el brand como el name, por si el admin llenó mal el brand al añadir el producto.
                         const matchStr = ((item.brand || '') + ' ' + (item.name || '')).toLowerCase();
@@ -1393,15 +1394,21 @@ function setupEventListeners() {
                             incentiveDetails.push(`${name} (+$${b})`);
                         }
                     }
-                    else if (item.category === 'combos2') { const b = parseInt(storeConfig.incentiveCombo2) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 2 P. (+$${b})`); console.log("Combo 2 bonus:", b); }
-                    else if (item.category === 'combos3') { const b = parseInt(storeConfig.incentiveCombo3) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 3 P. (+$${b})`); console.log("Combo 3 bonus:", b); }
-                    else if (item.category === 'combos4') { const b = parseInt(storeConfig.incentiveCombo4) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 4 P. (+$${b})`); console.log("Combo 4 bonus:", b); }
-                    else if (item.category === 'combos5') { const b = parseInt(storeConfig.incentiveCombo5) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 5+ P. (+$${b})`); console.log("Combo 5 bonus:", b); }
-                    else if (item.category === 'promociones_finde') { const b = parseInt(storeConfig.incentiveFinde) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Finde (+$${b})`); console.log("Promo Finde bonus:", b); }
-                    else if (item.category === 'promociones') { const b = parseInt(storeConfig.incentiveMes) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Mes (+$${b})`); console.log("Promo Mes bonus:", b); }
+                    else if (cat.includes('combos2')) { const b = parseInt(storeConfig.incentiveCombo2) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 2 P. (+$${b})`); console.log("Combo 2 bonus:", b); }
+                    else if (cat.includes('combos3')) { const b = parseInt(storeConfig.incentiveCombo3) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 3 P. (+$${b})`); console.log("Combo 3 bonus:", b); }
+                    else if (cat.includes('combos4')) { const b = parseInt(storeConfig.incentiveCombo4) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 4 P. (+$${b})`); console.log("Combo 4 bonus:", b); }
+                    else if (cat.includes('combos5')) { const b = parseInt(storeConfig.incentiveCombo5) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 5+ P. (+$${b})`); console.log("Combo 5 bonus:", b); }
+                    else if (cat.includes('promociones_finde')) { const b = parseInt(storeConfig.incentiveFinde) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Finde (+$${b})`); console.log("Promo Finde bonus:", b); }
+                    else if (cat.includes('promociones')) { const b = parseInt(storeConfig.incentiveMes) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Mes (+$${b})`); console.log("Promo Mes bonus:", b); }
                 });
             }
             console.log("Total incentive earned:", incentiveEarned, "Details:", incentiveDetails);
+            
+            if (isSellerMode && incentiveEarned > 0) {
+                alert(`💰 Bono ganado en esta venta: $${incentiveEarned}\n(${incentiveDetails.join(', ')})`);
+            } else if (isSellerMode) {
+                alert(`⚠️ Atención: Esta venta NO acumuló bono (verifica categorías o marcas en los productos).`);
+            }
 
             const saleData = {
                 clientName: cName || '',

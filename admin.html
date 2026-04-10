@@ -4160,10 +4160,14 @@
                     selectedOptions.forEach(prodId => {
                         const p = dynamicProducts.find(x => x.id.toString() === prodId);
                         if (p) {
-                            let finalPrice = p.price;
-                            if (individualCount >= 2 && p.category && p.category.toLowerCase().includes('individual')) {
-                                finalPrice -= 1000;
-                                console.log(`[DEBUG DISCOUNT] Applied 1000 discount to ${p.name}. Final: ${finalPrice}`);
+                            let finalPrice = (saleData.sellerName !== 'Página Web Oficial' && p.sellerPrice > 0) ? p.sellerPrice : p.price;
+                            if (individualCount >= 2 && (p.category || '').toLowerCase().includes('individual')) {
+                                let disc = 1000;
+                                if (saleData.sellerName !== 'Página Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
+                                else if (saleData.sellerName === 'Página Web Oficial' && storeConfig.discountAmount > 0) disc = storeConfig.discountAmount;
+                                
+                                finalPrice -= disc;
+                                console.log(`[DEBUG DISCOUNT] Applied ${disc} discount to ${p.name}. Final: ${finalPrice}`);
                             }
 
                             saleData.items.push({
@@ -4177,10 +4181,12 @@
 
                             // Cálculo de Incentivos (Bonos)
                             if (storeConfig.incentiveEnabled) {
-                                if (p.category === 'individual' || p.category === 'ventas_extras') {
+                                const cat = (p.category || '').toLowerCase();
+                                if (cat.includes('individual') || cat.includes('ventas_extras')) {
                                     let b = 0; let name = '';
                                     const matchStr = ((p.brand || '') + ' ' + (p.name || '')).toLowerCase();
 
+                                    console.log("Admin Match str:", matchStr);
                                     if (matchStr.includes('privada')) { b = parseInt(storeConfig.incentiveNetflixPrivada) || 0; name = 'Netflix Privada'; }
                                     else if (matchStr.includes('netflix')) { b = parseInt(storeConfig.incentiveNetflix) || 0; name = 'Netflix'; }
                                     else if (matchStr.includes('disney')) { b = parseInt(storeConfig.incentiveDisney) || 0; name = 'Disney+'; }
@@ -4192,17 +4198,18 @@
                                     else if (matchStr.includes('crunchyroll')) { b = parseInt(storeConfig.incentiveCrunchyroll) || 0; name = 'Crunchyroll'; }
                                     else if (matchStr.includes('apple')) { b = parseInt(storeConfig.incentiveApple) || 0; name = 'Apple TV'; }
 
+                                    console.log("Admin Result b:", b);
                                     if (b > 0) {
                                         incentiveEarned += b;
                                         incentiveDetails.push(`${name} (+$${b})`);
                                     }
                                 }
-                                else if (p.category === 'combos2') { const b = parseInt(storeConfig.incentiveCombo2) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 2 P. (+$${b})`); }
-                                else if (p.category === 'combos3') { const b = parseInt(storeConfig.incentiveCombo3) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 3 P. (+$${b})`); }
-                                else if (p.category === 'combos4') { const b = parseInt(storeConfig.incentiveCombo4) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 4 P. (+$${b})`); }
-                                else if (p.category === 'combos5') { const b = parseInt(storeConfig.incentiveCombo5) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 5+ P. (+$${b})`); }
-                                else if (p.category === 'promociones_finde') { const b = parseInt(storeConfig.incentiveFinde) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Finde (+$${b})`); }
-                                else if (p.category === 'promociones') { const b = parseInt(storeConfig.incentiveMes) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Mes (+$${b})`); }
+                                else if (cat.includes('combos2')) { const b = parseInt(storeConfig.incentiveCombo2) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 2 P. (+$${b})`); }
+                                else if (cat.includes('combos3')) { const b = parseInt(storeConfig.incentiveCombo3) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 3 P. (+$${b})`); }
+                                else if (cat.includes('combos4')) { const b = parseInt(storeConfig.incentiveCombo4) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 4 P. (+$${b})`); }
+                                else if (cat.includes('combos5')) { const b = parseInt(storeConfig.incentiveCombo5) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 5+ P. (+$${b})`); }
+                                else if (cat.includes('promociones_finde')) { const b = parseInt(storeConfig.incentiveFinde) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Finde (+$${b})`); }
+                                else if (cat.includes('promociones')) { const b = parseInt(storeConfig.incentiveMes) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Mes (+$${b})`); }
                             }
                         }
                     });
@@ -4214,7 +4221,8 @@
                 if (saleData.items.length > 0) {
                     await db.ref(`clientSales/${phoneStr}`).push(saleData);
                     await db.ref(`sellerSales/${saleData.sellerName}`).push(saleData);
-                    alert(`¡Cliente '${name}' creado satisfactoriamente con sus pantallas asignadas bajo el vendedor asignado!`);
+                    let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : "\n⚠️ Esta venta NO sumó bono (revisa categorías o marcas).";
+                    alert(`¡Cliente '${name}' creado satisfactoriamente!` + bonusMsg);
                 } else {
                     alert(`¡Cliente '${name}' registrado en la DB exitosamente sin compras activas!`);
                 }
