@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.7.4</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.7.5</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -2039,7 +2039,7 @@
             div.dataset.platformId = platformId;
             div.style = 'background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 1rem; border-radius: 12px;';
             div.innerHTML = `
-                <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem;">
+                <div style="display:flex; gap:1rem; align-items:center; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem;">
                     <div style="background:var(--accent-primary); color:black; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
                         <i class="fa-solid fa-tv"></i>
                     </div>
@@ -2047,6 +2047,10 @@
                     <button class="btn-icon" style="color:#ff4d4d; border:1px solid rgba(255,77,77,0.3); padding:6px; border-radius:6px;" onclick="this.parentElement.parentElement.remove()" title="Eliminar Pantalla Completa">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
+                </div>
+                <div style="margin-bottom:1rem; background:rgba(42, 183, 202, 0.1); padding:8px; border-radius:8px; border:1px solid rgba(42, 183, 202, 0.3);">
+                    <label style="font-size:0.75rem; color:#2ab7ca; display:block; margin-bottom:4px; font-weight:bold;">URL DE LA GUÍA (BOTÓN PARA EL CLIENTE):</label>
+                    <input type="text" class="platform-guide-url" placeholder="https://ejemplo.com/guia-netflix" style="width:100%; font-size:0.85rem; border-radius:6px; padding:6px; border:1px solid rgba(42,183,202,0.2);" value="${dataItems.guideUrl || ''}">
                 </div>
                 <div class="platform-photos-list" style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.8rem;"></div>
                 <button class="save-btn" style="background:rgba(255,255,255,0.1); border:1px dashed rgba(255,255,255,0.3); font-size:0.85rem; padding:8px 12px; width:auto; text-align:left;" onclick="addPhotoTextToPlatform('${platformId}')">
@@ -2091,7 +2095,13 @@
             if (keys.length > 0) {
                 // Nuevo formato por plataformas
                 for (let platformName in dict) {
-                    addCRMPlatform(platformName, dict[platformName]);
+                    const dataItems = dict[platformName] || [];
+                    const pConfig = (storeConfig.crmPlatforms && storeConfig.crmPlatforms[platformName]) ? storeConfig.crmPlatforms[platformName] : null;
+                    const guideUrl = pConfig ? pConfig.manualUrl : '';
+                    
+                    // Enviar como propiedad adjunta para el renderizado del input
+                    dataItems.guideUrl = guideUrl; 
+                    addCRMPlatform(platformName, dataItems);
                 }
             } else if (Array.isArray(storeConfig.crmGallery) && storeConfig.crmGallery.length > 0) {
                 // Formato antiguo (compatibilidad)
@@ -2228,13 +2238,14 @@
             if (document.getElementById('conf-useLocalRobotCRM')) storeConfig.useLocalRobotCRM = document.getElementById('conf-useLocalRobotCRM').value === 'true';
 
             const newCrmDict = {};
+            const newCrmPlatforms = {};
             const platformsContainer = document.getElementById('crm-platforms-container');
             if (platformsContainer) {
                 platformsContainer.querySelectorAll('.crm-platform-section').forEach((section, index) => {
                     let name = section.querySelector('.platform-name-input').value.trim();
+                    let guideUrl = section.querySelector('.platform-guide-url').value.trim();
                     if (!name) name = "Carpeta " + (index + 1);
                     
-                    // Asegurar nombre único
                     let finalName = name;
                     let counter = 1;
                     while (newCrmDict[finalName]) {
@@ -2248,11 +2259,14 @@
                         const text = item.querySelector('.gallery-text').value.trim();
                         if (photo || text) items.push({ photo, text });
                     });
+                    
                     newCrmDict[finalName] = items;
+                    newCrmPlatforms[finalName] = { name: finalName, manualUrl: guideUrl };
                 });
             }
             storeConfig.crmGalleryDict = newCrmDict;
-            storeConfig.crmGallery = []; // Limpiar formato antiguo
+            storeConfig.crmPlatforms = newCrmPlatforms;
+            storeConfig.crmGallery = []; 
 
             db.ref('storeConfig').set(storeConfig).then(() => {
                 alert('¡Configuración guardada exitosamente!');
