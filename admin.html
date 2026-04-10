@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.7.7</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.7.9</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -1183,6 +1183,15 @@
                             </div>
                         </div>
                         <div class="form-col">
+                            <label>Bono Netflix Privada ($)</label>
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <input type="number" id="conf-incentiveNetflixPrivada" placeholder="Ej: 500" style="flex:1;">
+                                <button class="save-btn" onclick="saveConfig()"
+                                    style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
+                                    title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-col">
                             <label>Bono Disney+ ($)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <input type="number" id="conf-incentiveDisney" placeholder="Ej: 500" style="flex:1;">
@@ -1316,6 +1325,17 @@
                                     title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
                             </div>
                         </div>
+                    </div>
+                    <div style="margin-top: 1.5rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+                        <label style="display:block; margin-bottom:0.5rem; font-weight:bold; color:var(--accent-primary);">Mensaje de Bonos / Felicitación (WhatsApp)</label>
+                        <textarea id="conf-incentiveMessage" placeholder="Ej: ¡Felicidades {vendedor}! Has ganado un bono de {monto} por tu venta de {items}. ¡Sigue así! 🚀" 
+                            style="width:100%; height:100px; border-radius:10px; padding:15px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.3); color:white; font-size:0.95rem; line-height:1.5;"></textarea>
+                        <button class="save-btn" onclick="saveConfig()" style="margin-top:0.8rem; width:100%; background:var(--accent-primary); height:45px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:10px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Mensaje de Bonos
+                        </button>
+                        <p style="font-size:0.8rem; color:#aaa; margin-top:0.5rem; background:rgba(255,255,255,0.05); padding:8px; border-radius:6px; border-left:3px solid var(--accent-primary);">
+                            <i class="fa-solid fa-circle-info"></i> Puedes usar <b>{vendedor}</b>, <b>{monto}</b> e <b>{items}</b> como variables en tu mensaje.
+                        </p>
                     </div>
                 </div>
 
@@ -1681,6 +1701,7 @@
             if (document.getElementById('conf-incentiveEnabled')) document.getElementById('conf-incentiveEnabled').value = storeConfig.incentiveEnabled === true ? 'true' : 'false';
             if (document.getElementById('conf-incentiveMessage')) document.getElementById('conf-incentiveMessage').value = storeConfig.incentiveMessage || '';
             if (document.getElementById('conf-incentiveNetflix')) document.getElementById('conf-incentiveNetflix').value = storeConfig.incentiveNetflix || 0;
+            if (document.getElementById('conf-incentiveNetflixPrivada')) document.getElementById('conf-incentiveNetflixPrivada').value = storeConfig.incentiveNetflixPrivada || 0;
             if (document.getElementById('conf-incentiveDisney')) document.getElementById('conf-incentiveDisney').value = storeConfig.incentiveDisney || 0;
             if (document.getElementById('conf-incentiveHbo')) document.getElementById('conf-incentiveHbo').value = storeConfig.incentiveHbo || storeConfig.incentiveMax || 0;
             if (document.getElementById('conf-incentivePrime')) document.getElementById('conf-incentivePrime').value = storeConfig.incentivePrime || 0;
@@ -2216,6 +2237,7 @@
             if (document.getElementById('conf-incentiveMessage')) storeConfig.incentiveMessage = document.getElementById('conf-incentiveMessage').value;
             if (document.getElementById('conf-incentiveNetflix')) {
                 storeConfig.incentiveNetflix = parseInt(document.getElementById('conf-incentiveNetflix').value) || 0;
+                storeConfig.incentiveNetflixPrivada = parseInt(document.getElementById('conf-incentiveNetflixPrivada').value) || 0;
                 storeConfig.incentiveDisney = parseInt(document.getElementById('conf-incentiveDisney').value) || 0;
                 storeConfig.incentiveHbo = parseInt(document.getElementById('conf-incentiveHbo').value) || 0;
                 storeConfig.incentiveMax = storeConfig.incentiveHbo;
