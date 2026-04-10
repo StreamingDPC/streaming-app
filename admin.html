@@ -2691,7 +2691,7 @@
                             if (i.category && i.category.startsWith('combos')) formatName = `🎬 *${i.name}* (Combo Prediseñado)`;
                             return formatName;
                         }).join(', ') : 'Pantallas';
-                        const safeClient = encodeURIComponent(sale.clientName || 'Desconocido');
+                        const safeClient = safeDecode(sale.clientName || 'Desconocido');
                         const safeSeller = encodeURIComponent(sName);
                         const totalDisp = sale.total ? `$${sale.total.toLocaleString()}` : 'No registrado';
 
@@ -2726,12 +2726,12 @@
                                 💰 Valor pagado: ${totalDisp}
                             </p>
                             <div style="display:flex; gap:0.5rem;">
-                                <button onclick="sendAdminReminderToSeller('${safeSeller}', '${safeClient}', '${encodeURIComponent(itemsStr)}', '${sale.clientPhone || ''}', ${sale.total || 0})" 
+                                <button onclick="sendAdminReminderToSeller('${safeSeller}', '${encodeURIComponent(safeClient)}', '${encodeURIComponent(itemsStr)}', '${sale.clientPhone || ''}', ${sale.total || 0})" 
                                     style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137; font-size:0.8rem; transition: background 0.3s;"
                                     onmouseover="this.style.background='rgba(76, 209, 55, 0.2)'" onmouseout="this.style.background='rgba(76, 209, 55, 0.1)'">
                                     <i class="fa-brands fa-whatsapp"></i> Recordar
                                 </button>
-                                <button onclick="sendAdminRenovadaMessage('${safeClient}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}', '${safeSeller}', 'seller')" 
+                                <button onclick="sendAdminRenovadaMessage('${encodeURIComponent(safeClient)}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}', '${safeSeller}', 'seller')" 
                                     style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem; transition: background 0.3s;"
                                     onmouseover="this.style.background='rgba(243, 156, 18, 0.2)'" onmouseout="this.style.background='rgba(243, 156, 18, 0.1)'">
                                     <i class="fa-brands fa-whatsapp"></i> Renovada
@@ -3301,7 +3301,7 @@
                     if (s.isPaid !== false) validCount++;
                 });
                 const latestSale = Object.values(sales).sort((a, b) => b.date - a.date)[0];
-                return { phone, name: latestSale.clientName || 'Desconocido', city: latestSale.clientCity || 'N/A', count: validCount };
+                return { phone, name: safeDecode(latestSale.clientName || 'Desconocido'), city: safeDecode(latestSale.clientCity || 'N/A'), count: validCount };
             });
 
             clientsData.filter(c => c.phone.includes(filterText) || c.name.toLowerCase().includes(filterText)).forEach(c => {
@@ -3556,7 +3556,7 @@
                 if (selectElement) selectElement.value = window.currentEditingSaleKey;
 
                 let latestSale = sales[window.currentEditingSaleKey];
-                document.getElementById('edit-client-name').value = latestSale.clientName || '';
+                document.getElementById('edit-client-name').value = safeDecode(latestSale.clientName || '');
                 document.getElementById('edit-client-city').value = latestSale.clientCity || '';
 
                 window.currentEditingOriginalDate = latestSale.date;
@@ -3765,15 +3765,15 @@
                         const daysLeft = Math.ceil((sale.expirationDate - now) / (1000 * 60 * 60 * 24));
 
                         if (daysLeft === 0 && isTodayEnabled) {
-                            let cName = sale.clientName || 'Cliente';
+                            let cName = safeDecode(sale.clientName || 'Cliente');
                             if (!sale.clientName && data.clientProfiles && data.clientProfiles[phone]) {
-                                cName = data.clientProfiles[phone].name;
+                                cName = safeDecode(data.clientProfiles[phone].name || 'Cliente');
                             }
                             globalReminderQueue.push({ type: 'direct', phone: phone, name: cName, sale: sale, daysLeft: daysLeft });
                         } else if (daysLeft === 1 && isTomorrowEnabled) {
-                            let cName = sale.clientName || 'Cliente';
+                            let cName = safeDecode(sale.clientName || 'Cliente');
                             if (!sale.clientName && data.clientProfiles && data.clientProfiles[phone]) {
-                                cName = data.clientProfiles[phone].name;
+                                cName = safeDecode(data.clientProfiles[phone].name || 'Cliente');
                             }
                             globalReminderQueue.push({ type: 'direct', phone: phone, name: cName, sale: sale, daysLeft: daysLeft });
                         }
