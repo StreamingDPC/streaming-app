@@ -746,6 +746,37 @@ function setupEventListeners() {
             // Populate Dropdown
             if (sellerClientSelector && sellerClientsDropdown) {
                 sellerClientSelector.style.display = 'block';
+                
+                    // Add search input if not exists at the TOP
+                    let searchInput = document.getElementById('seller-client-search');
+                    if (!searchInput) {
+                        searchInput = document.createElement('input');
+                        searchInput.id = 'seller-client-search';
+                        searchInput.type = 'text';
+                        searchInput.className = 'input-modern';
+                        searchInput.placeholder = '🔍 Buscar cliente guardado...';
+                        searchInput.style.marginBottom = '0.5rem';
+                        searchInput.style.padding = '0.5rem';
+                        searchInput.style.fontSize = '0.95rem';
+                        searchInput.style.border = '1px solid var(--accent-primary)';
+                        sellerClientSelector.prepend(searchInput);
+                        
+                        searchInput.addEventListener('input', (e) => {
+                            const query = e.target.value.toLowerCase();
+                            let found = false;
+                            Array.from(sellerClientsDropdown.options).forEach((opt, idx) => {
+                                if (idx === 0) return; // ignore first
+                                if (opt.value === "") return;
+                                const text = opt.text.toLowerCase();
+                                const isMatch = text.includes(query);
+                                opt.hidden = !isMatch;
+                                if (isMatch) found = true;
+                            });
+                        });
+                    } else {
+                        searchInput.value = '';
+                    }
+
                 db.ref(`sellerSales/${currentSellerName}`).once('value').then(snap => {
                     const sales = snap.val();
                     sellerClientsDropdown.innerHTML = '<option value="">-- Nuevo Cliente / Escribir Manual --</option>';
@@ -754,16 +785,21 @@ function setupEventListeners() {
                         const uniqueClients = {};
                         Object.keys(sales).forEach(key => {
                             const cName = sales[key].clientName;
-                            if (cName && !uniqueClients[cName]) {
-                                uniqueClients[cName] = sales[key];
+                            const cPhone = sales[key].clientPhone || '';
+                            const clientId = (cName + cPhone).toLowerCase().replace(/\s/g, '');
+                            if (cName && !uniqueClients[clientId]) {
+                                uniqueClients[clientId] = {
+                                    name: cName,
+                                    phone: cPhone,
+                                    city: sales[key].clientCity || ''
+                                };
                             }
                         });
 
-                        Object.values(uniqueClients).forEach(c => {
+                        Object.values(uniqueClients).sort((a,b) => a.name.localeCompare(b.name)).forEach(c => {
                             const opt = document.createElement('option');
-                            // Store json in value to parse on select
-                            opt.value = encodeURIComponent(JSON.stringify({ name: c.clientName, phone: c.clientPhone || '', city: c.clientCity || '' }));
-                            opt.text = c.clientName;
+                            opt.value = encodeURIComponent(JSON.stringify({ name: c.name, phone: c.phone, city: c.city }));
+                            opt.text = `${c.name} (${c.phone})`;
                             sellerClientsDropdown.appendChild(opt);
                         });
                     }
@@ -1816,93 +1852,132 @@ function renderClientDashboard() {
         }
 
         const salesArray = Object.keys(sales).map(k => ({ id: k, ...sales[k] })).sort((a, b) => b.date - a.date);
+        
+        const activeSales = [];
+        const expiredSales = [];
 
         salesArray.forEach(sale => {
             const now = Date.now();
             const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
             const isExpired = now > expEndOfDay;
-            const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
-
-            let statusColor = '#4cd137'; // Active
-            if (!isExpired && daysLeft <= 3) statusColor = '#f39c12'; // Ending soon
-            if (isExpired) statusColor = '#ff4d4d'; // Expired
-
-            const div = document.createElement('div');
-            div.style.background = 'rgba(255,255,255,0.05)';
-            div.style.border = `1px solid ${statusColor}`;
-            div.style.padding = '1rem';
-            div.style.borderRadius = '8px';
-
-            const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
-            
-            const sellerNetworksHtmlId = 'seller-networks-' + Math.random().toString(36).substr(2, 9);
-            let sellerAttribution = '';
-
-            if (sale.sellerName && sale.sellerName !== 'Página Web Oficial') {
-                sellerAttribution = `
-                    <div style="margin-bottom: 0.8rem; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border);">
-                        <span style="font-size:0.8rem; color:#a0a0a0; display:block; margin-bottom:0.3rem;">Atendido por: <b style="color:var(--accent-primary);">${sale.sellerName}</b></span>
-                        <div id="${sellerNetworksHtmlId}" style="display:flex; gap: 12px; font-size: 1.4rem; flex-wrap:wrap; margin-top:0.5rem;">
-                            <span style="font-size:0.75rem; color:#ccc;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando redes...</span>
-                        </div>
-                    </div>
-                `;
-            }
-
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
-                    <strong style="color:white; font-size:1.1rem;">${sale.clientName}</strong>
-                    <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
-                        ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
-                    </span>
-                </div>
-                ${sellerAttribution}
-                <div style="display:flex; justify-content:space-between; color:#a0a0a0; font-size:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.2); padding: 5px; border-radius:6px;">
-                    <span><i class="fa-regular fa-calendar-check" style="color:#4cd137;"></i> ${new Date(sale.date).toLocaleDateString()}</span>
-                    <span><i class="fa-regular fa-calendar-xmark" style="color:#ff4d4d;"></i> ${new Date(sale.expirationDate).toLocaleDateString()}</span>
-                </div>
-                <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:1rem;">📺 ${itemsStr}</p>
-                <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
-                    ${!isExpired ? `
-                    <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
-                        style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
-                        <i class="fa-solid fa-redo"></i> Renovar mis pantallas
-                    </button>
-                    ` : `
-                    <button disabled style="width: 100%; padding:0.6rem; border-radius:8px; cursor:not-allowed; font-weight:bold; border:none; background: rgba(255, 255, 255, 0.1); color:#a0a0a0;">
-                        <i class="fa-solid fa-history"></i> Historial (Vencido)
-                    </button>
-                    `}
-                </div>
-            `;
-            clientSalesList.appendChild(div);
-
-            if (sale.sellerName && sale.sellerName !== 'Página Web Oficial') {
-                db.ref(`sellerStores/${sale.sellerName}`).once('value').then(storeSnap => {
-                    const sData = storeSnap.val();
-                    const netDiv = document.getElementById(sellerNetworksHtmlId);
-                    if(netDiv) {
-                        if(sData) {
-                            let netsHtml = '';
-                            if(sData.whatsapp) netsHtml += `<a href="https://wa.me/${formatWaPhone(sData.whatsapp)}" target="_blank" style="color:#25D366; transition:transform 0.2s;"><i class="fa-brands fa-whatsapp"></i></a>`;
-                            if(sData.facebookUrl) netsHtml += `<a href="${sData.facebookUrl}" target="_blank" style="color:#1877F2; transition:transform 0.2s;"><i class="fa-brands fa-facebook"></i></a>`;
-                            if(sData.instagramUrl) netsHtml += `<a href="${sData.instagramUrl}" target="_blank" style="color:#E1306C; transition:transform 0.2s;"><i class="fa-brands fa-instagram"></i></a>`;
-                            if(sData.tiktokUrl) netsHtml += `<a href="${sData.tiktokUrl}" target="_blank" style="color:#ffffff; transition:transform 0.2s;"><i class="fa-brands fa-tiktok"></i></a>`;
-                            if(sData.kwaiUrl) netsHtml += `<a href="${sData.kwaiUrl}" target="_blank" style="color:#FF5E00; transition:transform 0.2s;"><i class="fa-solid fa-video"></i></a>`;
-                            if(sData.youtubeUrl) netsHtml += `<a href="${sData.youtubeUrl}" target="_blank" style="color:#FF0000; transition:transform 0.2s;"><i class="fa-brands fa-youtube"></i></a>`;
-                            
-                            netDiv.innerHTML = netsHtml || `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
-                        } else {
-                            netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
-                        }
-                    }
-                }).catch(() => {
-                    const netDiv = document.getElementById(sellerNetworksHtmlId);
-                    if(netDiv) netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
-                });
-            }
+            if (isExpired) expiredSales.push(sale);
+            else activeSales.push(sale);
         });
+
+        // Render Active Section
+        if (activeSales.length > 0) {
+            const header = document.createElement('h3');
+            header.innerHTML = '<i class="fa-solid fa-circle-play" style="color:#4cd137"></i> Mis Pantallas Activas';
+            header.style.cssText = 'color: white; margin: 1.5rem 0 1rem 0; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;';
+            clientSalesList.appendChild(header);
+
+            activeSales.forEach(sale => renderSaleItem(sale, false, clientSalesList));
+        }
+
+        // Render Expired Section
+        if (expiredSales.length > 0) {
+            const folderWrapper = document.createElement('details');
+            folderWrapper.style.cssText = 'margin-top: 1.5rem; background: rgba(255, 77, 77, 0.05); border: 1px solid rgba(255, 77, 77, 0.1); border-radius: 12px; padding: 0.5rem;';
+            
+            const summary = document.createElement('summary');
+            summary.style.cssText = 'color: #ff4d4d; font-weight: bold; cursor: pointer; padding: 0.5rem; outline: none; list-style: none; display: flex; align-items: center; justify-content: space-between;';
+            summary.innerHTML = `
+                <span><i class="fa-solid fa-folder-open" style="margin-right: 8px;"></i> PANTALLAS VENCIDAS (HISTORIAL)</span>
+                <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem;"></i>
+            `;
+            folderWrapper.appendChild(summary);
+
+            const folderContent = document.createElement('div');
+            folderContent.style.marginTop = '1rem';
+            expiredSales.forEach(sale => renderSaleItem(sale, true, folderContent));
+            folderWrapper.appendChild(folderContent);
+
+            clientSalesList.appendChild(folderWrapper);
+        }
     });
+}
+
+function renderSaleItem(sale, isExpired, container) {
+    const now = Date.now();
+    const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
+    const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
+
+    let statusColor = '#4cd137'; // Active
+    if (!isExpired && daysLeft <= 3) statusColor = '#f39c12'; // Ending soon
+    if (isExpired) statusColor = '#ff4d4d'; // Expired
+
+    const div = document.createElement('div');
+    div.style.background = isExpired ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255,255,255,0.05)';
+    div.style.border = `1px solid ${isExpired ? 'rgba(255, 77, 77, 0.2)' : statusColor}`;
+    div.style.padding = '1rem';
+    div.style.borderRadius = '12px';
+    div.style.marginBottom = '0.8rem';
+    div.style.opacity = isExpired ? '0.7' : '1';
+
+    const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
+    
+    const sellerNetworksHtmlId = 'seller-networks-' + Math.random().toString(36).substr(2, 9);
+    let sellerAttribution = '';
+
+    if (sale.sellerName && sale.sellerName !== 'Página Web Oficial') {
+        sellerAttribution = `
+            <div style="margin-bottom: 0.8rem; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <span style="font-size:0.8rem; color:#a0a0a0; display:block; margin-bottom:0.3rem;">Atendido por: <b style="color:var(--accent-primary);">${sale.sellerName}</b></span>
+                <div id="${sellerNetworksHtmlId}" style="display:flex; gap: 12px; font-size: 1.4rem; flex-wrap:wrap; margin-top:0.5rem;">
+                    <span style="font-size:0.75rem; color:#ccc;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando redes...</span>
+                </div>
+            </div>
+        `;
+    }
+
+    div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
+            <strong style="color:white; font-size:1.1rem;">${sale.clientName}</strong>
+            <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
+                ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
+            </span>
+        </div>
+        ${sellerAttribution}
+        <div style="display:flex; justify-content:space-between; color:#a0a0a0; font-size:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.2); padding: 5px; border-radius:6px;">
+            <span><i class="fa-regular fa-calendar-check" style="color:#4cd137;"></i> ${new Date(sale.date).toLocaleDateString()}</span>
+            <span><i class="fa-regular fa-calendar-xmark" style="color:#ff4d4d;"></i> ${new Date(sale.expirationDate).toLocaleDateString()}</span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '1rem'};">📺 ${itemsStr}</p>
+        ${!isExpired ? `
+        <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+            <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
+                style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
+                <i class="fa-solid fa-redo"></i> Renovar mis pantallas
+            </button>
+        </div>
+        ` : ''}
+    `;
+    container.appendChild(div);
+
+    if (sale.sellerName && sale.sellerName !== 'Página Web Oficial') {
+        db.ref(`sellerStores/${sale.sellerName}`).once('value').then(storeSnap => {
+            const sData = storeSnap.val();
+            const netDiv = document.getElementById(sellerNetworksHtmlId);
+            if(netDiv) {
+                if(sData) {
+                    let netsHtml = '';
+                    if(sData.whatsapp) netsHtml += `<a href="https://wa.me/${formatWaPhone(sData.whatsapp)}" target="_blank" style="color:#25D366; transition:transform 0.2s;"><i class="fa-brands fa-whatsapp"></i></a>`;
+                    if(sData.facebookUrl) netsHtml += `<a href="${sData.facebookUrl}" target="_blank" style="color:#1877F2; transition:transform 0.2s;"><i class="fa-brands fa-facebook"></i></a>`;
+                    if(sData.instagramUrl) netsHtml += `<a href="${sData.instagramUrl}" target="_blank" style="color:#E1306C; transition:transform 0.2s;"><i class="fa-brands fa-instagram"></i></a>`;
+                    if(sData.tiktokUrl) netsHtml += `<a href="${sData.tiktokUrl}" target="_blank" style="color:#ffffff; transition:transform 0.2s;"><i class="fa-brands fa-tiktok"></i></a>`;
+                    if(sData.kwaiUrl) netsHtml += `<a href="${sData.kwaiUrl}" target="_blank" style="color:#FF5E00; transition:transform 0.2s;"><i class="fa-solid fa-video"></i></a>`;
+                    if(sData.youtubeUrl) netsHtml += `<a href="${sData.youtubeUrl}" target="_blank" style="color:#FF0000; transition:transform 0.2s;"><i class="fa-brands fa-youtube"></i></a>`;
+                    
+                    netDiv.innerHTML = netsHtml || `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
+                } else {
+                    netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
+                }
+            }
+        }).catch(() => {
+            const netDiv = document.getElementById(sellerNetworksHtmlId);
+            if(netDiv) netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
+        });
+    }
 }
 
 // Firebase Initialization and Loading Logic

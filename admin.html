@@ -3170,6 +3170,87 @@
             }
         }
 
+        function renderAdminSaleCard(sale, isExpired, clientObj, container) {
+            const now = Date.now();
+            const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
+            const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
+
+            let statusColor = '#4cd137';
+            if (!isExpired && daysLeft <= 3) statusColor = '#f39c12';
+            if (isExpired) statusColor = '#ff4d4d';
+
+            const itemsStr = sale.items ? sale.items.map(i => {
+                let formatName = i.name;
+                if (i.category && i.category.startsWith('combos')) formatName = `🎬 * ${i.name}* (Combo Prediseñado)`;
+                return formatName;
+            }).join(', ') : 'Pantallas';
+            const safeClientName = clientObj.name.replace(/'/g, '');
+            const totalDisp = sale.total ? `$${sale.total.toLocaleString()} ` : 'No registrado';
+
+            const startDate = sale.date ? new Date(sale.date).toLocaleDateString() : 'N/A';
+            const endDate = sale.expirationDate ? new Date(sale.expirationDate).toLocaleDateString() : 'N/A';
+
+            const saleCard = document.createElement('div');
+            saleCard.style.padding = '1rem';
+            saleCard.style.background = isExpired ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)';
+            saleCard.style.borderLeft = `4px solid ${statusColor}`;
+            saleCard.style.borderRadius = '8px';
+            saleCard.style.opacity = isExpired ? '0.7' : '1';
+
+            let buttonsHtml = '';
+            if (!isExpired) {
+                buttonsHtml = `
+                    <div style="display:flex; gap:0.5rem;">
+                        <button onclick="sendAdminReminderToDirectClient('${safeClientName}', '${encodeURIComponent(itemsStr)}', '${clientObj.phone}', ${sale.total || 0})" 
+                            style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #2ab7ca; background: rgba(42, 183, 202, 0.1); color:#2ab7ca; font-size:0.8rem;">
+                            <i class="fa-brands fa-whatsapp"></i> Recordar
+                        </button>
+                        <button onclick="sendAdminRenovadaMessage('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}', '${encodeURIComponent(sale.sellerName || 'Página Web Oficial')}', 'client')" 
+                            style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem;">
+                            <i class="fa-brands fa-whatsapp"></i> Renovada
+                        </button>
+                        ${(!sale.sellerName || sale.sellerName === 'Página Web Oficial' || sale.sellerName === 'Admin') ? `
+                        <button onclick="openCRMPlatformSelector('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${startDate}', '${endDate}', '${(allClientProfiles[clientObj.phone] ? allClientProfiles[clientObj.phone].pin : '')}', '${encodeURIComponent(itemsStr)}')" 
+                            style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #9b59b6; background: rgba(155, 89, 182, 0.1); color:#9b59b6; font-size:0.8rem;">
+                            <i class="fa-solid fa-paper-plane"></i> CRM
+                        </button>
+                        ` : ''}
+                        <button onclick="deleteClientSale('${clientObj.phone}', '${sale.id}')" 
+                            style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            }
+
+            saleCard.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom: 0.3rem;">
+                    <span style="font-size: 0.85rem; color:#ccc; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" class="client-sale-checkbox" value="${clientObj.phone}|${sale.id}" style="cursor:pointer; width:16px; height:16px;">
+                        ${new Date(sale.date).toLocaleDateString()}
+                    </span>
+                    <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
+                        ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
+                    </span>
+                </div>
+                ${!isExpired ? `
+                <div style="margin-bottom:0.5rem; display:flex;">
+                    <button onclick="toggleSaleStatus('client', '${clientObj.phone}', '${sale.id}', ${sale.isPaid === false ? 'true' : 'false'}, '${clientObj.phone}')" 
+                        style="padding:0.4rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid ${sale.isPaid === false ? '#f39c12' : '#4cd137'}; background: transparent; color:${sale.isPaid === false ? '#f39c12' : '#4cd137'}; font-size:0.75rem;">
+                        <i class="fa-solid ${sale.isPaid === false ? 'fa-square' : 'fa-check-square'}"></i> ${sale.isPaid === false ? 'Pago Pendiente' : 'Pagado'}
+                    </button>
+                </div>
+                ` : ''}
+                <p style="font-size:0.8rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '0.8rem'}; line-height:1.4;">
+                    📺 ${itemsStr}<br>
+                    💰 Valor: ${totalDisp}<br>
+                    📅 Inicio: ${startDate} | ⏳ Fin: ${endDate}
+                </p>
+                ${buttonsHtml}
+            `;
+            container.appendChild(saleCard);
+        }
+
         function renderAllClientsList() {
             const listDiv = document.getElementById('admin-list-all-clients');
             if (!listDiv) return;
@@ -3230,79 +3311,42 @@
                     salesContainer.style.paddingTop = '1rem';
                     salesContainer.style.borderTop = '1px solid var(--glass-border)';
 
+                    const activeSales = [];
+                    const expiredSales = [];
+
                     salesArray.forEach(sale => {
                         const now = Date.now();
                         const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
                         const isExpired = now > expEndOfDay;
-                        const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
-
-                        let statusColor = '#4cd137';
-                        if (!isExpired && daysLeft <= 3) statusColor = '#f39c12';
-                        if (isExpired) statusColor = '#ff4d4d';
-
-                        const itemsStr = sale.items ? sale.items.map(i => {
-                            let formatName = i.name;
-                            if (i.category && i.category.startsWith('combos')) formatName = `🎬 * ${i.name}* (Combo Prediseñado)`;
-                            return formatName;
-                        }).join(', ') : 'Pantallas';
-                        const safeClientName = c.name.replace(/'/g, '');
-                        const totalDisp = sale.total ? `$${sale.total.toLocaleString()} ` : 'No registrado';
-
-                        const startDate = sale.date ? new Date(sale.date).toLocaleDateString() : 'N/A';
-                        const endDate = sale.expirationDate ? new Date(sale.expirationDate).toLocaleDateString() : 'N/A';
-
-                        const saleCard = document.createElement('div');
-                        saleCard.style.padding = '1rem';
-                        saleCard.style.background = 'rgba(255,255,255,0.05)';
-                        saleCard.style.borderLeft = `4px solid ${statusColor} `;
-                        saleCard.style.borderRadius = '8px';
-                        saleCard.innerHTML = `
-                            <div style="display:flex; justify-content:space-between; margin-bottom: 0.3rem;">
-                                <span style="font-size: 0.85rem; color:#ccc; display:flex; align-items:center; gap:8px;">
-                                    <input type="checkbox" class="client-sale-checkbox" value="${c.phone}|${sale.id}" style="cursor:pointer; width:16px; height:16px;" title="Seleccionar para eliminar">
-                                    ${new Date(sale.date).toLocaleDateString()}
-                                </span>
-                                <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
-                                    ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
-                                </span>
-                            </div>
-                            <div style="margin-bottom:0.5rem; display:flex;">
-                                <button onclick="toggleSaleStatus('client', '${c.phone}', '${sale.id}', ${sale.isPaid === false ? 'true' : 'false'}, '${c.phone}')" 
-                                    style="padding:0.4rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid ${sale.isPaid === false ? '#f39c12' : '#4cd137'}; background: transparent; color:${sale.isPaid === false ? '#f39c12' : '#4cd137'}; font-size:0.75rem;">
-                                    <i class="fa-solid ${sale.isPaid === false ? 'fa-square' : 'fa-check-square'}"></i> ${sale.isPaid === false ? 'Pago Pendiente (No Suma)' : 'Pagado (Contabilizada)'}
-                                </button>
-                            </div>
-                            <p style="font-size:0.8rem; color:var(--text-primary); margin-bottom:0.8rem; line-height:1.4;">
-                                📺 ${itemsStr}<br>
-                                💰 Valor pagado: ${totalDisp}<br>
-                                📅 Inicio: ${startDate} | ⏳ Fin: ${endDate}
-                            </p>
-                            <div style="display:flex; gap:0.5rem;">
-                                <button onclick="sendAdminReminderToDirectClient('${safeClientName}', '${encodeURIComponent(itemsStr)}', '${c.phone}', ${sale.total || 0})" 
-                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #2ab7ca; background: rgba(42, 183, 202, 0.1); color:#2ab7ca; font-size:0.8rem; transition: background 0.3s;"
-                                    onmouseover="this.style.background='rgba(42, 183, 202, 0.2)'" onmouseout="this.style.background='rgba(42, 183, 202, 0.1)'">
-                                    <i class="fa-brands fa-whatsapp"></i> Recordar
-                                </button>
-                                <button onclick="sendAdminRenovadaMessage('${encodeURIComponent(c.name)}', '${c.phone}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}', '${encodeURIComponent(sale.sellerName || 'Página Web Oficial')}', 'client')" 
-                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem; transition: background 0.3s;"
-                                    onmouseover="this.style.background='rgba(243, 156, 18, 0.2)'" onmouseout="this.style.background='rgba(243, 156, 18, 0.1)'">
-                                    <i class="fa-brands fa-whatsapp"></i> Renovada
-                                </button>
-                                ${(!sale.sellerName || sale.sellerName === 'Página Web Oficial' || sale.sellerName === 'Admin') ? `
-                                <button onclick="openCRMPlatformSelector('${encodeURIComponent(c.name)}', '${c.phone}', '${startDate}', '${endDate}', '${(allClientProfiles[c.phone] ? allClientProfiles[c.phone].pin : '')}', '${encodeURIComponent(itemsStr)}')" 
-                                    style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #9b59b6; background: rgba(155, 89, 182, 0.1); color:#9b59b6; font-size:0.8rem; transition: background 0.3s;"
-                                    onmouseover="this.style.background='rgba(155, 89, 182, 0.2)'" onmouseout="this.style.background='rgba(155, 89, 182, 0.1)'">
-                                    <i class="fa-solid fa-paper-plane"></i> CRM
-                                </button>
-                                ` : ''}
-                                <button onclick="deleteClientSale('${c.phone}', '${sale.id}')" 
-                                    style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
-                        `;
-                        salesContainer.appendChild(saleCard);
+                        if (isExpired) expiredSales.push(sale);
+                        else activeSales.push(sale);
                     });
+
+                    // Render Active Sales
+                    activeSales.forEach(sale => {
+                        renderAdminSaleCard(sale, false, c, salesContainer);
+                    });
+
+                    // Render Expired Section
+                    if (expiredSales.length > 0) {
+                        const expHeader = document.createElement('div');
+                        expHeader.style.gridColumn = '1 / -1';
+                        expHeader.style.padding = '0.5rem';
+                        expHeader.style.background = 'rgba(255, 77, 77, 0.1)';
+                        expHeader.style.borderRadius = '8px';
+                        expHeader.style.color = '#ff4d4d';
+                        expHeader.style.fontSize = '0.9rem';
+                        expHeader.style.fontWeight = 'bold';
+                        expHeader.style.marginTop = '1rem';
+                        expHeader.style.textAlign = 'center';
+                        expHeader.style.border = '1px dashed rgba(255, 77, 77, 0.3)';
+                        expHeader.innerHTML = '<i class="fa-solid fa-folder-open"></i> PANTALLAS VENCIDAS (HISTORIAL)';
+                        salesContainer.appendChild(expHeader);
+
+                        expiredSales.forEach(sale => {
+                            renderAdminSaleCard(sale, true, c, salesContainer);
+                        });
+                    }
 
                     div.appendChild(salesContainer);
                 }
