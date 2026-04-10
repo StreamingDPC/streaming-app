@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.7.6</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.7.7</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -1587,6 +1587,15 @@
         }
         const db = firebase.database();
 
+        function safeDecode(str) {
+            if (!str) return '';
+            try {
+                // Si contiene %, intentamos decodificar. 
+                // Si falla, devolvemos el original.
+                return str.includes('%') ? decodeURIComponent(str) : str;
+            } catch (e) { return str; }
+        }
+
         db.ref('/').on('value', (snap) => {
             const data = snap.val();
             if (data) {
@@ -2776,8 +2785,8 @@
 
         async function sendAdminRenovadaMessage(clientNameEnc, clientPhone, itemsEncoded, isMultiple, expirationDateTS, saleId, sourceNameEnc, sourceType) {
             if (!clientPhone) return alert('Este cliente no tiene número registrado.');
-            const clientName = decodeURIComponent(clientNameEnc);
-            const sourceName = decodeURIComponent(sourceNameEnc);
+            const clientName = safeDecode(clientNameEnc);
+            const sourceName = safeDecode(sourceNameEnc);
             const itemsStr = decodeURIComponent(itemsEncoded);
 
             const autoRenew = confirm(`¿Deseas REGISTRAR esta RENOVACIÓN en el sistema ahora?\n\n- Se extenderán 30 días adicionales.\n- Se marcará como PAGADO.\n\n(Si pulsas Cancelar, solo se enviará el mensaje de WhatsApp)`);
@@ -3206,7 +3215,7 @@
                 if (i.category && i.category.startsWith('combos')) formatName = `🎬 * ${i.name}* (Combo Prediseñado)`;
                 return formatName;
             }).join(', ') : 'Pantallas';
-            const safeClientName = clientObj.name.replace(/'/g, '');
+            const safeClientName = safeDecode(clientObj.name || '').replace(/'/g, '');
             const totalDisp = sale.total ? `$${sale.total.toLocaleString()} ` : 'No registrado';
 
             const startDate = sale.date ? new Date(sale.date).toLocaleDateString() : 'N/A';
@@ -3310,7 +3319,7 @@
                         <div style="display:flex; gap:1rem; width:100%; align-items:center;">
                         <div><i class="fa-solid fa-user" style="color:#2ab7ca; font-size:1.5rem"></i></div>
                         <div style="flex:1;">
-                            <strong style="color: white; font-size:1.1rem">${c.name}</strong> <span style="font-size:0.8rem; color:#ccc;">(${c.count} compras)</span><br>
+                            <strong style="color: white; font-size:1.1rem">${safeDecode(c.name)}</strong> <span style="font-size:0.8rem; color:#ccc;">(${c.count} compras)</span><br>
                             <span style="font-size: 0.8rem; color: #a0a0a0;">📱 ${c.phone} | 📍 ${c.city}</span>
                         </div>
                         <div class="item-actions">
@@ -3443,9 +3452,10 @@
         }
 
         async function sendAdminReminderToDirectClient(clientName, itemsEncoded, clientPhone, saleTotal) {
-            const itemsStr = decodeURIComponent(itemsEncoded);
+            const itemsStr = safeDecode(itemsEncoded);
+            const cName = safeDecode(clientName);
             let template = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️";
-            let msg = template.replace(/{cliente}/g, clientName).replace(/{pantallas}/g, itemsStr);
+            let msg = template.replace(/{cliente}/g, cName).replace(/{pantallas}/g, itemsStr);
 
             if (saleTotal > 0) {
                 msg += `\n\n💰 *Total a Renovar:* $${saleTotal.toLocaleString()}`;

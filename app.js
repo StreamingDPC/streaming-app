@@ -24,6 +24,13 @@ const formatWaPhone = (phone) => {
     return (p.length === 10 && p.startsWith('3')) ? '57' + p : p;
 };
 
+const safeDecode = (str) => {
+    if (!str) return '';
+    try {
+        return str.includes('%') ? decodeURIComponent(str) : str;
+    } catch (e) { return str; }
+};
+
 // DOM Elements
 const productsGrid = document.getElementById('products-grid');
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -1671,7 +1678,7 @@ function renderSellerSaleCard(sale, isExpired, container) {
     if (!isExpired) {
         buttonsHtml = `
             <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
-                <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller')" 
+                <button onclick="renewFromDash('${safeDecode(sale.clientName)}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                     <i class="fa-solid fa-redo"></i> Renovar
                 </button>
@@ -1683,7 +1690,7 @@ function renderSellerSaleCard(sale, isExpired, container) {
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12;">
                     <i class="fa-brands fa-whatsapp"></i> Renovada
                 </button>
-                <button onclick="editClientFromDash('${sale.id}', '${sale.clientName}', '${sale.clientPhone || ''}', '${sale.clientCity || ''}')" 
+                <button onclick="editClientFromDash('${sale.id}', '${safeDecode(sale.clientName)}', '${sale.clientPhone || ''}', '${sale.clientCity || ''}')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #c48dfc; background: rgba(196, 141, 252, 0.1); color:#c48dfc;">
                     <i class="fa-solid fa-pen"></i> Editar
                 </button>
@@ -1693,7 +1700,7 @@ function renderSellerSaleCard(sale, isExpired, container) {
 
     div.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
-            <strong style="color:white; font-size:1.1rem;">${sale.clientName}</strong>
+            <strong style="color:white; font-size:1.1rem;">${safeDecode(sale.clientName)}</strong>
             <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
                 ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
             </span>
@@ -1736,7 +1743,7 @@ window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded, saleId 
 
         // Open Cart, pre-fill
         document.getElementById('is-renewal').checked = true;
-        document.getElementById('client-name').value = cName !== 'undefined' ? cName : '';
+        document.getElementById('client-name').value = cName !== 'undefined' ? safeDecode(cName) : '';
         document.getElementById('client-phone').value = cPhone !== 'undefined' ? cPhone : '';
         document.getElementById('client-city').value = cCity !== 'undefined' ? cCity : '';
 
@@ -1977,7 +1984,7 @@ function renderSaleItem(sale, isExpired, container) {
 
     div.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
-            <strong style="color:white; font-size:1.1rem;">${sale.clientName}</strong>
+            <strong style="color:white; font-size:1.1rem;">${safeDecode(sale.clientName)}</strong>
             <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
                 ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
             </span>
@@ -2010,7 +2017,7 @@ function renderSaleItem(sale, isExpired, container) {
                     return '';
                 }).join('')}
             </div>
-            <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
+            <button onclick="renewFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
                 style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                 <i class="fa-solid fa-redo"></i> Renovar mis pantallas
             </button>
