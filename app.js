@@ -1603,66 +1603,114 @@ function renderSellerDashboard() {
             });
         }
 
+        const activeSales = [];
+        const expiredSales = [];
+
         displayedSalesArray.forEach(sale => {
             const now = Date.now();
             const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
             const isExpired = now > expEndOfDay;
-            const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
-
-            let statusColor = '#4cd137'; // Active
-            if (!isExpired && daysLeft <= 3) statusColor = '#f39c12'; // Ending soon
-            if (isExpired) statusColor = '#ff4d4d'; // Expired
-
-            const div = document.createElement('div');
-            div.style.background = 'rgba(255,255,255,0.05)';
-            div.style.border = `1px solid ${statusColor}`;
-            div.style.padding = '1rem';
-            div.style.borderRadius = '8px';
-
-            const safeClientName = (sale.clientName || 'Cliente').replace(/'/g, "");
-            const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
-
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
-                    <strong style="color:white; font-size:1.1rem;">${sale.clientName}</strong>
-                    <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
-                        ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
-                    </span>
-                </div>
-                <!-- Fechas de Inicio y Fin -->
-                <div style="display:flex; justify-content:space-between; color:#a0a0a0; font-size:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.2); padding: 5px; border-radius:6px;">
-                    <span><i class="fa-regular fa-calendar-check" style="color:#4cd137;"></i> Inicio: ${new Date(sale.date).toLocaleDateString()}</span>
-                    <span><i class="fa-regular fa-calendar-xmark" style="color:#ff4d4d;"></i> Fin: ${new Date(sale.expirationDate).toLocaleDateString()}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; color:#ccc; font-size:0.85rem; margin-bottom:0.5rem;">
-                    <span><i class="fa-solid fa-mobile-screen"></i> ${sale.clientPhone || 'No registrado'}</span>
-                    <span>📍 ${sale.clientCity || 'Ciudad N/A'}</span>
-                </div>
-                <!-- Mostrar bono en tarjeta si lo hay -->
-                ${sale.incentiveEarned ? `<div style="background: rgba(243,156,18,0.2); border: 1px dashed #f39c12; color: #f39c12; font-size: 0.8rem; padding: 5px 10px; border-radius: 6px; margin-bottom: 0.8rem;"><b>Bono Ganado:</b> +$${sale.incentiveEarned.toLocaleString()} <span style="font-size:0.75rem;">(${sale.incentiveDetails ? sale.incentiveDetails.join(', ') : ''})</span></div>` : ''}
-                <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:1rem;">📺 ${itemsStr}</p>
-                <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
-                    <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller')" 
-                        style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
-                        <i class="fa-solid fa-redo"></i> Renovar
-                    </button>
-                    <button onclick="sendReminderFromDash('${sale.id}', '${safeClientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}')" 
-                        style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
-                        <i class="fa-brands fa-whatsapp"></i> Recordar
-                    </button>
-                    <button onclick="sendRenovadaFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}')" 
-                        style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12;">
-                        <i class="fa-brands fa-whatsapp"></i> Renovada
-                    </button>
-                    <button onclick="editClientFromDash('${sale.id}', '${sale.clientName}', '${sale.clientPhone || ''}', '${sale.clientCity || ''}')" 
-                        style="flex: 1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #c48dfc; background: rgba(196, 141, 252, 0.1); color:#c48dfc;">
-                        <i class="fa-solid fa-pen"></i> Editar
-                    </button>
-                </div>
-            `;
-            sellerSalesList.appendChild(div);
+            if (isExpired) expiredSales.push(sale);
+            else activeSales.push(sale);
         });
+
+        // Render Active Section
+        if (activeSales.length > 0) {
+            const header = document.createElement('h3');
+            header.innerHTML = '<i class="fa-solid fa-cart-shopping" style="color:#4cd137"></i> Mis Ventas Activas';
+            header.style.cssText = 'color: white; margin: 1.5rem 0 1rem 0; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;';
+            sellerSalesList.appendChild(header);
+
+            activeSales.forEach(sale => renderSellerSaleCard(sale, false, sellerSalesList));
+        }
+
+        // Render Expired Section (Folder)
+        if (expiredSales.length > 0) {
+            const folderWrapper = document.createElement('details');
+            folderWrapper.style.cssText = 'margin-top: 1.5rem; background: rgba(255, 77, 77, 0.05); border: 1px solid rgba(255, 77, 77, 0.1); border-radius: 12px; padding: 0.5rem;';
+            
+            const summary = document.createElement('summary');
+            summary.style.cssText = 'color: #ff4d4d; font-weight: bold; cursor: pointer; padding: 0.5rem; outline: none; list-style: none; display: flex; align-items: center; justify-content: space-between;';
+            summary.innerHTML = `
+                <span><i class="fa-solid fa-folder-open" style="margin-right: 8px;"></i> VENTAS VENCIDAS (HISTORIAL)</span>
+                <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem;"></i>
+            `;
+            folderWrapper.appendChild(summary);
+
+            const folderContent = document.createElement('div');
+            folderContent.style.marginTop = '1rem';
+            expiredSales.forEach(sale => renderSellerSaleCard(sale, true, folderContent));
+            folderWrapper.appendChild(folderContent);
+
+            sellerSalesList.appendChild(folderWrapper);
+        }
     });
+}
+
+function renderSellerSaleCard(sale, isExpired, container) {
+    const now = Date.now();
+    const expEndOfDay = new Date(sale.expirationDate).setHours(23, 59, 59, 999) + 86400000;
+    const daysLeft = Math.ceil((expEndOfDay - now) / (1000 * 60 * 60 * 24));
+
+    let statusColor = '#4cd137';
+    if (!isExpired && daysLeft <= 3) statusColor = '#f39c12';
+    if (isExpired) statusColor = '#ff4d4d';
+
+    const div = document.createElement('div');
+    div.style.background = isExpired ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255,255,255,0.05)';
+    div.style.border = `1px solid ${isExpired ? 'rgba(255, 77, 77, 0.2)' : statusColor}`;
+    div.style.padding = '1rem';
+    div.style.borderRadius = '12px';
+    div.style.marginBottom = '0.8rem';
+    div.style.opacity = isExpired ? '0.7' : '1';
+
+    const safeClientName = (sale.clientName || 'Cliente').replace(/'/g, "");
+    const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
+
+    let buttonsHtml = '';
+    if (!isExpired) {
+        buttonsHtml = `
+            <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+                <button onclick="renewFromDash('${sale.clientName}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller')" 
+                    style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
+                    <i class="fa-solid fa-redo"></i> Renovar
+                </button>
+                <button onclick="sendReminderFromDash('${sale.id}', '${safeClientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}')" 
+                    style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
+                    <i class="fa-brands fa-whatsapp"></i> Recordar
+                </button>
+                <button onclick="sendRenovadaFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}')" 
+                    style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12;">
+                    <i class="fa-brands fa-whatsapp"></i> Renovada
+                </button>
+                <button onclick="editClientFromDash('${sale.id}', '${sale.clientName}', '${sale.clientPhone || ''}', '${sale.clientCity || ''}')" 
+                    style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #c48dfc; background: rgba(196, 141, 252, 0.1); color:#c48dfc;">
+                    <i class="fa-solid fa-pen"></i> Editar
+                </button>
+            </div>
+        `;
+    }
+
+    div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
+            <strong style="color:white; font-size:1.1rem;">${sale.clientName}</strong>
+            <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
+                ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
+            </span>
+        </div>
+        <div style="display:flex; justify-content:space-between; color:#a0a0a0; font-size:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.2); padding: 5px; border-radius:6px;">
+            <span><i class="fa-regular fa-calendar-check" style="color:#4cd137;"></i> Inicio: ${new Date(sale.date).toLocaleDateString()}</span>
+            <span><i class="fa-regular fa-calendar-xmark" style="color:#ff4d4d;"></i> Fin: ${new Date(sale.expirationDate).toLocaleDateString()}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; color:#ccc; font-size:0.85rem; margin-bottom:0.5rem;">
+            <span><i class="fa-solid fa-mobile-screen"></i> ${sale.clientPhone || 'No registrado'}</span>
+            <span>📍 ${sale.clientCity || 'Ciudad N/A'}</span>
+        </div>
+        ${sale.incentiveEarned ? `<div style="background: rgba(243,156,18,0.2); border: 1px dashed #f39c12; color: #f39c12; font-size: 0.8rem; padding: 5px 10px; border-radius: 6px; margin-bottom: 0.8rem;"><b>Bono Ganado:</b> +$${sale.incentiveEarned.toLocaleString()}</div>` : ''}
+        <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '1rem'};">📺 ${itemsStr}</p>
+        ${buttonsHtml}
+    `;
+    container.appendChild(div);
 }
 
 window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded, saleId = null, source = 'client') {
