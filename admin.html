@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.13 (Fix CRM Save)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.14 (Fix Email CRM)</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -550,6 +550,11 @@
                     <div class="form-col">
                         <label>PIN de Acceso</label>
                         <input type="text" id="manual-client-pin" placeholder="Opcional. Ej: 1234">
+                    </div>
+                    <div class="form-col">
+                        <label>📧 Email / Correo del Cliente</label>
+                        <input type="email" id="manual-client-email" placeholder="Ej: cliente@gmail.com">
+                        <p style="font-size:0.75rem; color:#a0a0a0; margin-top:0.3rem;">Usa <strong>{correo}</strong> en tus mensajes CRM para incluirlo.</p>
                     </div>
                     <div class="form-col">
                         <label>Vendedor Asignado (Opcional)</label>
@@ -4198,6 +4203,7 @@
             const name = document.getElementById('manual-client-name').value.trim();
             const phoneStr = document.getElementById('manual-client-phone').value.replace(/\D/g, '');
             const pinStr = document.getElementById('manual-client-pin').value.trim();
+            const emailStr = document.getElementById('manual-client-email') ? document.getElementById('manual-client-email').value.trim() : '';
             const startDateStr = document.getElementById('manual-client-start-date').value;
             const endDateStr = document.getElementById('manual-client-end-date').value;
             const selectElem = document.getElementById('manual-client-product');
@@ -4233,7 +4239,8 @@
                     sellerName: sellerNameVal,
                     isPaid: !isSellerSale,
                     incentiveEarned: 0,
-                    incentiveDetails: []
+                    incentiveDetails: [],
+                    email: emailStr || null,
                 };
 
                 if (selectedOptions.length > 0) {
