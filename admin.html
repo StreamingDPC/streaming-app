@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.2</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.3</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -4071,7 +4071,9 @@
                 items: [],
                 total: 0,
                 sellerName: document.getElementById('edit-client-add-seller') ? document.getElementById('edit-client-add-seller').value : 'Página Web Oficial',
-                isPaid: true
+                isPaid: true,
+                incentiveEarned: 0,
+                incentiveDetails: []
             };
 
             let individualCount = 0;
@@ -4085,11 +4087,12 @@
             selectedOptions.forEach(prodId => {
                 const p = dynamicProducts.find(x => x.id.toString() === prodId);
                 if (p) {
-                    let finalPrice = p.price;
-                    // Descuento de 1000 por cada pantalla si selecciona 2 o más individuales
-                    if (individualCount >= 2 && p.category && p.category.toLowerCase().includes('individual')) {
-                        finalPrice -= 1000;
-                        console.log(`[DEBUG DISCOUNT] Applied 1000 discount to ${p.name}. Final: ${finalPrice}`);
+                    let finalPrice = (saleData.sellerName !== 'Página Web Oficial' && p.sellerPrice > 0) ? p.sellerPrice : p.price;
+                    if (individualCount >= 2 && (p.category || '').toLowerCase().includes('individual')) {
+                        let disc = 1000;
+                        if (saleData.sellerName !== 'Página Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
+                        else if (saleData.sellerName === 'Página Web Oficial' && storeConfig.discountAmount > 0) disc = storeConfig.discountAmount;
+                        finalPrice -= disc;
                     }
 
                     saleData.items.push({
@@ -4100,6 +4103,43 @@
                         finalPrice: finalPrice
                     });
                     saleData.total += finalPrice;
+
+                    // Cálculo de Incentivos (Bonos)
+                    if (storeConfig.incentiveEnabled) {
+                        let itemBono = 0;
+                        let itemBonoNombre = '';
+                        const prodCat = (p.category || '').toLowerCase().trim();
+                        const prodMarca = ((p.brand || '') + ' ' + (p.name || '')).toLowerCase();
+
+                        if (prodCat.includes('individual') || prodCat.includes('ventas_extras')) {
+                            if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
+                            else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; itemBonoNombre = 'Netflix'; }
+                            else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney+'; }
+                            else if (prodMarca.includes('max') || prodMarca.includes('hbo')) { itemBono = parseInt(storeConfig.incentiveMax) || 0; itemBonoNombre = 'HBO Max'; }
+                            else if (prodMarca.includes('prime')) { itemBono = parseInt(storeConfig.incentivePrime) || 0; itemBonoNombre = 'Prime Video'; }
+                            else if (prodMarca.includes('paramount')) { itemBono = parseInt(storeConfig.incentiveParamount) || 0; itemBonoNombre = 'Paramount+'; }
+                            else if (prodMarca.includes('vix')) { itemBono = parseInt(storeConfig.incentiveVix) || 0; itemBonoNombre = 'Vix'; }
+                            else if (prodMarca.includes('iptv')) { itemBono = parseInt(storeConfig.incentiveIptv) || 0; itemBonoNombre = 'IPTV'; }
+                            else if (prodMarca.includes('crunchyroll')) { itemBono = parseInt(storeConfig.incentiveCrunchyroll) || 0; itemBonoNombre = 'Crunchyroll'; }
+                            else if (prodMarca.includes('apple')) { itemBono = parseInt(storeConfig.incentiveApple) || 0; itemBonoNombre = 'Apple TV'; }
+                        }
+                        
+                        const cleanCat = prodCat.replace(/[\s\-_]/g, '');
+                        if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                        else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                        else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                        else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                        
+                        if (prodCat.includes('promo')) {
+                            if (prodCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
+                            else { itemBono = parseInt(storeConfig.incentiveMes) || 0; itemBonoNombre = 'Promo Mes'; }
+                        }
+
+                        if (itemBono > 0) {
+                            saleData.incentiveEarned += itemBono;
+                            saleData.incentiveDetails.push(itemBonoNombre + ' (+$' + itemBono + ')');
+                        }
+                    }
                 }
             });
 
@@ -4107,7 +4147,10 @@
                 try {
                     await db.ref(`clientSales/${currentEditingClientPhone}`).push(saleData);
                     await db.ref(`sellerSales/${saleData.sellerName}`).push(saleData);
-                    alert(`¡Nuevas pantallas agregadas satisfactoriamente al historial de ${currentEditingClientPhone} (${name}), bajo el vendedor asignado!`);
+                    let catDebug = saleData.items.map(i => i.category || 'SIN_CATEGORIA').join(', ');
+                    let combo2Val = storeConfig.incentiveCombo2;
+                    let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n❌ NO SUMÓ BONO.\n[DEBUG]: Cat='${catDebug}', Val='${combo2Val}', Vendedor='${saleData.sellerName}'`;
+                    alert(`¡Nuevas pantallas agregadas satisfactoriamente!` + bonusMsg);
                     window.location.reload();
                 } catch(e) {
                     alert('Error añadiendo pantallas: ' + e.message);
