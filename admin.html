@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.0</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.1</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -4131,8 +4131,7 @@
                 // Register Client Profile first
                 await db.ref(`clientProfiles/${phoneStr}`).update({ name: name });
 
-                let incentiveEarned = 0;
-                let incentiveDetails = [];
+                // Variables de incentivos (Uso directo sobre saleData luego)
 
                 const saleData = {
                     clientName: name,
@@ -4214,14 +4213,12 @@
                                 }
 
                                 if (itemBono > 0) {
-                                    incentiveEarned += itemBono;
-                                    incentiveDetails.push(itemBonoNombre + ' (+$' + itemBono + ')');
+                                    saleData.incentiveEarned += itemBono;
+                                    saleData.incentiveDetails.push(itemBonoNombre + ' (+$' + itemBono + ')');
                                 }
                             }
                         }
                     });
-                    saleData.incentiveEarned = incentiveEarned;
-                    saleData.incentiveDetails = incentiveDetails;
                 }
 
                 // Guardar como venta inicial si se seleccionó producto, o registro vacío si no
