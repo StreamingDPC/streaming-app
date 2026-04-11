@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.8.9</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.0</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -4200,11 +4200,12 @@
                                     else if (prodMarca.includes('apple')) { itemBono = parseInt(storeConfig.incentiveApple) || 0; itemBonoNombre = 'Apple TV'; }
                                 }
                                 
-                                // Bloque Combos
-                                if (prodCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
-                                else if (prodCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
-                                else if (prodCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
-                                else if (prodCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                                // Bloque Combos (Detección Flexible)
+                                const cleanCat = prodCat.replace(/[\s\-_]/g, ''); // Quita espacios, guiones y guiones bajos
+                                if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                                else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                                else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                                else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
                                 
                                 // Bloque Promos
                                 if (prodCat.includes('promo')) {
