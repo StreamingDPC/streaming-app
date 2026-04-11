@@ -4064,8 +4064,15 @@
             const name = document.getElementById('edit-client-name').value.trim() || 'Cliente';
             
             const sellerSelect = document.getElementById('edit-client-add-seller');
-            const sellerNameVal = sellerSelect ? sellerSelect.value.trim() : 'Página Web Oficial';
-            const isSellerSale = sellerNameVal !== 'Página Web Oficial' && sellerNameVal !== '';
+            const sellerNameRaw = sellerSelect ? sellerSelect.value : 'Página Web Oficial';
+            const sellerNameVal = sellerNameRaw.trim();
+            
+            // Un vendedor es cualquier cosa que no sea la Oficial y que esté en la lista de vendedores
+            const sellersList = storeConfig.sellers || [];
+            const isSellerFound = sellersList.some(s => s.name.trim() === sellerNameVal);
+            const isSellerSale = isSellerFound && sellerNameVal !== 'Página Web Oficial';
+            
+            console.log("[DEBUG] Seller Detection:", { raw: sellerNameRaw, val: sellerNameVal, isFound: isSellerFound, isSellerSale });
 
             const saleData = {
                 clientName: name,
@@ -4092,7 +4099,9 @@
             selectedOptions.forEach(prodId => {
                 const p = dynamicProducts.find(x => x.id.toString() === prodId);
                 if (p) {
-                    let finalPrice = (saleData.sellerName !== 'Página Web Oficial' && p.sellerPrice > 0) ? p.sellerPrice : p.price;
+                    const hasSellerPrice = p.sellerPrice && p.sellerPrice > 0;
+                    let finalPrice = (isSellerSale && hasSellerPrice) ? p.sellerPrice : p.price;
+                    console.log(`[DEBUG] Price for ${p.name}:`, { isSellerSale, hasSellerPrice, sellerPrice: p.sellerPrice, adminPrice: p.price, chosen: finalPrice });
                     if (individualCount >= 2 && (p.category || '').toLowerCase().includes('individual')) {
                         let disc = 1000;
                         if (saleData.sellerName !== 'Página Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
@@ -4155,8 +4164,10 @@
                     let catDebug = saleData.items.map(i => i.category || 'SIN_CATEGORIA').join(', ');
                     let combo2Val = storeConfig.incentiveCombo2;
                     let enabledFlag = storeConfig.incentiveEnabled ? 'ACTIVADO' : 'APAGADO';
-                    let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned}` : `\n❌ NO SUMÓ.\n[DEBUG]: Cat='${catDebug}', Val='${combo2Val}', Activo='${enabledFlag}', Vendedor='${saleData.sellerName}'`;
-                    alert(`¡Acción completada!` + bonusMsg);
+                    let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
+                    let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned}` : `\n❌ NO SUMÓ BONO.`;
+                    let debugInfo = `\n---\n[DEBUG]: Vendedor='${saleData.sellerName}', Status='${statusText}', Cat='${catDebug}', Activo='${enabledFlag}'`;
+                    alert(`¡Acción completada!` + bonusMsg + debugInfo);
                     window.location.reload();
                 } catch(e) {
                     alert('Error añadiendo pantallas: ' + e.message);
@@ -4183,8 +4194,14 @@
                 // Variables de incentivos (Uso directo sobre saleData luego)
 
                 const sellerSelect = document.getElementById('manual-client-seller');
-                const sellerNameVal = sellerSelect ? sellerSelect.value.trim() : 'Página Web Oficial';
-                const isSellerSale = sellerNameVal !== 'Página Web Oficial' && sellerNameVal !== '';
+                const sellerNameRaw = sellerSelect ? sellerSelect.value : 'Página Web Oficial';
+                const sellerNameVal = sellerNameRaw.trim();
+                
+                const sellersList = storeConfig.sellers || [];
+                const isSellerFound = sellersList.some(s => s.name.trim() === sellerNameVal);
+                const isSellerSale = isSellerFound && sellerNameVal !== 'Página Web Oficial';
+                
+                console.log("[DEBUG] Manual Create Seller Detection:", { raw: sellerNameRaw, val: sellerNameVal, isFound: isSellerFound, isSellerSale });
 
                 const saleData = {
                     clientName: name,
@@ -4212,7 +4229,9 @@
                     selectedOptions.forEach(prodId => {
                         const p = dynamicProducts.find(x => x.id.toString() === prodId);
                         if (p) {
-                            let finalPrice = (saleData.sellerName !== 'Página Web Oficial' && p.sellerPrice > 0) ? p.sellerPrice : p.price;
+                            const hasSellerPrice = p.sellerPrice && p.sellerPrice > 0;
+                            let finalPrice = (isSellerSale && hasSellerPrice) ? p.sellerPrice : p.price;
+                            console.log(`[DEBUG] Manual Price for ${p.name}:`, { isSellerSale, hasSellerPrice, sellerPrice: p.sellerPrice, adminPrice: p.price, chosen: finalPrice });
                             if (individualCount >= 2 && (p.category || '').toLowerCase().includes('individual')) {
                                 let disc = 1000;
                                 if (saleData.sellerName !== 'Página Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
@@ -4282,8 +4301,10 @@
                     let catDebug = saleData.items.map(i => i.category || 'SIN_CATEGORIA').join(', ');
                     let combo2Val = storeConfig.incentiveCombo2;
                     let enabledFlag = storeConfig.incentiveEnabled ? 'SI' : 'NO';
-                    let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n❌ NO SUMÓ BONO.\n[DEBUG]: Cat='${catDebug}', Val='${combo2Val}' (${typeof combo2Val}), Activo=${enabledFlag}, Vendedor='${saleData.sellerName}'`;
-                    alert(`¡Cliente '${name}' registrado!` + bonusMsg);
+                    let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
+                    let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n❌ NO SUMÓ BONO.`;
+                    let debugInfo = `\n---\n[DEBUG]: Vendedor='${saleData.sellerName}', Status='${statusText}', Cat='${catDebug}', Activo=${enabledFlag}`;
+                    alert(`¡Cliente '${name}' registrado!` + bonusMsg + debugInfo);
                 } else {
                     alert(`¡Cliente '${name}' registrado en la DB exitosamente sin compras activas!`);
                 }
