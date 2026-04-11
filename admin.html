@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.6</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.7</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -4111,6 +4111,7 @@
                         const prodCat = (p.category || '').toLowerCase().trim();
                         const prodMarca = ((p.brand || '') + ' ' + (p.name || '')).toLowerCase();
 
+                        const cleanCat = prodCat.replace(/[\s\-_]/g, '');
                         if (prodCat.includes('individual') || prodCat.includes('ventas_extras')) {
                             if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
                             else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; itemBonoNombre = 'Netflix'; }
@@ -4228,6 +4229,7 @@
                                 const prodCat = (p.category || '').toLowerCase().trim();
                                 const prodMarca = ((p.brand || '') + ' ' + (p.name || '')).toLowerCase();
 
+                                const cleanCat = prodCat.replace(/[\s\-_]/g, '');
                                 // Bloque Individuales
                                 if (prodCat.includes('individual') || prodCat.includes('ventas_extras')) {
                                     if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
