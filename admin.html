@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.8 (Fix Bonos)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.9 (Fix Combos)</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -4139,10 +4139,10 @@
                             else if (prodMarca.includes('apple')) { itemBono = parseInt(storeConfig.incentiveApple) || 0; itemBonoNombre = 'Apple TV'; }
                         }
                         else if (cleanCat.includes('combo')) {
-                            if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
-                            else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
-                            else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
-                            else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                            if (cleanCat.includes('combo2') || cleanCat.includes('combos2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                            else if (cleanCat.includes('combo3') || cleanCat.includes('combos3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                            else if (cleanCat.includes('combo4') || cleanCat.includes('combos4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                            else if (cleanCat.includes('combo5') || cleanCat.includes('combos5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
                         }
                         else if (prodCat.includes('promo')) {
                             if (prodCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveIncentiveFinde) || parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
@@ -4275,10 +4275,10 @@
                                 }
                                 // Bloque Combos (Solo si no es individual)
                                 else if (cleanCat.includes('combo')) {
-                                    if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
-                                    else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
-                                    else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
-                                    else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                                    if (cleanCat.includes('combo2') || cleanCat.includes('combos2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                                    else if (cleanCat.includes('combo3') || cleanCat.includes('combos3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                                    else if (cleanCat.includes('combo4') || cleanCat.includes('combos4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                                    else if (cleanCat.includes('combo5') || cleanCat.includes('combos5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
                                 }
                                 // Bloque Promos (Solo si no es nada de lo anterior)
                                 else if (prodCat.includes('promo')) {
