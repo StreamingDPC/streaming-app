@@ -4145,9 +4145,11 @@
                             else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
                         }
                         else if (prodCat.includes('promo')) {
-                            if (prodCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
+                            if (prodCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveIncentiveFinde) || parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
                             else { itemBono = parseInt(storeConfig.incentiveMes) || 0; itemBonoNombre = 'Promo Mes'; }
                         }
+                        
+                        console.log(`[DEBUG] Bono search for ${p.name}:`, { cat: prodCat, clean: cleanCat, marca: prodMarca, configVal: storeConfig.incentiveCombo2, calculated: itemBono });
 
                         if (itemBono > 0) {
                             saleData.incentiveEarned += itemBono;
@@ -4166,7 +4168,7 @@
                     let enabledFlag = storeConfig.incentiveEnabled ? 'ACTIVADO' : 'APAGADO';
                     let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
                     let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned}` : `\n❌ NO SUMÓ BONO.`;
-                    let debugInfo = `\n---\n[DEBUG]: Vendedor='${saleData.sellerName}', Status='${statusText}', Cat='${catDebug}', Activo='${enabledFlag}'`;
+                    let debugInfo = `\n---\n[DEBUG]: Vendedor='${saleData.sellerName}', Status='${statusText}', Cat='${catDebug}', ConfigCombo2='${storeConfig.incentiveCombo2}'`;
                     alert(`¡Acción completada!` + bonusMsg + debugInfo);
                     window.location.reload();
                 } catch(e) {
@@ -4303,7 +4305,7 @@
                     let enabledFlag = storeConfig.incentiveEnabled ? 'SI' : 'NO';
                     let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
                     let bonusMsg = saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n❌ NO SUMÓ BONO.`;
-                    let debugInfo = `\n---\n[DEBUG]: Vendedor='${saleData.sellerName}', Status='${statusText}', Cat='${catDebug}', Activo=${enabledFlag}`;
+                    let debugInfo = `\n---\n[DEBUG]: Vendedor='${saleData.sellerName}', Status='${statusText}', Cat='${catDebug}', ConfigCombo2='${storeConfig.incentiveCombo2}'`;
                     alert(`¡Cliente '${name}' registrado!` + bonusMsg + debugInfo);
                 } else {
                     alert(`¡Cliente '${name}' registrado en la DB exitosamente sin compras activas!`);
