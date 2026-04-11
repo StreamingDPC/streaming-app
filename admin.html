@@ -1651,6 +1651,7 @@
                     renderBannersList();
                     renderSellersList();
                     renderBlockedClients();
+                    renderManualClientProducts();
                 }
             } else {
                 console.warn("Snapshot is EMPTY (null)!");
@@ -4062,8 +4063,9 @@
 
             const name = document.getElementById('edit-client-name').value.trim() || 'Cliente';
             
-            const sellerNameVal = document.getElementById('edit-client-add-seller') ? document.getElementById('edit-client-add-seller').value : 'Página Web Oficial';
-            const isSellerSale = sellerNameVal !== 'Página Web Oficial';
+            const sellerSelect = document.getElementById('edit-client-add-seller');
+            const sellerNameVal = sellerSelect ? sellerSelect.value.trim() : 'Página Web Oficial';
+            const isSellerSale = sellerNameVal !== 'Página Web Oficial' && sellerNameVal !== '';
 
             const saleData = {
                 clientName: name,
@@ -4180,8 +4182,9 @@
 
                 // Variables de incentivos (Uso directo sobre saleData luego)
 
-                const sellerNameVal = document.getElementById('manual-client-seller') ? document.getElementById('manual-client-seller').value : 'Página Web Oficial';
-                const isSellerSale = sellerNameVal !== 'Página Web Oficial';
+                const sellerSelect = document.getElementById('manual-client-seller');
+                const sellerNameVal = sellerSelect ? sellerSelect.value.trim() : 'Página Web Oficial';
+                const isSellerSale = sellerNameVal !== 'Página Web Oficial' && sellerNameVal !== '';
 
                 const saleData = {
                     clientName: name,
