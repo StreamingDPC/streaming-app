@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.12 (Fix CRM URL)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.13 (Fix CRM Save)</span></h1>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </div>
 
@@ -2340,7 +2340,7 @@
                     let keyBase = variant ? `${name} | ${variant}` : name;
                     let finalName = keyBase;
                     let counter = 1;
-                    while (newCrmDict[finalName]) {
+                    while (newCrmDict.hasOwnProperty(finalName)) {
                         finalName = keyBase + " (" + counter + ")";
                         counter++;
                     }
