@@ -3806,11 +3806,16 @@
             if (!confirm(`¿Actualizar todos los registros de compras para ${currentEditingClientPhone} con este nuevo nombre y ciudad?`)) return;
 
             try {
+                // Fetch All Data needed
+                const [snap, sSnap] = await Promise.all([
+                    db.ref(`clientSales/${currentEditingClientPhone}`).once('value'),
+                    db.ref(`sellerSales`).once('value')
+                ]);
+
+                const sales = snap.val();
+                const allSellers = sSnap.val();
                 const updates = {};
                 
-                // Update in Client Sales
-                const snap = await db.ref(`clientSales/${currentEditingClientPhone}`).once('value');
-                const sales = snap.val();
                 if (sales) {
                     Object.keys(sales).forEach(saleKey => {
                         updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientName`] = newName;
@@ -3834,9 +3839,12 @@
                         if (histEmailsList && histEmailsList.children.length > 0) {
                             const curSale = window.currentClientSales[window.currentEditingSaleKey];
                             if (curSale && curSale.items) {
-                                let modifiedItems = JSON.parse(JSON.stringify(curSale.items));
-                                modifiedItems.forEach(item => {
-                                    const itemEmailGroups = histEmailsList.querySelectorAll(`.history-email-group[data-prod-id="${item.id}"]`);
+                                // Asegurar que items sea un array
+                                let rawItems = Array.isArray(curSale.items) ? curSale.items : Object.values(curSale.items);
+                                let modifiedItems = JSON.parse(JSON.stringify(rawItems));
+
+                                modifiedItems.forEach((item, itemIdx) => {
+                                    const itemEmailGroups = histEmailsList.querySelectorAll(`.history-email-group[data-item-index="${itemIdx}"]`);
                                     if (itemEmailGroups.length > 0) {
                                         item.specificEmails = [];
                                         itemEmailGroups.forEach(group => {
@@ -3852,10 +3860,13 @@
                                 // También actualizar en sellerSales
                                 if (allSellers) {
                                     for (let sName in allSellers) {
-                                        for (let sid in allSellers[sName]) {
-                                            const ss = allSellers[sName][sid];
+                                        let sMap = allSellers[sName];
+                                        for (let sid in sMap) {
+                                            const ss = sMap[sid];
                                             if (ss.clientPhone === currentEditingClientPhone && (sid === window.currentEditingSaleKey || ss.date === window.currentEditingOriginalDate)) {
                                                 updates[`sellerSales/${sName}/${sid}/items`] = modifiedItems;
+                                                updates[`sellerSales/${sName}/${sid}/clientName`] = newName;
+                                                updates[`sellerSales/${sName}/${sid}/clientCity`] = newCity;
                                             }
                                         }
                                     }
@@ -3865,9 +3876,17 @@
                     }
                 }
 
-                // Update in Seller Sales where phone and date match
-                const sSnap = await db.ref(`sellerSales`).once('value');
-                const allSellers = sSnap.val();
+                // Update common fields in sellerSales for all sales of this phone (not just the selected one)
+                if (allSellers) {
+                    for (let sName in allSellers) {
+                        for (let sid in allSellers[sName]) {
+                            if (allSellers[sName][sid].clientPhone === currentEditingClientPhone) {
+                                updates[`sellerSales/${sName}/${sid}/clientName`] = newName;
+                                updates[`sellerSales/${sName}/${sid}/clientCity`] = newCity;
+                            }
+                        }
+                    }
+                }
                 if (allSellers) {
                     for (let sellerName in allSellers) {
                         for (let sId in allSellers[sellerName]) {
@@ -4272,7 +4291,10 @@
             let hasCombos = false;
             list.innerHTML = '';
 
-            sale.items.forEach(item => {
+            // Manejar si items no es un array (Firebase issue)
+            const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items || {});
+
+            items.forEach((item, itemIdx) => {
                 const cat = (item.category || '').toLowerCase();
                 const nameLow = (item.name || '').toLowerCase();
                 let screenCount = 1;
@@ -4288,11 +4310,11 @@
                     const specific = (item.specificEmails && item.specificEmails[i]) ? item.specificEmails[i] : { platform: guesses[i] || item.name, email: '' };
                     const group = document.createElement('div');
                     group.className = 'history-email-group';
-                    group.dataset.prodId = item.id;
+                    group.dataset.itemIndex = itemIdx; // Rastrear índice para guardar correctamente
                     group.style = 'display:grid; grid-template-columns: 1fr 2fr; gap:10px; align-items:center; background:rgba(255,150,0,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);';
                     group.innerHTML = `
                         <div>
-                            <input type="text" class="history-platform-input" placeholder="Plataforma" value="${specific.platform || item.name}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
+                            <input type="text" class="history-platform-input" placeholder="Plataforma" value="${specific.platform || guesses[i] || item.name}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
                         </div>
                         <div>
                             <input type="email" class="history-email-input" placeholder="Email / Usuario" value="${specific.email || ''}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
