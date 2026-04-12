@@ -3158,12 +3158,26 @@
             document.getElementById('crm-selector-modal').style.display = 'none';
         }
 
+        function replaceCRMVars(text, data) {
+            if (!text) return "";
+            return text
+                .replace(/{cliente}/ig, data.name || '')
+                .replace(/{nombre}/ig, data.name || '')
+                .replace(/{pantalla}/ig, data.platformName || '')
+                .replace(/{inicio}/ig, data.start || '')
+                .replace(/{Fin}/ig, data.end || '')
+                .replace(/{pin}/ig, data.pin || 'N/A')
+                .replace(/{correo}/ig, data.email || 'N/A')
+                .replace(/{clave}/ig, data.pass || 'N/A')
+                .replace(/{perfil}/ig, data.profile || 'N/A');
+        }
+
         window.sendCRMStep1Message = function(platformName) {
             const { name, phone, start, end, pin } = _crmTargetClient;
             const dict = storeConfig.crmGalleryDict || {};
             const items = dict[platformName] || [];
 
-            let targetEmail = _crmTargetClient.email || 'N/A';
+            let targetEmail = _crmTargetClient.email && _crmTargetClient.email.trim() ? _crmTargetClient.email : 'N/A';
             
             // Buscar email específico para esta plataforma en los items de la venta
             if (_crmTargetClient.fullItems && Array.isArray(_crmTargetClient.fullItems)) {
@@ -3171,26 +3185,26 @@
                     if (it.specificEmails && Array.isArray(it.specificEmails)) {
                         // Intentar coincidencia exacta o por inclusión
                         const match = it.specificEmails.find(se => 
+                            se.platform && (
                             se.platform.toLowerCase() === platformName.toLowerCase() || 
                             platformName.toLowerCase().includes(se.platform.toLowerCase()) ||
                             se.platform.toLowerCase().includes(platformName.toLowerCase())
+                            )
                         );
-                        if (match && match.email) targetEmail = match.email;
+                        if (match && match.email && match.email.trim()) targetEmail = match.email;
                     }
                 });
             }
 
+            const dataVars = {
+                name, platformName, start, end, pin,
+                email: targetEmail,
+                pass: _crmTargetClient.pass,
+                profile: _crmTargetClient.profile
+            };
+
             let template = storeConfig.msgTemplate1 || "¡Hola {cliente}! Aquí tienes los datos de tu pantalla de {pantalla}:";
-            let mainText = template
-                .replace(/{cliente}/ig, name)
-                .replace(/{nombre}/ig, name)
-                .replace(/{pantalla}/ig, platformName)
-                .replace(/{inicio}/ig, start)
-                .replace(/{Fin}/ig, end)
-                .replace(/{pin}/ig, pin || 'N/A')
-                .replace(/{correo}/ig, targetEmail)
-                .replace(/{clave}/ig, _crmTargetClient.pass || 'N/A')
-                .replace(/{perfil}/ig, _crmTargetClient.profile || 'N/A');
+            let mainText = replaceCRMVars(template, dataVars);
             
             let allLocalPhotos = [];
             let extraText = "";
@@ -3199,15 +3213,14 @@
             if (items.length > 0) {
                 extraText += "\n\n🚀 *DETALLES Y GUÍA:*";
                 items.forEach((item, index) => {
-                    if (item.text) extraText += `\n\n📌 *Paso ${index+1}:* ${item.text}`;
+                    let itemText = replaceCRMVars(item.text, dataVars);
+                    if (itemText) extraText += `\n\n📌 *Paso ${index+1}:* ${itemText}`;
                     
                     if (item.photo) {
                         const urls = item.photo.split(/[,,;]/).map(u => u.trim()).filter(u => u);
                         if (storeConfig.useLocalRobotCRM) {
-                            // Guardar rutas locales para el robot
                             urls.forEach(url => allLocalPhotos.push(url));
                         } else {
-                            // Enviar como links web normales
                             urls.forEach(url => extraText += `\n🔗 Foto guía: ${url}`);
                         }
                     }
@@ -4167,6 +4180,17 @@
             const elem = document.getElementById('auto-reminder-ui');
             if (elem) elem.style.display = 'none';
         }
+        function guessPlatforms(productName, screenCount) {
+            if (!productName) return [];
+            let clean = productName.replace(/^(combo\s+\d+|trío|dúo|triple|cuádruple|combo)\s*[:\-]\s*/i, '');
+            let parts = clean.split(/\s*[\+\-\|]\s*/).map(s => s.trim()).filter(s => s);
+            let result = [];
+            for (let i = 0; i < screenCount; i++) {
+                result.push(parts[i] || productName);
+            }
+            return result;
+        }
+
         window.updateManualEmailsUI = function(mode) {
             const selectId = mode === 'manual' ? 'manual-client-product' : 'edit-client-add-product';
             const containerId = mode === 'manual' ? 'manual-emails-container' : 'edit-add-emails-container';
@@ -4203,17 +4227,19 @@
                 const p = dynamicProducts.find(x => x.id.toString() === prodId);
                 if (!p) return;
                 
-                let screenCount = 1;
                 const cat = (p.category || '').toLowerCase();
                 const nameLow = (p.name || '').toLowerCase();
+                let screenCount = 1;
                 if (cat === 'combos2' || nameLow.includes('duo') || nameLow.includes('combo 2')) screenCount = 2;
                 else if (cat === 'combos3' || nameLow.includes('trio') || nameLow.includes('triple') || nameLow.includes('combo 3')) screenCount = 3;
                 else if (cat === 'combos4' || nameLow.includes('combo 4')) screenCount = 4;
                 else if (cat === 'combos5' || nameLow.includes('combo 5')) screenCount = 5;
                 
+                const guesses = guessPlatforms(p.name, screenCount);
+                
                 for (let i = 0; i < screenCount; i++) {
                     const key = `${prodId}_${i}`;
-                    const prev = previousValues[key] || { email: '', platform: p.brand || p.name };
+                    const prev = previousValues[key] || { email: '', platform: guesses[i] || p.brand || p.name };
                     
                     const group = document.createElement('div');
                     group.className = 'manual-email-group';
@@ -4247,19 +4273,19 @@
             list.innerHTML = '';
 
             sale.items.forEach(item => {
-                // Determinar screenCount
-                let screenCount = 1;
                 const cat = (item.category || '').toLowerCase();
                 const nameLow = (item.name || '').toLowerCase();
+                let screenCount = 1;
                 if (cat === 'combos2' || nameLow.includes('duo') || nameLow.includes('combo 2')) screenCount = 2;
                 else if (cat === 'combos3' || nameLow.includes('trio') || nameLow.includes('triple') || nameLow.includes('combo 3')) screenCount = 3;
                 else if (cat === 'combos4' || nameLow.includes('combo 4')) screenCount = 4;
                 else if (cat === 'combos5' || nameLow.includes('combo 5')) screenCount = 5;
 
+                const guesses = guessPlatforms(item.name, screenCount);
                 if (screenCount > 1) hasCombos = true;
 
                 for (let i = 0; i < screenCount; i++) {
-                    const specific = (item.specificEmails && item.specificEmails[i]) ? item.specificEmails[i] : { platform: '', email: '' };
+                    const specific = (item.specificEmails && item.specificEmails[i]) ? item.specificEmails[i] : { platform: guesses[i] || item.name, email: '' };
                     const group = document.createElement('div');
                     group.className = 'history-email-group';
                     group.dataset.prodId = item.id;
