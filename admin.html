@@ -631,6 +631,12 @@
                             <input type="email" id="edit-client-email" placeholder="cliente@gmail.com">
                         </div>
 
+                        <div id="history-emails-container" class="form-col" style="grid-column: 1 / -1; display:none; border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 0.5rem;">
+                            <label style="color: #f39c12; font-weight: bold;"><i class="fa-solid fa-envelope"></i> Configurar Emails para esta Venta Seleccionada:</label>
+                            <p style="font-size:0.75rem; color:#a0a0a0; margin-bottom: 0.8rem;">Puedes corregir los correos de cada pantalla para que el CRM use el correcto.</p>
+                            <div id="history-emails-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                        </div>
+
                         <div class="form-col" style="grid-column: 1 / -1; margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
                             <label><i class="fa-solid fa-cart-plus"></i> Agregar Nuevas Pantallas Adicionales a este Cliente:</label>
                             
@@ -3693,6 +3699,7 @@
                 const s = window.currentClientSales[selectedKey];
                 window.currentEditingOriginalDate = s.date;
                 updateEditClientDatesUI(s);
+                updateEditSaleEmailsUI(s);
             }
         };
 
@@ -3754,6 +3761,8 @@
                     document.getElementById('edit-client-email').value = latestSale.email || '';
                 }
 
+                updateEditSaleEmailsUI(latestSale);
+
                 currentEditingClientPhone = phone;
                 document.getElementById('client-edit-area').style.display = 'block';
 
@@ -3805,6 +3814,40 @@
                         if (endVal) {
                             const [eYear, eMo, eDa] = endVal.split('-');
                             updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/expirationDate`] = new Date(eYear, eMo - 1, eDa, 12, 0, 0).getTime();
+                        }
+                        
+                        // Recolectar emails del historial
+                        const histEmailsList = document.getElementById('history-emails-list');
+                        if (histEmailsList && histEmailsList.children.length > 0) {
+                            const curSale = window.currentClientSales[window.currentEditingSaleKey];
+                            if (curSale && curSale.items) {
+                                let modifiedItems = JSON.parse(JSON.stringify(curSale.items));
+                                modifiedItems.forEach(item => {
+                                    const itemEmailGroups = histEmailsList.querySelectorAll(`.history-email-group[data-prod-id="${item.id}"]`);
+                                    if (itemEmailGroups.length > 0) {
+                                        item.specificEmails = [];
+                                        itemEmailGroups.forEach(group => {
+                                            item.specificEmails.push({
+                                                platform: group.querySelector('.history-platform-input').value.trim(),
+                                                email: group.querySelector('.history-email-input').value.trim()
+                                            });
+                                        });
+                                    }
+                                });
+                                updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/items`] = modifiedItems;
+                                
+                                // También actualizar en sellerSales
+                                if (allSellers) {
+                                    for (let sName in allSellers) {
+                                        for (let sid in allSellers[sName]) {
+                                            const ss = allSellers[sName][sid];
+                                            if (ss.clientPhone === currentEditingClientPhone && (sid === window.currentEditingSaleKey || ss.date === window.currentEditingOriginalDate)) {
+                                                updates[`sellerSales/${sName}/${sid}/items`] = modifiedItems;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -4162,10 +4205,11 @@
                 
                 let screenCount = 1;
                 const cat = (p.category || '').toLowerCase();
-                if (cat === 'combos2') screenCount = 2;
-                else if (cat === 'combos3') screenCount = 3;
-                else if (cat === 'combos4') screenCount = 4;
-                else if (cat === 'combos5') screenCount = 5;
+                const nameLow = (p.name || '').toLowerCase();
+                if (cat === 'combos2' || nameLow.includes('duo') || nameLow.includes('combo 2')) screenCount = 2;
+                else if (cat === 'combos3' || nameLow.includes('trio') || nameLow.includes('triple') || nameLow.includes('combo 3')) screenCount = 3;
+                else if (cat === 'combos4' || nameLow.includes('combo 4')) screenCount = 4;
+                else if (cat === 'combos5' || nameLow.includes('combo 5')) screenCount = 5;
                 
                 for (let i = 0; i < screenCount; i++) {
                     const key = `${prodId}_${i}`;
@@ -4185,9 +4229,54 @@
                             <input type="email" class="manual-email-input" placeholder="Email / Usuario de la pantalla" value="${prev.email}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
                         </div>
                     `;
-                    listElem.appendChild(group);
                 }
             });
+        };
+
+        window.updateEditSaleEmailsUI = function(sale) {
+            const container = document.getElementById('history-emails-container');
+            const list = document.getElementById('history-emails-list');
+            if (!container || !list) return;
+
+            if (!sale.items || sale.items.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            let hasCombos = false;
+            list.innerHTML = '';
+
+            sale.items.forEach(item => {
+                // Determinar screenCount
+                let screenCount = 1;
+                const cat = (item.category || '').toLowerCase();
+                const nameLow = (item.name || '').toLowerCase();
+                if (cat === 'combos2' || nameLow.includes('duo') || nameLow.includes('combo 2')) screenCount = 2;
+                else if (cat === 'combos3' || nameLow.includes('trio') || nameLow.includes('triple') || nameLow.includes('combo 3')) screenCount = 3;
+                else if (cat === 'combos4' || nameLow.includes('combo 4')) screenCount = 4;
+                else if (cat === 'combos5' || nameLow.includes('combo 5')) screenCount = 5;
+
+                if (screenCount > 1) hasCombos = true;
+
+                for (let i = 0; i < screenCount; i++) {
+                    const specific = (item.specificEmails && item.specificEmails[i]) ? item.specificEmails[i] : { platform: '', email: '' };
+                    const group = document.createElement('div');
+                    group.className = 'history-email-group';
+                    group.dataset.prodId = item.id;
+                    group.style = 'display:grid; grid-template-columns: 1fr 2fr; gap:10px; align-items:center; background:rgba(255,150,0,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);';
+                    group.innerHTML = `
+                        <div>
+                            <input type="text" class="history-platform-input" placeholder="Plataforma" value="${specific.platform || item.name}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
+                        </div>
+                        <div>
+                            <input type="email" class="history-email-input" placeholder="Email / Usuario" value="${specific.email || ''}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
+                        </div>
+                    `;
+                    list.appendChild(group);
+                }
+            });
+
+            container.style.display = hasCombos ? 'block' : 'none';
         };
 
         window.renderManualClientProducts = function() {
