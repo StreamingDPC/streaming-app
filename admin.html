@@ -1570,15 +1570,20 @@
 
                 keys.forEach(key => {
                     const acc = accounts[key];
+                    const pass = acc.password || "";
+                    const last4 = pass.length > 4 ? pass.substring(pass.length - 4) : pass;
+                    const masked = "*".repeat(Math.max(0, pass.length - 4)) + last4;
+
                     const div = document.createElement('div');
                     div.className = 'admin-item';
                     div.innerHTML = `
                         <div style="color:var(--accent-primary); font-size:1.5rem;"><i class="fa-solid fa-envelope"></i></div>
-                        <div>
+                        <div style="flex:1;">
                             <strong style="color:white; font-size:1rem;">${acc.email}</strong><br>
-                            <span style="font-size:0.8rem; color:#888;">Contraseña: **** (Oculta)</span>
+                            <span style="font-size:0.8rem; color:#888;">Contraseña: <span style="color:#2ab7ca; font-weight:bold;">${masked}</span></span>
                         </div>
                         <div class="item-actions">
+                            <button class="btn-icon btn-edit" onclick="editEmailAccount('${key}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
                             <button class="btn-icon btn-delete" onclick="deleteEmailAccount('${key}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     `;
@@ -1603,6 +1608,27 @@
                 document.getElementById('new-email-addr').value = '';
                 document.getElementById('new-email-pass').value = '';
                 alert('Cuenta vinculada correctamente.');
+            });
+        }
+
+        window.editEmailAccount = async function(key) {
+            const snap = await db.ref('emailAccounts/' + key).once('value');
+            const current = snap.val();
+            if(!current) return;
+
+            const newEmail = prompt("Editar Correo:", current.email);
+            if (newEmail === null) return;
+            
+            const newPass = prompt("Editar Contraseña de Aplicación:", current.password);
+            if (newPass === null) return;
+
+            if (!newEmail || !newPass) return alert("Los campos no pueden estar vacíos.");
+
+            db.ref('emailAccounts/' + key).update({
+                email: newEmail.trim(),
+                password: newPass.trim()
+            }).then(() => {
+                alert("Cuenta actualizada correctamente.");
             });
         }
 
