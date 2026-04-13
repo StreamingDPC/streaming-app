@@ -80,20 +80,25 @@ app.post('/api/get-code', async (req, res) => {
                 await connection.openBox('INBOX');
 
                 const yesterday = new Date();
-                yesterday.setTime(Date.now() - (24 * 3600 * 1000));
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                // Formato IMAP estándar: DD-Mon-YYYY (Ej: 13-Apr-2024)
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const imapDate = `${yesterday.getDate()}-${monthNames[yesterday.getMonth()]}-${yesterday.getFullYear()}`;
 
-                const searchCriteria = [['SINCE', yesterday.toISOString()]];
+                console.log(`Buscando correos desde: ${imapDate}`);
+                const searchCriteria = [['SINCE', imapDate]];
                 
                 if (platform === 'netflix') {
-                    // Netflix usa varios dominios, el filtro FROM es el más seguro
                     searchCriteria.push(['OR', ['FROM', 'netflix.com'], ['SUBJECT', 'Netflix']]);
                 } else if (platform === 'disney') {
-                    // Disney+ a veces usa disneyplus.com o solo 'Disney' en el asunto
                     searchCriteria.push(['OR', ['FROM', 'disney'], ['SUBJECT', 'Disney']]);
                 }
 
                 const fetchOptions = { bodies: ['HEADER', 'TEXT'], markSeen: false };
                 const messages = await connection.search(searchCriteria, fetchOptions);
+
+                console.log(`Mensajes encontrados en ${account.email}: ${messages.length}`);
 
                 for (let i = messages.length - 1; i >= 0; i--) {
                     const item = messages[i];
@@ -102,26 +107,25 @@ app.post('/api/get-code', async (req, res) => {
                     const subject = (parsed.subject || "").toLowerCase();
                     const textContent = (parsed.text || "").toLowerCase();
                     const htmlContent = parsed.html || "";
-
-                    // Verificar si el correo es para el cliente específico
-                    // Buscamos el email del cliente en el cuerpo, asunto o incluso en el campo 'to'
-                    const targetEmail = email.toLowerCase();
                     const recipientText = (parsed.to && parsed.to.text) ? parsed.to.text.toLowerCase() : "";
-                    
-                    const mentionsEmail = textContent.includes(targetEmail) || 
-                                         htmlContent.toLowerCase().includes(targetEmail) || 
-                                         subject.includes(targetEmail) ||
-                                         recipientText.includes(targetEmail);
 
-                    if (mentionsEmail) {
+                    // Log para debugging interno del usuario
+                    console.log(`Analizando: "${parsed.subject}" de ${parsed.from.text}`);
+
+                    // Verificamos si es el correo correcto
+                    // Si el correo viene de Disney/Netflix y estamos en la cuenta del dueño, 
+                    // somos menos estrictos con la mención del email.
+                    const isFromPlatform = subject.includes(platform) || parsed.from.text.toLowerCase().includes(platform);
+                    const mentionsEmail = textContent.includes(email.toLowerCase()) || 
+                                         recipientText.includes(email.toLowerCase()) || 
+                                         htmlContent.toLowerCase().includes(email.toLowerCase());
+
+                    if (isFromPlatform || mentionsEmail) {
                         if (platform === 'netflix') {
-                            // Caso 1: Código directo en el texto (Acceso temporal)
-                            // Buscamos un bloque de 4 dígitos. Netflix suele presentarlo rodeado de texto.
                             const codeMatch = textContent.match(/\b\d{4}\b/);
                             if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
                                 foundCode = codeMatch[0];
                             } else {
-                                // Caso 2: Link de verificación (Actualizar Hogar / Viaje)
                                 const $ = cheerio.load(htmlContent);
                                 const links = [];
                                 $('a').each((j, el) => {
@@ -137,11 +141,10 @@ app.post('/api/get-code', async (req, res) => {
                                 }
                             }
                         } else if (platform === 'disney') {
-                            // Caso Disney: Código de 6 dígitos
-                            // Quitamos la restricción del subject para Disney, si menciona el email y hay 6 dígitos, es el código.
                             const codeMatch = textContent.match(/\b\d{6}\b/);
                             if (codeMatch) {
                                 foundCode = codeMatch[0];
+                                console.log("¡Código Disney encontrado!", foundCode);
                             }
                         }
                     }
