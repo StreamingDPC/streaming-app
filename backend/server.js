@@ -47,21 +47,23 @@ app.post('/api/get-code', async (req, res) => {
     }
 
     try {
-        // 1. Obtener todas las cuentas de correo registradas en Firebase
         console.log("Consultando cuentas de correo en Firebase...");
         const dbResponse = await axios.get(`${FIREBASE_DB_URL}/emailAccounts.json`);
         const accountsData = dbResponse.data;
 
         if (!accountsData) {
-            return res.status(404).json({ success: false, error: 'No hay cuentas de correo configuradas en el sistema.' });
+            return res.status(404).json({ success: false, error: 'No hay cuentas de correo configuradas.' });
         }
 
-        const accounts = Object.values(accountsData);
-        
-        // 2. Probar con cada cuenta configurada (EN PARALELO para evitar timeouts)
-        console.log(`Iniciando búsqueda en paralelo en ${accounts.length} cuentas...`);
+        const accounts = Object.values(accountsData).filter(a => a && a.email && a.password);
+        let foundCode = null;
 
-        const searchPromises = accounts.map(async (account) => {
+        console.log(`Iniciando búsqueda en ${accounts.length} cuentas configuradas...`);
+
+        // 2. Probar con cada cuenta (Secuencial para evitar bloqueos de IP y saturación)
+        for (const account of accounts) {
+            console.log(`Checando cuenta: ${account.email}...`);
+            
             const imapConfig = {
                 imap: {
                     user: account.email,
@@ -69,7 +71,7 @@ app.post('/api/get-code', async (req, res) => {
                     host: account.email.includes('gmail.com') ? 'imap.gmail.com' : 'imap.titan.email',
                     port: 993,
                     tls: true,
-                    authTimeout: 5000,
+                    authTimeout: 8000,
                     tlsOptions: { rejectUnauthorized: false }
                 }
             };
@@ -78,21 +80,9 @@ app.post('/api/get-code', async (req, res) => {
             try {
                 connection = await imaps.connect(imapConfig);
                 
-                // Para Gmail, lo mejor es buscar en "All Mail" (Todos) para no perder correos de Promociones/Social
-                let folderToOpen = 'INBOX';
-                if (account.email.includes('gmail.com')) {
-                    const boxes = await connection.getBoxes();
-                    // Intentamos encontrar la carpeta "All Mail" o "Todos"
-                    const gmailBox = boxes['[Gmail]'] || boxes['[gmail]'];
-                    if (gmailBox && gmailBox.children) {
-                        if (gmailBox.children['All Mail']) folderToOpen = '[Gmail]/All Mail';
-                        else if (gmailBox.children['Todos']) folderToOpen = '[Gmail]/Todos';
-                    }
-                }
-
-                await connection.openBox(folderToOpen);
-                console.log(`Buscando en ${account.email} - Carpeta: ${folderToOpen}`);
-
+                // Prioridad 1: Siempre intentar INBOX primero (es lo más común)
+                await connection.openBox('INBOX');
+                
                 const yesterday = new Date();
                 yesterday.setDate(yesterday.getDate() - 1);
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -106,8 +96,23 @@ app.post('/api/get-code', async (req, res) => {
                     searchCriteria.push(['OR', ['FROM', 'disney'], ['SUBJECT', 'Disney']]);
                 }
 
-                const messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
-                console.log(`Cta ${account.email}: ${messages.length} msgs encontrados.`);
+                let messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
+
+                // Prioridad 2: Si no hay nada en INBOX y es Gmail, probar en "All Mail" o "Todos"
+                if (messages.length === 0 && account.email.includes('gmail.com')) {
+                    console.log("Nada en INBOX, probando en All Mail...");
+                    const boxes = await connection.getBoxes();
+                    const gmailBox = boxes['[Gmail]'] || boxes['[gmail]'];
+                    let folderToOpen = null;
+                    if (gmailBox && gmailBox.children) {
+                        if (gmailBox.children['All Mail']) folderToOpen = '[Gmail]/All Mail';
+                        else if (gmailBox.children['Todos']) folderToOpen = '[Gmail]/Todos';
+                    }
+                    if (folderToOpen) {
+                        await connection.openBox(folderToOpen);
+                        messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
+                    }
+                }
 
                 for (let i = messages.length - 1; i >= 0; i--) {
                     const item = messages[i];
@@ -125,12 +130,10 @@ app.post('/api/get-code', async (req, res) => {
                                          htmlContent.toLowerCase().includes(email.toLowerCase());
 
                     if (isFromPlatform || mentionsEmail) {
-                        console.log(`¡Coincidencia! Analizando "${parsed.subject}" en ${account.email}`);
                         if (platform === 'netflix') {
                             const codeMatch = textContent.match(/\b\d{4}\b/);
                             if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
-                                connection.end();
-                                return codeMatch[0];
+                                foundCode = codeMatch[0];
                             } else {
                                 const $ = cheerio.load(htmlContent);
                                 const links = [];
@@ -143,42 +146,38 @@ app.post('/api/get-code', async (req, res) => {
                                     if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
                                         const code = await getCodeFromNetflixUrl(link);
                                         if (code) {
-                                            connection.end();
-                                            return code;
+                                            foundCode = code;
+                                            break;
                                         }
                                     }
                                 }
                             }
                         } else if (platform === 'disney') {
-                            // Extraemos cualquier código de 6 dígitos que aparezca en un correo de Disney
                             const codeMatch = textContent.match(/\b\d{6}\b/);
                             if (codeMatch) {
-                                connection.end();
-                                return codeMatch[0];
+                                foundCode = codeMatch[0];
                             }
                         }
                     }
+                    if (foundCode) break;
                 }
                 connection.end();
             } catch (err) {
                 if (connection) connection.end();
                 console.error(`Error en cuenta ${account.email}:`, err.message);
             }
-            return null;
-        });
-
-        const results = await Promise.all(searchPromises);
-        let foundCode = results.find(code => code !== null);
+            if (foundCode) break;
+        }
 
         if (foundCode) {
             return res.json({ success: true, code: foundCode });
         } else {
-            return res.status(404).json({ success: false, error: 'Código no encontrado. Verifica si el correo llegó a la bandeja de entrada y si la cuenta de Gmail vinculada es la correcta.' });
+            return res.status(404).json({ success: false, error: 'Código no encontrado en ninguna cuenta vinculada.' });
         }
 
     } catch (err) {
         console.error("General Backend Error:", err);
-        return res.status(500).json({ success: false, error: 'Error interno del servidor.' });
+        return res.status(500).json({ success: false, error: 'Error del servidor. Por favor reintenta en un momento.' });
     }
 });
 
