@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const imaps = require('imap-simple');
 const simpleParser = require('mailparser').simpleParser;
+const axios = require('axios');
+const cheerio = require('cheerio');
 
 const app = express();
 app.use(cors());
@@ -21,6 +23,34 @@ const imapConfig = {
         authTimeout: 3000
     }
 };
+
+/**
+ * Intenta obtener el código de 4 dígitos desde una URL de Netflix
+ */
+async function getCodeFromNetflixUrl(url) {
+    try {
+        console.log("Visitando URL de Netflix:", url);
+        const response = await axios.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        });
+        const $ = cheerio.load(response.data);
+        
+        // El código suele estar en un contenedor prominente o texto directo.
+        // Buscamos patrones de 4 dígitos en todo el texto de la página.
+        const pageText = $('body').text();
+        const codeMatch = pageText.match(/\b\d{4}\b/);
+        
+        if (codeMatch) {
+            console.log("Código encontrado en la web:", codeMatch[0]);
+            return codeMatch[0];
+        }
+    } catch (error) {
+        console.error("Error al visitar la URL de Netflix:", error.message);
+    }
+    return null;
+}
 
 app.post('/api/get-code', async (req, res) => {
     const { email, platform } = req.body;
@@ -63,21 +93,46 @@ app.post('/api/get-code', async (req, res) => {
             const item = messages[i];
             const all = item.parts.find(a => a.which === 'TEXT');
             const parsed = await simpleParser(all.body);
-            const textToSearch = (parsed.text || parsed.html || "").toLowerCase();
+            const textContent = (parsed.text || "").toLowerCase();
+            const htmlContent = parsed.html || "";
 
-            // Verificar que el correo menciona el email del cliente (esto asume que netflix/disney manda al correo respectivo y este es reenviado a titan)
-            if (textToSearch.includes(email.toLowerCase()) || parsed.subject.toLowerCase().includes(email.toLowerCase())) {
+            // Verificar que el correo menciona el email del cliente
+            if (textContent.includes(email.toLowerCase()) || htmlContent.toLowerCase().includes(email.toLowerCase()) || parsed.subject.toLowerCase().includes(email.toLowerCase())) {
 
                 if (platform === 'netflix') {
-                    // Buscar un patrón de 4 números típico de código de actualización (modificar según el correo real)
-                    const codeMatch = textToSearch.match(/\b\d{4}\b/);
+                    // 1. Intentar buscar código directo de 4 números en el texto
+                    const codeMatch = textContent.match(/\b\d{4}\b/);
                     if (codeMatch) {
                         foundCode = codeMatch[0];
                         break;
                     }
+
+                    // 2. Si no hay código directo, buscar links de verificación (Nueva Regla Netflix)
+                    const $ = cheerio.load(htmlContent);
+                    const links = [];
+                    $('a').each((i, el) => {
+                        const href = $(el).attr('href');
+                        if (href && href.includes('netflix.com')) {
+                            links.push(href);
+                        }
+                    });
+
+                    // Buscamos en los links encontrados (especialmente los que tienen tokens largos o palabras clave como 'verify' o 'travel')
+                    for (const link of links) {
+                        if (link.includes('verify') || link.includes('token') || link.includes('travel')) {
+                            const codeFromWeb = await getCodeFromNetflixUrl(link);
+                            if (codeFromWeb) {
+                                foundCode = codeFromWeb;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (foundCode) break;
+
                 } else if (platform === 'disney') {
                     // Buscar un patrón típico de Disney (6 números)
-                    const codeMatch = textToSearch.match(/\b\d{6}\b/);
+                    const codeMatch = textContent.match(/\b\d{6}\b/);
                     if (codeMatch) {
                         foundCode = codeMatch[0];
                         break;
