@@ -88,7 +88,8 @@ app.post('/api/get-code', async (req, res) => {
                     // Netflix usa varios dominios, el filtro FROM es el más seguro
                     searchCriteria.push(['OR', ['FROM', 'netflix.com'], ['SUBJECT', 'Netflix']]);
                 } else if (platform === 'disney') {
-                    searchCriteria.push(['OR', ['FROM', 'disneyplus.com'], ['SUBJECT', 'Disney+']]);
+                    // Disney+ a veces usa disneyplus.com o solo 'Disney' en el asunto
+                    searchCriteria.push(['OR', ['FROM', 'disney'], ['SUBJECT', 'Disney']]);
                 }
 
                 const fetchOptions = { bodies: ['HEADER', 'TEXT'], markSeen: false };
@@ -103,15 +104,21 @@ app.post('/api/get-code', async (req, res) => {
                     const htmlContent = parsed.html || "";
 
                     // Verificar si el correo es para el cliente específico
-                    const mentionsEmail = textContent.includes(email.toLowerCase()) || 
-                                         htmlContent.toLowerCase().includes(email.toLowerCase()) || 
-                                         subject.includes(email.toLowerCase());
+                    // Buscamos el email del cliente en el cuerpo, asunto o incluso en el campo 'to'
+                    const targetEmail = email.toLowerCase();
+                    const recipientText = (parsed.to && parsed.to.text) ? parsed.to.text.toLowerCase() : "";
+                    
+                    const mentionsEmail = textContent.includes(targetEmail) || 
+                                         htmlContent.toLowerCase().includes(targetEmail) || 
+                                         subject.includes(targetEmail) ||
+                                         recipientText.includes(targetEmail);
 
                     if (mentionsEmail) {
                         if (platform === 'netflix') {
                             // Caso 1: Código directo en el texto (Acceso temporal)
+                            // Buscamos un bloque de 4 dígitos. Netflix suele presentarlo rodeado de texto.
                             const codeMatch = textContent.match(/\b\d{4}\b/);
-                            if (codeMatch && (subject.includes('acceso') || subject.includes('temporal') || textContent.includes('código'))) {
+                            if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
                                 foundCode = codeMatch[0];
                             } else {
                                 // Caso 2: Link de verificación (Actualizar Hogar / Viaje)
@@ -131,8 +138,9 @@ app.post('/api/get-code', async (req, res) => {
                             }
                         } else if (platform === 'disney') {
                             // Caso Disney: Código de 6 dígitos
+                            // Quitamos la restricción del subject para Disney, si menciona el email y hay 6 dígitos, es el código.
                             const codeMatch = textContent.match(/\b\d{6}\b/);
-                            if (codeMatch && (subject.includes('acceso') || subject.includes('único'))) {
+                            if (codeMatch) {
                                 foundCode = codeMatch[0];
                             }
                         }
