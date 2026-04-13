@@ -57,12 +57,11 @@ app.post('/api/get-code', async (req, res) => {
         }
 
         const accounts = Object.values(accountsData);
-        let foundCode = null;
+        
+        // 2. Probar con cada cuenta configurada (EN PARALELO para evitar timeouts)
+        console.log(`Iniciando búsqueda en paralelo en ${accounts.length} cuentas...`);
 
-        // 2. Probar con cada cuenta configurada
-        for (const account of accounts) {
-            console.log(`Intentando buscar en la cuenta: ${account.email}...`);
-            
+        const searchPromises = accounts.map(async (account) => {
             const imapConfig = {
                 imap: {
                     user: account.email,
@@ -75,18 +74,16 @@ app.post('/api/get-code', async (req, res) => {
                 }
             };
 
+            let connection = null;
             try {
-                const connection = await imaps.connect(imapConfig);
+                connection = await imaps.connect(imapConfig);
                 await connection.openBox('INBOX');
 
                 const yesterday = new Date();
                 yesterday.setDate(yesterday.getDate() - 1);
-                
-                // Formato IMAP estándar: DD-Mon-YYYY (Ej: 13-Apr-2024)
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 const imapDate = `${yesterday.getDate()}-${monthNames[yesterday.getMonth()]}-${yesterday.getFullYear()}`;
 
-                console.log(`Buscando correos desde: ${imapDate}`);
                 const searchCriteria = [['SINCE', imapDate]];
                 
                 if (platform === 'netflix') {
@@ -95,10 +92,7 @@ app.post('/api/get-code', async (req, res) => {
                     searchCriteria.push(['OR', ['FROM', 'disney'], ['SUBJECT', 'Disney']]);
                 }
 
-                const fetchOptions = { bodies: ['HEADER', 'TEXT'], markSeen: false };
-                const messages = await connection.search(searchCriteria, fetchOptions);
-
-                console.log(`Mensajes encontrados en ${account.email}: ${messages.length}`);
+                const messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
 
                 for (let i = messages.length - 1; i >= 0; i--) {
                     const item = messages[i];
@@ -109,13 +103,7 @@ app.post('/api/get-code', async (req, res) => {
                     const htmlContent = parsed.html || "";
                     const recipientText = (parsed.to && parsed.to.text) ? parsed.to.text.toLowerCase() : "";
 
-                    // Log para debugging interno del usuario
-                    console.log(`Analizando: "${parsed.subject}" de ${parsed.from.text}`);
-
-                    // Verificamos si es el correo correcto
-                    // Si el correo viene de Disney/Netflix y estamos en la cuenta del dueño, 
-                    // somos menos estrictos con la mención del email.
-                    const isFromPlatform = subject.includes(platform) || parsed.from.text.toLowerCase().includes(platform);
+                    const isFromPlatform = subject.includes(platform) || parsed.from.text.toLowerCase().includes(platform) || parsed.from.value[0].address.toLowerCase().includes(platform);
                     const mentionsEmail = textContent.includes(email.toLowerCase()) || 
                                          recipientText.includes(email.toLowerCase()) || 
                                          htmlContent.toLowerCase().includes(email.toLowerCase());
@@ -124,7 +112,8 @@ app.post('/api/get-code', async (req, res) => {
                         if (platform === 'netflix') {
                             const codeMatch = textContent.match(/\b\d{4}\b/);
                             if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
-                                foundCode = codeMatch[0];
+                                connection.end();
+                                return codeMatch[0];
                             } else {
                                 const $ = cheerio.load(htmlContent);
                                 const links = [];
@@ -135,35 +124,38 @@ app.post('/api/get-code', async (req, res) => {
 
                                 for (const link of links) {
                                     if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
-                                        foundCode = await getCodeFromNetflixUrl(link);
-                                        if (foundCode) break;
+                                        const code = await getCodeFromNetflixUrl(link);
+                                        if (code) {
+                                            connection.end();
+                                            return code;
+                                        }
                                     }
                                 }
                             }
                         } else if (platform === 'disney') {
                             const codeMatch = textContent.match(/\b\d{6}\b/);
                             if (codeMatch) {
-                                foundCode = codeMatch[0];
-                                console.log("¡Código Disney encontrado!", foundCode);
+                                connection.end();
+                                return codeMatch[0];
                             }
                         }
                     }
-                    if (foundCode) break;
                 }
-
                 connection.end();
-                if (foundCode) break; // Si encontramos código, dejamos de buscar en otras cuentas
-
             } catch (err) {
-                console.error(`Error conectando a ${account.email}:`, err.message);
-                // Continuar con la siguiente cuenta si esta falla
+                if (connection) connection.end();
+                console.error(`Error en cuenta ${account.email}:`, err.message);
             }
-        }
+            return null;
+        });
+
+        const results = await Promise.all(searchPromises);
+        let foundCode = results.find(code => code !== null);
 
         if (foundCode) {
             return res.json({ success: true, code: foundCode });
         } else {
-            return res.status(404).json({ success: false, error: 'Código no encontrado. Asegúrate de que el correo haya llegado recientemente.' });
+            return res.status(404).json({ success: false, error: 'Código no encontrado. Verifica si el correo llegó a la bandeja de entrada y si la cuenta de Gmail vinculada es la correcta.' });
         }
 
     } catch (err) {
