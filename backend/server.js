@@ -88,20 +88,17 @@ app.post('/api/get-code', async (req, res) => {
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 const imapDate = `${yesterday.getDate()}-${monthNames[yesterday.getMonth()]}-${yesterday.getFullYear()}`;
 
-                const searchCriteria = [['SINCE', imapDate]];
+                const searchCriteria = ['ALL']; // Buscamos todo pero limitaremos la cantidad
+                let messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
                 
-                // Filtro optimizado
-                const platformLower = platform.toLowerCase();
-                if (platformLower.includes('netflix')) {
-                    searchCriteria.push(['OR', ['FROM', 'netflix.com'], ['SUBJECT', 'Netflix']]);
-                } else if (platformLower.includes('disney')) {
-                    searchCriteria.push(['OR', ['FROM', 'disney'], ['SUBJECT', 'Disney']]);
+                // Solo nos interesan los últimos 10 mensajes para ir rápido
+                if (messages.length > 10) {
+                    messages = messages.slice(-10);
                 }
 
-                let messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
-
-                // Fallback para Gmail: All Mail
+                // Fallback para Gmail: All Mail (si no hay nada en Inbox)
                 if (messages.length === 0 && account.email.includes('gmail.com')) {
+                    console.log(`[DEBUG] No hay mensajes en Inbox de ${account.email}, probando All Mail...`);
                     const boxes = await connection.getBoxes();
                     const gmailBox = boxes['[Gmail]'] || boxes['[gmail]'];
                     let folderToOpen = null;
@@ -112,6 +109,7 @@ app.post('/api/get-code', async (req, res) => {
                     if (folderToOpen) {
                         await connection.openBox(folderToOpen);
                         messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
+                        if (messages.length > 10) messages = messages.slice(-10);
                     }
                 }
 
