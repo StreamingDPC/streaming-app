@@ -118,65 +118,86 @@ app.post('/api/get-code', async (req, res) => {
                 console.log(`[DEBUG] ${messages.length} mensajes en ${account.email}`);
 
                 for (let i = messages.length - 1; i >= 0; i--) {
-                    const item = messages[i];
-                    const all = item.parts.find(a => a.which === 'TEXT');
-                    const parsed = await simpleParser(all.body);
-                    
-                    const subject = (parsed.subject || "").toLowerCase();
-                    const textContent = (parsed.text || "").toLowerCase();
-                    const htmlContent = parsed.html || "";
-                    const fromText = (parsed.from && parsed.from.text) ? parsed.from.text.toLowerCase() : "";
-                    const recipientText = (parsed.to && parsed.to.text) ? parsed.to.text.toLowerCase() : "";
-                    const targetEmail = email.toLowerCase();
+                    try {
+                        const item = messages[i];
+                        if (!item || !item.parts) continue;
 
-                    const isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
-                    const mentionsEmail = textContent.includes(targetEmail) || 
-                                         recipientText.includes(targetEmail) || 
-                                         htmlContent.toLowerCase().includes(targetEmail);
+                        const all = item.parts.find(a => a.which === 'TEXT');
+                        if (!all || !all.body) continue;
 
-                    if (isFromPlatform || mentionsEmail) {
-                        console.log(`[DEBUG] ¡Match! Subject: ${parsed.subject}`);
-                        if (platformLower.includes('netflix')) {
-                            const codeMatch = textContent.match(/\b\d{4}\b/);
-                            if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
-                                foundCode = codeMatch[0];
-                            } else {
-                                const $ = cheerio.load(htmlContent);
-                                const links = [];
-                                $('a').each((j, el) => {
-                                    const href = $(el).attr('href');
-                                    if (href && href.includes('netflix.com')) links.push(href);
-                                });
+                        const parsed = await simpleParser(all.body);
+                        if (!parsed) continue;
+                        
+                        const subject = (parsed.subject || "").toString().toLowerCase();
+                        const textContent = (parsed.text || "").toString().toLowerCase();
+                        const htmlContent = (parsed.html || "").toString();
+                        
+                        // Obtener remitente de forma segura
+                        let fromText = "";
+                        if (parsed.from && parsed.from.text) fromText = parsed.from.text.toLowerCase();
+                        else if (parsed.from && parsed.from.value && parsed.from.value[0]) fromText = (parsed.from.value[0].address || "").toLowerCase();
 
-                                for (const link of links) {
-                                    if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
-                                        const code = await getCodeFromNetflixUrl(link);
-                                        if (code) {
-                                            foundCode = code;
-                                            break;
+                        // Obtener destinatario de forma segura
+                        let recipientText = "";
+                        if (parsed.to && parsed.to.text) recipientText = parsed.to.text.toLowerCase();
+                        else if (parsed.to && parsed.to.value && parsed.to.value[0]) recipientText = (parsed.to.value[0].address || "").toLowerCase();
+
+                        const targetEmail = email.toLowerCase();
+                        const platformLower = platform.toLowerCase();
+
+                        const isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
+                        const mentionsEmail = textContent.includes(targetEmail) || 
+                                             recipientText.includes(targetEmail) || 
+                                             htmlContent.toLowerCase().includes(targetEmail);
+
+                        if (isFromPlatform || mentionsEmail) {
+                            console.log(`[DEBUG] MATCH en ${account.email}: ${subject}`);
+                            if (platformLower.includes('netflix')) {
+                                const codeMatch = textContent.match(/\b\d{4}\b/);
+                                if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
+                                    foundCode = codeMatch[0];
+                                } else {
+                                    const $ = cheerio.load(htmlContent);
+                                    const links = [];
+                                    $('a').each((j, el) => {
+                                        const href = $(el).attr('href');
+                                        if (href && href.includes('netflix.com')) links.push(href);
+                                    });
+
+                                    for (const link of links) {
+                                        if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
+                                            const code = await getCodeFromNetflixUrl(link);
+                                            if (code) {
+                                                foundCode = code;
+                                                break;
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        } else if (platformLower.includes('disney')) {
-                            const codeMatch = textContent.match(/\b\d{6}\b/);
-                            if (codeMatch) {
-                                foundCode = codeMatch[0];
+                            } else if (platformLower.includes('disney')) {
+                                const codeMatch = textContent.match(/\b\d{6}\b/);
+                                if (codeMatch) {
+                                    foundCode = codeMatch[0];
+                                }
                             }
                         }
+                    } catch (msgErr) {
+                        console.error(`[DEBUG] Error procesando mensaje individual:`, msgErr.message);
                     }
                     if (foundCode) break;
                 }
             } catch (innerErr) {
                 console.error(`[DEBUG] Error en ${account.email}:`, innerErr.message);
             } finally {
-                if (connection) connection.end();
+                if (connection) {
+                    try { connection.end(); } catch(e) {}
+                }
             }
             if (foundCode) break;
         }
 
         if (foundCode) {
-            console.log(`[DEBUG] ÉXITO: Código ${foundCode}`);
+            console.log(`[DEBUG] ÉXITO FINAL: ${foundCode}`);
             return res.json({ success: true, code: foundCode });
         } else {
             return res.status(404).json({ success: false, error: 'Código no encontrado. Revisa si el correo ya llegó o si faltan cuentas por vincular.' });
