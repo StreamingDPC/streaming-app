@@ -47,22 +47,24 @@ app.post('/api/get-code', async (req, res) => {
     }
 
     try {
-        console.log("Consultando cuentas de correo en Firebase...");
+        console.log(`[DEBUG] Nueva solicitud: ${email} para ${platform}`);
+        
+        // 1. Obtener cuentas
         const dbResponse = await axios.get(`${FIREBASE_DB_URL}/emailAccounts.json`);
         const accountsData = dbResponse.data;
 
         if (!accountsData) {
-            return res.status(404).json({ success: false, error: 'No hay cuentas de correo configuradas.' });
+            console.log("[DEBUG] No hay cuentas en Firebase");
+            return res.status(404).json({ success: false, error: 'No hay cuentas de correo configuradas en Firebase.' });
         }
 
         const accounts = Object.values(accountsData).filter(a => a && a.email && a.password);
         let foundCode = null;
 
-        console.log(`Iniciando búsqueda en ${accounts.length} cuentas configuradas...`);
+        console.log(`[DEBUG] Procesando ${accounts.length} cuentas...`);
 
-        // 2. Probar con cada cuenta (Secuencial para evitar bloqueos de IP y saturación)
         for (const account of accounts) {
-            console.log(`Checando cuenta: ${account.email}...`);
+            console.log(`[DEBUG] Conectando a ${account.email}...`);
             
             const imapConfig = {
                 imap: {
@@ -71,7 +73,7 @@ app.post('/api/get-code', async (req, res) => {
                     host: account.email.includes('gmail.com') ? 'imap.gmail.com' : 'imap.titan.email',
                     port: 993,
                     tls: true,
-                    authTimeout: 8000,
+                    authTimeout: 10000,
                     tlsOptions: { rejectUnauthorized: false }
                 }
             };
@@ -79,8 +81,6 @@ app.post('/api/get-code', async (req, res) => {
             let connection = null;
             try {
                 connection = await imaps.connect(imapConfig);
-                
-                // Prioridad 1: Siempre intentar INBOX primero (es lo más común)
                 await connection.openBox('INBOX');
                 
                 const yesterday = new Date();
@@ -90,17 +90,18 @@ app.post('/api/get-code', async (req, res) => {
 
                 const searchCriteria = [['SINCE', imapDate]];
                 
-                if (platform === 'netflix') {
+                // Filtro optimizado
+                const platformLower = platform.toLowerCase();
+                if (platformLower.includes('netflix')) {
                     searchCriteria.push(['OR', ['FROM', 'netflix.com'], ['SUBJECT', 'Netflix']]);
-                } else if (platform === 'disney') {
+                } else if (platformLower.includes('disney')) {
                     searchCriteria.push(['OR', ['FROM', 'disney'], ['SUBJECT', 'Disney']]);
                 }
 
                 let messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
 
-                // Prioridad 2: Si no hay nada en INBOX y es Gmail, probar en "All Mail" o "Todos"
+                // Fallback para Gmail: All Mail
                 if (messages.length === 0 && account.email.includes('gmail.com')) {
-                    console.log("Nada en INBOX, probando en All Mail...");
                     const boxes = await connection.getBoxes();
                     const gmailBox = boxes['[Gmail]'] || boxes['[gmail]'];
                     let folderToOpen = null;
@@ -114,23 +115,28 @@ app.post('/api/get-code', async (req, res) => {
                     }
                 }
 
+                console.log(`[DEBUG] ${messages.length} mensajes en ${account.email}`);
+
                 for (let i = messages.length - 1; i >= 0; i--) {
                     const item = messages[i];
                     const all = item.parts.find(a => a.which === 'TEXT');
                     const parsed = await simpleParser(all.body);
+                    
                     const subject = (parsed.subject || "").toLowerCase();
                     const textContent = (parsed.text || "").toLowerCase();
                     const htmlContent = parsed.html || "";
+                    const fromText = (parsed.from && parsed.from.text) ? parsed.from.text.toLowerCase() : "";
                     const recipientText = (parsed.to && parsed.to.text) ? parsed.to.text.toLowerCase() : "";
-                    const fromText = parsed.from ? parsed.from.text.toLowerCase() : "";
+                    const targetEmail = email.toLowerCase();
 
-                    const isFromPlatform = subject.includes(platform) || fromText.includes(platform);
-                    const mentionsEmail = textContent.includes(email.toLowerCase()) || 
-                                         recipientText.includes(email.toLowerCase()) || 
-                                         htmlContent.toLowerCase().includes(email.toLowerCase());
+                    const isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
+                    const mentionsEmail = textContent.includes(targetEmail) || 
+                                         recipientText.includes(targetEmail) || 
+                                         htmlContent.toLowerCase().includes(targetEmail);
 
                     if (isFromPlatform || mentionsEmail) {
-                        if (platform === 'netflix') {
+                        console.log(`[DEBUG] ¡Match! Subject: ${parsed.subject}`);
+                        if (platformLower.includes('netflix')) {
                             const codeMatch = textContent.match(/\b\d{4}\b/);
                             if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
                                 foundCode = codeMatch[0];
@@ -152,7 +158,7 @@ app.post('/api/get-code', async (req, res) => {
                                     }
                                 }
                             }
-                        } else if (platform === 'disney') {
+                        } else if (platformLower.includes('disney')) {
                             const codeMatch = textContent.match(/\b\d{6}\b/);
                             if (codeMatch) {
                                 foundCode = codeMatch[0];
@@ -161,23 +167,25 @@ app.post('/api/get-code', async (req, res) => {
                     }
                     if (foundCode) break;
                 }
-                connection.end();
-            } catch (err) {
+            } catch (innerErr) {
+                console.error(`[DEBUG] Error en ${account.email}:`, innerErr.message);
+            } finally {
                 if (connection) connection.end();
-                console.error(`Error en cuenta ${account.email}:`, err.message);
             }
             if (foundCode) break;
         }
 
         if (foundCode) {
+            console.log(`[DEBUG] ÉXITO: Código ${foundCode}`);
             return res.json({ success: true, code: foundCode });
         } else {
-            return res.status(404).json({ success: false, error: 'Código no encontrado en ninguna cuenta vinculada.' });
+            return res.status(404).json({ success: false, error: 'Código no encontrado. Revisa si el correo ya llegó o si faltan cuentas por vincular.' });
         }
 
     } catch (err) {
         console.error("General Backend Error:", err);
-        return res.status(500).json({ success: false, error: 'Error del servidor. Por favor reintenta en un momento.' });
+        // Devolvemos el error real para diagnóstico temporal del usuario
+        return res.status(500).json({ success: false, error: err.message || 'Error desconocido del servidor.' });
     }
 });
 
