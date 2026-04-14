@@ -3560,7 +3560,7 @@
                 let formatName = i.name;
                 if (i.category && i.category.startsWith('combos')) formatName = `🎬 * ${i.name}* (Combo Prediseñado)`;
                 return formatName;
-            }).join(', ') : 'Pantallas';
+            }).join(', ') || 'Pantallas';
             const safeClientName = safeDecode(clientObj.name || '').replace(/'/g, '');
             const totalDisp = sale.total ? `$${sale.total.toLocaleString()} ` : 'No registrado';
 
