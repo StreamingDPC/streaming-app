@@ -485,6 +485,10 @@
                         <input type="text" id="new-seller-name" placeholder="Ej: Carlos">
                     </div>
                     <div class="form-col" style="margin-bottom: 1rem;">
+                        <label>WhatsApp del Vendedor</label>
+                        <input type="text" id="new-seller-whatsapp" placeholder="Ej: 573001234567">
+                    </div>
+                    <div class="form-col" style="margin-bottom: 1rem;">
                         <label>Contraseña</label>
                         <input type="text" id="new-seller-pass" placeholder="Ej: pWd123">
                     </div>
@@ -2746,7 +2750,7 @@
                     <div><i class="fa-solid fa-user-tie" style="color:#c48dfc; font-size:1.5rem"></i></div>
                     <div>
                         <strong style="color: white; font-size:1.1rem">${s.name}</strong><br>
-                        <span style="font-size: 0.8rem; color: #a0a0a0;">Contraseña: ${s.password}</span><br>
+                        <span style="font-size: 0.8rem; color: #a0a0a0;">Wa: ${s.whatsapp || 'No registrado'} | Pass: ${s.password}</span><br>
                         <span style="font-size: 0.8rem; color: #f39c12;">Ventas Extras: ${s.extraSalesEnabled ? 'Sí (Límite ' + (s.extraProductsLimit || 0) + ')' : 'No'}</span>
                     </div>
                     <div class="item-actions">
@@ -2766,6 +2770,8 @@
             editSellerIndex = index;
             const s = storeConfig.sellers[index];
             document.getElementById('new-seller-name').value = s.name;
+            const waInput = document.getElementById('new-seller-whatsapp');
+            if (waInput) waInput.value = s.whatsapp || '';
             document.getElementById('new-seller-pass').value = s.password;
             const selExtras = document.getElementById('new-seller-extras-enabled');
             if (selExtras) selExtras.value = s.extraSalesEnabled === true ? 'true' : 'false';
@@ -2780,6 +2786,8 @@
         function cancelEditSeller() {
             editSellerIndex = -1;
             document.getElementById('new-seller-name').value = '';
+            const waInput = document.getElementById('new-seller-whatsapp');
+            if (waInput) waInput.value = '';
             document.getElementById('new-seller-pass').value = '';
             const selExtras = document.getElementById('new-seller-extras-enabled');
             if (selExtras) selExtras.value = 'false';
@@ -2791,6 +2799,8 @@
 
         function saveSeller() {
             const name = document.getElementById('new-seller-name').value.trim();
+            const waInput = document.getElementById('new-seller-whatsapp');
+            const whatsapp = waInput ? waInput.value.trim().replace(/\D/g, '') : '';
             const password = document.getElementById('new-seller-pass').value.trim();
             if (!name || !password) return alert('Completa nombre y contraseña.');
 
@@ -2802,9 +2812,9 @@
             if (!storeConfig.sellers) storeConfig.sellers = [];
 
             if (editSellerIndex !== -1) {
-                storeConfig.sellers[editSellerIndex] = { name, password, extraSalesEnabled, extraProductsLimit };
+                storeConfig.sellers[editSellerIndex] = { name, whatsapp, password, extraSalesEnabled, extraProductsLimit };
             } else {
-                storeConfig.sellers.push({ name, password, extraSalesEnabled, extraProductsLimit });
+                storeConfig.sellers.push({ name, whatsapp, password, extraSalesEnabled, extraProductsLimit });
             }
 
             db.ref('storeConfig').set(storeConfig).then(() => {
