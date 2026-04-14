@@ -2814,7 +2814,7 @@
             const extraProductsLimit = selLimit ? parseInt(selLimit.value) || 0 : 0;
 
             let sellersRaw = storeConfig.sellers || [];
-            storeConfig.sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
+            storeConfig.sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw || {});
 
             if (editSellerIndex !== -1) {
                 storeConfig.sellers[editSellerIndex] = { name, whatsapp, password, extraSalesEnabled, extraProductsLimit };
@@ -4527,7 +4527,8 @@
                     return;
                 }
             } else {
-                items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+                let itemsRaw = sale.items || [];
+                items = Array.isArray(itemsRaw) ? itemsRaw : Object.values(itemsRaw || {});
             }
 
             container.style.display = 'block';
@@ -4596,8 +4597,8 @@
 
             if (storeConfig && storeConfig.sellers) {
                 let sellersHtml = '<option value="Página Web Oficial">Página Web Oficial (Admin)</option>';
-                let sellersRaw = storeConfig.sellers;
-                let sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
+                let sellersRaw = storeConfig.sellers || [];
+                let sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw || {});
                 sellers.forEach(s => sellersHtml += `<option value="${s.name}">${s.name}</option>`);
                 const seller1 = document.getElementById('manual-client-seller');
                 const seller2 = document.getElementById('edit-client-add-seller');
