@@ -1944,7 +1944,8 @@
             if (ownerSelect) {
                 const currentVal = ownerSelect.value;
                 ownerSelect.innerHTML = '<option value="admin">Administrador (Global)</option>';
-                const sellers = storeConfig.sellers || [];
+                let sellersRaw = storeConfig.sellers || [];
+                const sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
                 sellers.forEach(s => {
                     const opt = document.createElement('option');
                     opt.value = s.name;
@@ -2539,7 +2540,8 @@
         function renderEstrenosList() {
             const listDiv = document.getElementById('admin-list-estrenos');
             listDiv.innerHTML = '';
-            const estrenos = storeConfig.estrenos || [];
+            let estrenosRaw = storeConfig.estrenos || [];
+            const estrenos = Array.isArray(estrenosRaw) ? estrenosRaw : Object.values(estrenosRaw);
 
             estrenos.forEach((e, index) => {
                 const div = document.createElement('div');
@@ -2628,7 +2630,8 @@
 
             const listDiv = document.getElementById('admin-list-main-banners');
             listDiv.innerHTML = '';
-            const banners = storeConfig.mainBanners || [];
+            let bannersRaw = storeConfig.mainBanners || [];
+            const banners = Array.isArray(bannersRaw) ? bannersRaw : Object.values(bannersRaw);
 
             banners.forEach((b, index) => {
                 const div = document.createElement('div');
@@ -3426,6 +3429,8 @@
             if (isNaN(deduct) || deduct <= 0) return alert('Ingresa un valor numérico válido.');
             if (deduct > maxAmount) return alert('No puedes canjear más dinero del saldo que tiene disponible el vendedor.');
 
+            let sellersRaw = storeConfig.sellers || [];
+            storeConfig.sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
             const selIndex = storeConfig.sellers.findIndex(s => s.name === sellerName);
             if (selIndex === -1) return alert('Vendedor no encontrado.');
 
@@ -4575,7 +4580,9 @@
 
             if (storeConfig && storeConfig.sellers) {
                 let sellersHtml = '<option value="Página Web Oficial">Página Web Oficial (Admin)</option>';
-                storeConfig.sellers.forEach(s => sellersHtml += `<option value="${s.name}">${s.name}</option>`);
+                let sellersRaw = storeConfig.sellers;
+                let sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
+                sellers.forEach(s => sellersHtml += `<option value="${s.name}">${s.name}</option>`);
                 const seller1 = document.getElementById('manual-client-seller');
                 const seller2 = document.getElementById('edit-client-add-seller');
                 if (seller1) seller1.innerHTML = sellersHtml;
@@ -4597,7 +4604,8 @@
             const sellerNameVal = sellerNameRaw.trim();
             
             // Un vendedor es cualquier cosa que no sea la Oficial y que esté en la lista de vendedores
-            const sellersList = storeConfig.sellers || [];
+            let sellersRaw = storeConfig.sellers || [];
+            const sellersList = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
             const isSellerFound = sellersList.some(s => s.name.trim() === sellerNameVal);
             const isSellerSale = isSellerFound && sellerNameVal !== 'Página Web Oficial';
             
@@ -4738,7 +4746,8 @@
                 const sellerNameRaw = sellerSelect ? sellerSelect.value : 'Página Web Oficial';
                 const sellerNameVal = sellerNameRaw.trim();
                 
-                const sellersList = storeConfig.sellers || [];
+                let sellersRaw = storeConfig.sellers || [];
+                const sellersList = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
                 const isSellerFound = sellersList.some(s => s.name.trim() === sellerNameVal);
                 const isSellerSale = isSellerFound && sellerNameVal !== 'Página Web Oficial';
                 
