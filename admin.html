@@ -3139,8 +3139,8 @@
             }
         }
 
-        let _crmTargetClient = { name: '', phone: '', start: '', end: '', pin: '', fullItems: [] };
-        window.openCRMPlatformSelector = function(nameEnc, phone, start, end, pin, itemsEnc, email = '', pass = '', profile = '', fullItemsJson = '[]') {
+        let _crmTargetClient = { name: '', phone: '', start: '', end: '', pin: '', fullItems: [], sellerName: '' };
+        window.openCRMPlatformSelector = function(nameEnc, phone, start, end, pin, itemsEnc, email = '', pass = '', profile = '', fullItemsJson = '[]', sellerNameEnc = '') {
             _crmTargetClient = { 
                 name: decodeURIComponent(nameEnc), 
                 phone: phone,
@@ -3151,7 +3151,8 @@
                 email: email,
                 pass: pass,
                 profile: profile,
-                fullItems: JSON.parse(decodeURIComponent(fullItemsJson))
+                fullItems: JSON.parse(decodeURIComponent(fullItemsJson)),
+                sellerName: decodeURIComponent(sellerNameEnc || '')
             };
             const modal = document.getElementById('crm-selector-modal');
             const searchInput = document.getElementById('crm-platform-search');
@@ -3278,7 +3279,7 @@
         }
 
         window.sendCRMStep1Message = function(platformName) {
-            const { name, phone, start, end, pin } = _crmTargetClient;
+            const { name, phone, start, end, pin, sellerName } = _crmTargetClient;
             const dict = storeConfig.crmGalleryDict || {};
             const items = dict[platformName] || [];
 
@@ -3334,6 +3335,19 @@
 
             const fullMsgForClient = mainText + extraText;
 
+            let targetWhatsAppStr = phone;
+            let isTargetingSeller = false;
+
+            if (sellerName && sellerName !== 'Página Web Oficial' && storeConfig.sellers) {
+                const sellerInfo = storeConfig.sellers.find(s => s.name === sellerName);
+                if (sellerInfo && sellerInfo.whatsapp) {
+                    if (confirm(`📦 Esta venta pertenece al vendedor "${sellerName}".\n\n¿Deseas enviar el CRM al VENDEDOR para que él se lo entregue a su cliente?\n\n- Aceptar (OK) = Enviar al Vendedor\n- Cancelar = Enviar directo al Cliente`)) {
+                        targetWhatsAppStr = sellerInfo.whatsapp;
+                        isTargetingSeller = true;
+                    }
+                }
+            }
+
             if (storeConfig.useLocalRobotCRM) {
                 // OPCIÓN 2: ENVIAR COMANDO AL ROBOT PROPIO
                 const adminPhone = storeConfig.whatsappNumber || '';
@@ -3342,16 +3356,16 @@
                 let cleanAdmin = adminPhone.replace(/\D/g, '');
                 if (cleanAdmin.length === 10 && cleanAdmin.startsWith('3')) cleanAdmin = '57' + cleanAdmin;
 
-                // El robot captará este comando y enviará todo al cliente
-                const command = `CMD_CRM@@@TEL:${phone}@@@TX:${fullMsgForClient}@@@IMG:${allLocalPhotos.join(',')}`;
+                // El robot captará este comando y enviará todo al target
+                const command = `CMD_CRM@@@TEL:${targetWhatsAppStr}@@@TX:${fullMsgForClient}@@@IMG:${allLocalPhotos.join(',')}`;
                 
-                if (confirm('Se enviará una orden de envío a tu Robot Local para que él mande las fotos del disco D: al cliente. ¿Continuar?')) {
+                if (confirm(`Se enviará una orden a tu Robot Local para enviar las credenciales y fotos ${isTargetingSeller ? 'al VENDEDOR' : 'al CLIENTE'}. ¿Continuar?`)) {
                     window.open(`https://wa.me/${cleanAdmin}?text=${encodeURIComponent(command)}`, '_blank');
                 }
             } else {
                 // OPCIÓN 1: ENVÍO DIRECTO TRADICIONAL
                 const encodedMsg = encodeURIComponent(fullMsgForClient);
-                let waPhone = phone.replace(/\D/g, '');
+                let waPhone = targetWhatsAppStr.replace(/\D/g, '');
                 if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
                 window.open(`https://wa.me/${waPhone}?text=${encodedMsg}`, '_blank');
             }
@@ -3547,7 +3561,7 @@
                             style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem;">
                             <i class="fa-brands fa-whatsapp"></i> Renovada
                         </button>
-                        <button onclick="openCRMPlatformSelector('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${startDate}', '${endDate}', '${(allClientProfiles[clientObj.phone] ? allClientProfiles[clientObj.phone].pin : '')}', '${encodeURIComponent(itemsStr)}', '${(sale.email || '').replace(/'/g, "\\'")}', '${(sale.password || '').replace(/'/g, "\\'")}', '${(sale.profile || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(sale.items || []))}')" 
+                        <button onclick="openCRMPlatformSelector('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${startDate}', '${endDate}', '${(allClientProfiles[clientObj.phone] ? allClientProfiles[clientObj.phone].pin : '')}', '${encodeURIComponent(itemsStr)}', '${(sale.email || '').replace(/'/g, "\\'")}', '${(sale.password || '').replace(/'/g, "\\'")}', '${(sale.profile || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${encodeURIComponent(sale.sellerName || 'Página Web Oficial')}')" 
                             style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #9b59b6; background: rgba(155, 89, 182, 0.1); color:#9b59b6; font-size:0.8rem;">
                             <i class="fa-solid fa-paper-plane"></i> CRM
                         </button>
