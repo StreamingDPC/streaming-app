@@ -4628,8 +4628,8 @@
             // Un vendedor es cualquier cosa que no sea la Oficial y que esté en la lista de vendedores
             let sellersRaw = storeConfig.sellers || [];
             const sellersList = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
-            const isSellerFound = sellersList.some(s => s.name.trim() === sellerNameVal);
-            const isSellerSale = isSellerFound && sellerNameVal !== 'Página Web Oficial';
+            const isSellerFound = sellersList.some(s => s.name.trim().toLowerCase() === sellerNameVal.toLowerCase());
+            const isSellerSale = isSellerFound && sellerNameVal.toLowerCase() !== 'página web oficial';
             
             console.log("[DEBUG] Seller Detection:", { raw: sellerNameRaw, val: sellerNameVal, isFound: isSellerFound, isSellerSale, sellersListNames: sellersList.map(s => s.name) });
 
@@ -4708,10 +4708,18 @@
                             else if (prodMarca.includes('apple')) { itemBono = parseInt(storeConfig.incentiveApple) || 0; itemBonoNombre = 'Apple TV'; }
                         }
                         else if (cleanCat.includes('combo')) {
-                            if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
-                            else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
-                            else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
-                            else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                            const combinedMatch = (cleanCat + prodMarca);
+                            if (combinedMatch.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                            else if (combinedMatch.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                            else if (combinedMatch.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                            else if (combinedMatch.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                            else {
+                                // Fallback: try to guess from product title if category is just "Combos"
+                                if (prodMarca.includes('2 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                                else if (prodMarca.includes('3 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                                else if (prodMarca.includes('4 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                                else if (prodMarca.includes('5 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                            }
                         }
                         else if (cleanCat.includes('promo') || cleanCat.includes('promocion')) {
                             if (cleanCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
@@ -4770,8 +4778,8 @@
                 
                 let sellersRaw = storeConfig.sellers || [];
                 const sellersList = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
-                const isSellerFound = sellersList.some(s => s.name.trim() === sellerNameVal);
-                const isSellerSale = isSellerFound && sellerNameVal !== 'Página Web Oficial';
+                const isSellerFound = sellersList.some(s => s.name.trim().toLowerCase() === sellerNameVal.toLowerCase());
+                const isSellerSale = isSellerFound && sellerNameVal.toLowerCase() !== 'página web oficial';
                 
                 console.log("[DEBUG] Manual Create Seller Detection:", { raw: sellerNameRaw, val: sellerNameVal, isFound: isSellerFound, isSellerSale, sellersListNames: sellersList.map(s => s.name) });
 
@@ -4844,7 +4852,7 @@
                                 // Bloque Individuales
                                 if (cleanCat.includes('individual') || cleanCat.includes('ventasextras')) {
                                     if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
-                                    else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; name = 'Netflix'; }
+                                    else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; itemBonoNombre = 'Netflix'; }
                                     else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney+'; }
                                     else if (prodMarca.includes('max') || prodMarca.includes('hbo')) { itemBono = parseInt(storeConfig.incentiveMax) || 0; itemBonoNombre = 'HBO Max'; }
                                     else if (prodMarca.includes('prime')) { itemBono = parseInt(storeConfig.incentivePrime) || 0; itemBonoNombre = 'Prime Video'; }
@@ -4856,10 +4864,17 @@
                                 }
                                 // Bloque Combos
                                 else if (cleanCat.includes('combo')) {
-                                    if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
-                                    else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
-                                    else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
-                                    else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                                    const combinedMatch = (cleanCat + prodMarca);
+                                    if (combinedMatch.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                                    else if (combinedMatch.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                                    else if (combinedMatch.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                                    else if (combinedMatch.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                                    else {
+                                        if (prodMarca.includes('2 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                                        else if (prodMarca.includes('3 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                                        else if (prodMarca.includes('4 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                                        else if (prodMarca.includes('5 pantalla')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                                    }
                                 }
                                 // Bloque Promos
                                 else if (cleanCat.includes('promo') || cleanCat.includes('promocion')) {

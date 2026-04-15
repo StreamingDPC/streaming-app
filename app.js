@@ -1417,10 +1417,19 @@ function setupEventListeners() {
                     }
                     else if (cleanCat.includes('combo')) {
                         let b = 0; let name = '';
-                        if (cleanCat.includes('combo2')) { b = parseInt(storeConfig.incentiveCombo2) || 0; name = 'Combo 2 P.'; }
-                        else if (cleanCat.includes('combo3')) { b = parseInt(storeConfig.incentiveCombo3) || 0; name = 'Combo 3 P.'; }
-                        else if (cleanCat.includes('combo4')) { b = parseInt(storeConfig.incentiveCombo4) || 0; name = 'Combo 4 P.'; }
-                        else if (cleanCat.includes('combo5')) { b = parseInt(storeConfig.incentiveCombo5) || 0; name = 'Combo 5+ P.'; }
+                        const combinedMatch = (cleanCat + prodMarca);
+
+                        if (combinedMatch.includes('combo2')) { b = parseInt(storeConfig.incentiveCombo2) || 0; name = 'Combo 2 P.'; }
+                        else if (combinedMatch.includes('combo3')) { b = parseInt(storeConfig.incentiveCombo3) || 0; name = 'Combo 3 P.'; }
+                        else if (combinedMatch.includes('combo4')) { b = parseInt(storeConfig.incentiveCombo4) || 0; name = 'Combo 4 P.'; }
+                        else if (combinedMatch.includes('combo5')) { b = parseInt(storeConfig.incentiveCombo5) || 0; name = 'Combo 5+ P.'; }
+                        else {
+                            // Guess by title if category is just "Combos"
+                            if (prodMarca.includes('2 pantalla')) { b = parseInt(storeConfig.incentiveCombo2) || 0; name = 'Combo 2 P.'; }
+                            else if (prodMarca.includes('3 pantalla')) { b = parseInt(storeConfig.incentiveCombo3) || 0; name = 'Combo 3 P.'; }
+                            else if (prodMarca.includes('4 pantalla')) { b = parseInt(storeConfig.incentiveCombo4) || 0; name = 'Combo 4 P.'; }
+                            else if (prodMarca.includes('5 pantalla')) { b = parseInt(storeConfig.incentiveCombo5) || 0; name = 'Combo 5+ P.'; }
+                        }
                         
                         if (b > 0) {
                             incentiveEarned += b;
