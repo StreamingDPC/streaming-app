@@ -59,140 +59,98 @@ app.post('/api/get-code', async (req, res) => {
         }
 
         const accounts = Object.values(accountsData).filter(a => a && a.email && a.password);
-        let foundCode = null;
+        
+        console.log(`[DEBUG] Procesando ${accounts.length} cuentas en PARALELO para mayor velocidad...`);
 
-        console.log(`[DEBUG] Procesando ${accounts.length} cuentas...`);
-
-        for (const account of accounts) {
-            console.log(`[DEBUG] Conectando a ${account.email}...`);
-            
-            const imapConfig = {
-                imap: {
-                    user: account.email,
-                    password: account.password,
-                    host: account.email.includes('gmail.com') ? 'imap.gmail.com' : 'imap.titan.email',
-                    port: 993,
-                    tls: true,
-                    authTimeout: 10000,
-                    tlsOptions: { rejectUnauthorized: false }
-                }
-            };
-
+        // Función individual para procesar cada cuenta
+        const checkAccount = async (account) => {
             let connection = null;
             try {
+                console.log(`[DEBUG] Intentando conexión: ${account.email}`);
+                const imapConfig = {
+                    imap: {
+                        user: account.email,
+                        password: account.password,
+                        host: account.email.includes('gmail.com') ? 'imap.gmail.com' : 'imap.titan.email',
+                        port: 993,
+                        tls: true,
+                        authTimeout: 5000, // Timeout más agresivo
+                        tlsOptions: { rejectUnauthorized: false }
+                    }
+                };
+
                 connection = await imaps.connect(imapConfig);
-                await connection.openBox('INBOX');
+                const box = await connection.openBox('INBOX');
                 
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const imapDate = `${yesterday.getDate()}-${monthNames[yesterday.getMonth()]}-${yesterday.getFullYear()}`;
-
-                const searchCriteria = ['ALL']; // Buscamos todo pero limitaremos la cantidad
-                let messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
+                // OPTIMIZACIÓN: En lugar de buscar en todo el buzón, pedimos directamente los últimos 15 correos
+                const total = box.messages.total;
+                if (total === 0) return null;
                 
-                // Solo nos interesan los últimos 10 mensajes para ir rápido
-                if (messages.length > 10) {
-                    messages = messages.slice(-10);
-                }
-
-                // Fallback para Gmail: All Mail (si no hay nada en Inbox)
-                if (messages.length === 0 && account.email.includes('gmail.com')) {
-                    console.log(`[DEBUG] No hay mensajes en Inbox de ${account.email}, probando All Mail...`);
-                    const boxes = await connection.getBoxes();
-                    const gmailBox = boxes['[Gmail]'] || boxes['[gmail]'];
-                    let folderToOpen = null;
-                    if (gmailBox && gmailBox.children) {
-                        if (gmailBox.children['All Mail']) folderToOpen = '[Gmail]/All Mail';
-                        else if (gmailBox.children['Todos']) folderToOpen = '[Gmail]/Todos';
-                    }
-                    if (folderToOpen) {
-                        await connection.openBox(folderToOpen);
-                        messages = await connection.search(searchCriteria, { bodies: ['HEADER', 'TEXT'], markSeen: false });
-                        if (messages.length > 10) messages = messages.slice(-10);
-                    }
-                }
-
-                console.log(`[DEBUG] ${messages.length} mensajes en ${account.email}`);
+                const range = `${Math.max(1, total - 15)}:*`;
+                let messages = await connection.fetch(range, { bodies: ['HEADER', 'TEXT'], markSeen: false });
+                
+                console.log(`[DEBUG] Realsando ${messages.length} últimos correos en ${account.email}`);
 
                 for (let i = messages.length - 1; i >= 0; i--) {
-                    try {
-                        const item = messages[i];
-                        if (!item || !item.parts) continue;
+                    const item = messages[i];
+                    if (!item || !item.parts) continue;
 
-                        const all = item.parts.find(a => a.which === 'TEXT');
-                        if (!all || !all.body) continue;
+                    const all = item.parts.find(a => a.which === 'TEXT');
+                    if (!all || !all.body) continue;
 
-                        const parsed = await simpleParser(all.body);
-                        if (!parsed) continue;
-                        
-                        const subject = (parsed.subject || "").toString().toLowerCase();
-                        const textContent = (parsed.text || "").toString().toLowerCase();
-                        const htmlContent = (parsed.html || "").toString();
-                        
-                        // Obtener remitente de forma segura
-                        let fromText = "";
-                        if (parsed.from && parsed.from.text) fromText = parsed.from.text.toLowerCase();
-                        else if (parsed.from && parsed.from.value && parsed.from.value[0]) fromText = (parsed.from.value[0].address || "").toLowerCase();
+                    const parsed = await simpleParser(all.body);
+                    const subject = (parsed.subject || "").toString().toLowerCase();
+                    const textContent = (parsed.text || "").toString().toLowerCase();
+                    const htmlContent = (parsed.html || "").toString();
+                    
+                    let fromText = "";
+                    if (parsed.from && parsed.from.text) fromText = parsed.from.text.toLowerCase();
 
-                        // Obtener destinatario de forma segura
-                        let recipientText = "";
-                        if (parsed.to && parsed.to.text) recipientText = parsed.to.text.toLowerCase();
-                        else if (parsed.to && parsed.to.value && parsed.to.value[0]) recipientText = (parsed.to.value[0].address || "").toLowerCase();
+                    const targetEmail = email.toLowerCase();
+                    const platformLower = platform.toLowerCase();
 
-                        const targetEmail = email.toLowerCase();
-                        const platformLower = platform.toLowerCase();
+                    const isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
+                    const mentionsEmail = textContent.includes(targetEmail) || htmlContent.toLowerCase().includes(targetEmail);
 
-                        const isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
-                        const mentionsEmail = textContent.includes(targetEmail) || 
-                                             recipientText.includes(targetEmail) || 
-                                             htmlContent.toLowerCase().includes(targetEmail);
-
-                        if (isFromPlatform || mentionsEmail) {
-                            console.log(`[DEBUG] MATCH en ${account.email}: ${subject}`);
-                            if (platformLower.includes('netflix')) {
-                                const codeMatch = textContent.match(/\b\d{4}\b/);
-                                if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
-                                    foundCode = codeMatch[0];
-                                } else {
-                                    const $ = cheerio.load(htmlContent);
-                                    const links = [];
-                                    $('a').each((j, el) => {
-                                        const href = $(el).attr('href');
-                                        if (href && href.includes('netflix.com')) links.push(href);
-                                    });
-
-                                    for (const link of links) {
-                                        if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
-                                            const code = await getCodeFromNetflixUrl(link);
-                                            if (code) {
-                                                foundCode = code;
-                                                break;
-                                            }
-                                        }
+                    if (isFromPlatform || mentionsEmail) {
+                        console.log(`[DEBUG] ¡MATCH ENCONTRADO en ${account.email}!`);
+                        if (platformLower.includes('netflix')) {
+                            const codeMatch = textContent.match(/\b\d{4}\b/);
+                            if (codeMatch && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
+                                return codeMatch[0];
+                            } else {
+                                const $ = cheerio.load(htmlContent);
+                                const links = [];
+                                $('a').each((j, el) => {
+                                    const href = $(el).attr('href');
+                                    if (href && href.includes('netflix.com')) links.push(href);
+                                });
+                                for (const link of links) {
+                                    if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
+                                        const code = await getCodeFromNetflixUrl(link);
+                                        if (code) return code;
                                     }
                                 }
-                            } else if (platformLower.includes('disney')) {
-                                const codeMatch = textContent.match(/\b\d{6}\b/);
-                                if (codeMatch) {
-                                    foundCode = codeMatch[0];
-                                }
                             }
+                        } else if (platformLower.includes('disney')) {
+                            const codeMatch = textContent.match(/\b\d{6}\b/);
+                            if (codeMatch) return codeMatch[0];
                         }
-                    } catch (msgErr) {
-                        console.error(`[DEBUG] Error procesando mensaje individual:`, msgErr.message);
                     }
-                    if (foundCode) break;
                 }
-            } catch (innerErr) {
-                console.error(`[DEBUG] Error en ${account.email}:`, innerErr.message);
+            } catch (err) {
+                console.error(`[DEBUG] Error en ${account.email}:`, err.message);
             } finally {
                 if (connection) {
                     try { connection.end(); } catch(e) {}
                 }
             }
-            if (foundCode) break;
-        }
+            return null;
+        };
+
+        // Ejecutar todas las búsquedas simultáneamente
+        const results = await Promise.all(accounts.map(acc => checkAccount(acc)));
+        const foundCode = results.find(r => r !== null);
 
         if (foundCode) {
             console.log(`[DEBUG] ÉXITO FINAL: ${foundCode}`);

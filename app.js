@@ -118,6 +118,17 @@ const storePaymentInfoInput = document.getElementById('store-payment-info');
 const storePricesList = document.getElementById('store-prices-list');
 const saveStoreBtn = document.getElementById('save-store-btn');
 
+// Success Modal Elements
+const successModal = document.getElementById('success-modal');
+const successBonusContainer = document.getElementById('success-bonus-container');
+const successBonusAmount = document.getElementById('success-bonus-amount');
+const successBonusDetails = document.getElementById('success-bonus-details');
+const successWhatsappBtn = document.getElementById('success-whatsapp-btn');
+
+let pendingWhatsappMessage = "";
+let pendingWhatsappNumber = "";
+
+
 function init() {
     renderProducts('individual');
     setupEventListeners();
@@ -993,6 +1004,17 @@ function setupEventListeners() {
         });
     }
 
+    if (successWhatsappBtn) {
+        successWhatsappBtn.addEventListener('click', () => {
+            const encoded = encodeURIComponent(pendingWhatsappMessage);
+            window.open(`https://wa.me/${pendingWhatsappNumber}?text=${encoded}`, '_blank');
+            
+            // Cerrar modal y refrescar para limpiar estado
+            successModal.style.display = 'none';
+            setTimeout(() => window.location.reload(), 1000);
+        });
+    }
+
     if (loginClientBtn) {
         loginClientBtn.addEventListener('click', () => {
             const typedPin = clientLoginPin.value.trim();
@@ -1369,48 +1391,64 @@ function setupEventListeners() {
             console.log("Checking incentives... Enabled:", storeConfig.incentiveEnabled);
             if (storeConfig.incentiveEnabled) {
                 stats.processedCart.forEach(item => {
-                    const cat = (item.category || '').toLowerCase();
-                    console.log("Analyzing item for incentive:", item.name, "Category:", cat);
-                    if (cat.includes('individual') || cat.includes('ventas_extras')) {
+                    const prodCat = (item.category || '').toLowerCase().trim();
+                    const cleanCat = prodCat.replace(/[\s\-_]/g, '');
+                    const prodMarca = ((item.brand || '') + ' ' + (item.name || '')).toLowerCase();
+
+                    console.log("Analyzing item for incentive:", item.name, "Category:", prodCat, "CleanCat:", cleanCat);
+                    
+                    if (cleanCat.includes('individual') || cleanCat.includes('ventasextras')) {
                         let b = 0; let name = '';
-                        // Usar tanto el brand como el name, por si el admin llenó mal el brand al añadir el producto.
-                        const matchStr = ((item.brand || '') + ' ' + (item.name || '')).toLowerCase();
-                        console.log("Match string:", matchStr);
+                        if (prodMarca.includes('privada')) { b = parseInt(storeConfig.incentiveNetflixPrivada) || 0; name = 'Netflix Privada'; }
+                        else if (prodMarca.includes('netflix')) { b = parseInt(storeConfig.incentiveNetflix) || 0; name = 'Netflix'; }
+                        else if (prodMarca.includes('disney')) { b = parseInt(storeConfig.incentiveDisney) || 0; name = 'Disney+'; }
+                        else if (prodMarca.includes('max') || prodMarca.includes('hbo')) { b = parseInt(storeConfig.incentiveMax) || 0; name = 'HBO Max'; }
+                        else if (prodMarca.includes('prime')) { b = parseInt(storeConfig.incentivePrime) || 0; name = 'Prime Video'; }
+                        else if (prodMarca.includes('paramount')) { b = parseInt(storeConfig.incentiveParamount) || 0; name = 'Paramount+'; }
+                        else if (prodMarca.includes('vix')) { b = parseInt(storeConfig.incentiveVix) || 0; name = 'Vix'; }
+                        else if (prodMarca.includes('iptv')) { b = parseInt(storeConfig.incentiveIptv) || 0; name = 'IPTV'; }
+                        else if (prodMarca.includes('crunchyroll')) { b = parseInt(storeConfig.incentiveCrunchyroll) || 0; name = 'Crunchyroll'; }
+                        else if (prodMarca.includes('apple')) { b = parseInt(storeConfig.incentiveApple) || 0; name = 'Apple TV'; }
 
-                        if (matchStr.includes('privada')) { b = parseInt(storeConfig.incentiveNetflixPrivada) || 0; name = 'Netflix Privada'; }
-                        else if (matchStr.includes('netflix')) { b = parseInt(storeConfig.incentiveNetflix) || 0; name = 'Netflix'; }
-                        else if (matchStr.includes('disney')) { b = parseInt(storeConfig.incentiveDisney) || 0; name = 'Disney+'; }
-                        else if (matchStr.includes('max') || matchStr.includes('hbo')) { b = parseInt(storeConfig.incentiveMax) || 0; name = 'HBO Max'; }
-                        else if (matchStr.includes('prime')) { b = parseInt(storeConfig.incentivePrime) || 0; name = 'Prime Video'; }
-                        else if (matchStr.includes('paramount')) { b = parseInt(storeConfig.incentiveParamount) || 0; name = 'Paramount+'; }
-                        else if (matchStr.includes('vix')) { b = parseInt(storeConfig.incentiveVix) || 0; name = 'Vix'; }
-                        else if (matchStr.includes('iptv')) { b = parseInt(storeConfig.incentiveIptv) || 0; name = 'IPTV'; }
-                        else if (matchStr.includes('crunchyroll')) { b = parseInt(storeConfig.incentiveCrunchyroll) || 0; name = 'Crunchyroll'; }
-                        else if (matchStr.includes('apple')) { b = parseInt(storeConfig.incentiveApple) || 0; name = 'Apple TV'; }
-
-                        console.log("Found bonus:", b, "for name:", name);
                         if (b > 0) {
                             incentiveEarned += b;
                             incentiveDetails.push(`${name} (+$${b})`);
                         }
                     }
-                    else if (cat.includes('combo2')) { const b = parseInt(storeConfig.incentiveCombo2) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 2 P. (+$${b})`); console.log("Combo 2 bonus:", b); }
-                    else if (cat.includes('combo3')) { const b = parseInt(storeConfig.incentiveCombo3) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 3 P. (+$${b})`); console.log("Combo 3 bonus:", b); }
-                    else if (cat.includes('combo4')) { const b = parseInt(storeConfig.incentiveCombo4) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 4 P. (+$${b})`); console.log("Combo 4 bonus:", b); }
-                    else if (cat.includes('combo5')) { const b = parseInt(storeConfig.incentiveCombo5) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Combo 5+ P. (+$${b})`); console.log("Combo 5 bonus:", b); }
-                    else if (cat.includes('promocion') || cat.includes('promo')) { 
-                        if (cat.includes('finde')) { const b = parseInt(storeConfig.incentiveFinde) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Finde (+$${b})`); console.log("Promo Finde bonus:", b); }
-                        else { const b = parseInt(storeConfig.incentiveMes) || 0; incentiveEarned += b; if (b > 0) incentiveDetails.push(`Promo Mes (+$${b})`); console.log("Promo Mes bonus:", b); }
+                    else if (cleanCat.includes('combo')) {
+                        let b = 0; let name = '';
+                        if (cleanCat.includes('combo2')) { b = parseInt(storeConfig.incentiveCombo2) || 0; name = 'Combo 2 P.'; }
+                        else if (cleanCat.includes('combo3')) { b = parseInt(storeConfig.incentiveCombo3) || 0; name = 'Combo 3 P.'; }
+                        else if (cleanCat.includes('combo4')) { b = parseInt(storeConfig.incentiveCombo4) || 0; name = 'Combo 4 P.'; }
+                        else if (cleanCat.includes('combo5')) { b = parseInt(storeConfig.incentiveCombo5) || 0; name = 'Combo 5+ P.'; }
+                        
+                        if (b > 0) {
+                            incentiveEarned += b;
+                            incentiveDetails.push(`${name} (+$${b})`);
+                        }
+                    }
+                    else if (cleanCat.includes('promocion') || cleanCat.includes('promo')) { 
+                        let b = 0; let name = '';
+                        if (cleanCat.includes('finde')) { b = parseInt(storeConfig.incentiveFinde) || 0; name = 'Promo Finde'; }
+                        else { b = parseInt(storeConfig.incentiveMes) || 0; name = 'Promo Mes'; }
+                        
+                        if (b > 0) {
+                            incentiveEarned += b;
+                            incentiveDetails.push(`${name} (+$${b})`);
+                        }
                     }
                 });
             }
             console.log("Total incentive earned:", incentiveEarned, "Details:", incentiveDetails);
             
+            let successIncentive = 0;
+            let successDetailsStr = "";
+            
             if (isSellerMode && incentiveEarned > 0) {
-                alert(`💰 Bono ganado en esta venta: $${incentiveEarned}\n(${incentiveDetails.join(', ')})`);
-            } else if (isSellerMode) {
-                alert(`⚠️ Atención: Esta venta NO acumuló bono (verifica categorías o marcas en los productos).`);
-            }
+                successIncentive = incentiveEarned;
+                successDetailsStr = incentiveDetails.join(', ');
+            } 
+
 
             const saleData = {
                 clientName: cName || '',
@@ -1516,15 +1554,32 @@ function setupEventListeners() {
             message += `${currentPaymentInfo}\n\n`;
             message += `Quedo atento a la activación de mis pantallas.`;
 
-            const encoded = encodeURIComponent(message);
-            window.open(`https://wa.me/${formatWaPhone(checkoutWhatsappNumber)}?text=${encoded}`, '_blank');
+            // Configurar Modal de Éxito
+            pendingWhatsappMessage = message;
+            pendingWhatsappNumber = formatWaPhone(checkoutWhatsappNumber);
 
-            // Vaciar el carrito y cerrar
+            if (isSellerMode) {
+                successBonusContainer.style.display = 'block';
+                if (incentiveEarned > 0) {
+                    successBonusAmount.parentElement.style.color = '#f39c12';
+                    successBonusAmount.innerText = incentiveEarned.toLocaleString();
+                    successBonusDetails.innerText = incentiveDetails.join(', ');
+                } else {
+                    successBonusAmount.parentElement.style.color = '#ff4d4d';
+                    successBonusAmount.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 0 (No Acumuló Bono)';
+                    successBonusDetails.innerText = "⚠️ Atención: Esta venta NO acumuló bono (verifica categorías o marcas en los productos).";
+                }
+            } else {
+                successBonusContainer.style.display = 'none';
+            }
+
+            // Mostrar el modal y ocultar el del carrito
+            if (cartModal) cartModal.style.display = 'none';
+            successModal.style.display = 'block';
+
+            // Vaciar el carrito y actualizar UI
             cart = [];
             updateCartUI();
-            if (cartModal) cartModal.style.display = 'none';
-            
-            setTimeout(() => window.location.reload(), 2000);
         };
 
         if (publicSellerRef || (extrasOriginalOwner && !isSellerMode && !publicSellerRef)) {

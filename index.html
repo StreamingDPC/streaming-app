@@ -589,6 +589,27 @@
         </div>
     </div>
 
+    <!-- Final Success Modal -->
+    <div id="success-modal" class="modal" style="z-index: 3000;">
+        <div class="modal-content" style="max-width: 450px; text-align: center; border-color: #4cd137;">
+            <div style="font-size: 4rem; color: #4cd137; margin-bottom: 1rem;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h2 style="color: white; margin-bottom: 0.5rem;">¡Pedido Registrado!</h2>
+            
+            <div id="success-bonus-container" style="display: none; background: rgba(243, 156, 18, 0.1); border: 1px solid #f39c12; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h3 style="color: #f39c12; margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-trophy"></i> Bono Ganado: $<span id="success-bonus-amount">0</span></h3>
+                <p id="success-bonus-details" style="font-size: 0.8rem; color: #ccc; margin: 5px 0 0 0;"></p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Haz clic abajo para enviar el ticket al administrador por WhatsApp y completar tu pedido.</p>
+            
+            <button id="success-whatsapp-btn" class="checkout-btn" style="background: #25D366; color: white; display:flex; align-items:center; justify-content:center; gap:10px;">
+                <i class="fa-brands fa-whatsapp" style="font-size: 1.5rem;"></i> Enviar Ticket a WhatsApp
+            </button>
+        </div>
+    </div>
+
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>

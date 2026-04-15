@@ -4695,7 +4695,7 @@
                         const prodMarca = ((p.brand || '') + ' ' + (p.name || '')).toLowerCase();
 
                         const cleanCat = prodCat.replace(/[\s\-_]/g, '');
-                        if (prodCat.includes('individual') || prodCat.includes('ventas_extras')) {
+                        if (cleanCat.includes('individual') || cleanCat.includes('ventasextras')) {
                             if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
                             else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; itemBonoNombre = 'Netflix'; }
                             else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney+'; }
@@ -4708,13 +4708,13 @@
                             else if (prodMarca.includes('apple')) { itemBono = parseInt(storeConfig.incentiveApple) || 0; itemBonoNombre = 'Apple TV'; }
                         }
                         else if (cleanCat.includes('combo')) {
-                            if (cleanCat.includes('combo2') || cleanCat.includes('combos2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
-                            else if (cleanCat.includes('combo3') || cleanCat.includes('combos3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
-                            else if (cleanCat.includes('combo4') || cleanCat.includes('combos4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
-                            else if (cleanCat.includes('combo5') || cleanCat.includes('combos5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                            if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                            else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                            else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                            else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
                         }
-                        else if (prodCat.includes('promo')) {
-                            if (prodCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveIncentiveFinde) || parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
+                        else if (cleanCat.includes('promo') || cleanCat.includes('promocion')) {
+                            if (cleanCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
                             else { itemBono = parseInt(storeConfig.incentiveMes) || 0; itemBonoNombre = 'Promo Mes'; }
                         }
                         
@@ -4736,7 +4736,7 @@
                     let combo2Val = storeConfig.incentiveCombo2;
                     let enabledFlag = storeConfig.incentiveEnabled ? 'ACTIVADO' : 'APAGADO';
                     let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
-                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned}` : `\n❌ NO SUMÓ BONO.`) : '';
+                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n⚠️ Atención: Esta venta NO acumuló bono (verifica categorías o marcas en los productos).`) : '';
                     alert(`¡Acción completada!` + bonusMsg);
                     window.location.reload();
                 } catch(e) {
@@ -4842,9 +4842,9 @@
 
                                 const cleanCat = prodCat.replace(/[\s\-_]/g, '');
                                 // Bloque Individuales
-                                if (prodCat.includes('individual') || prodCat.includes('ventas_extras')) {
+                                if (cleanCat.includes('individual') || cleanCat.includes('ventasextras')) {
                                     if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
-                                    else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; itemBonoNombre = 'Netflix'; }
+                                    else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; name = 'Netflix'; }
                                     else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney+'; }
                                     else if (prodMarca.includes('max') || prodMarca.includes('hbo')) { itemBono = parseInt(storeConfig.incentiveMax) || 0; itemBonoNombre = 'HBO Max'; }
                                     else if (prodMarca.includes('prime')) { itemBono = parseInt(storeConfig.incentivePrime) || 0; itemBonoNombre = 'Prime Video'; }
@@ -4854,16 +4854,16 @@
                                     else if (prodMarca.includes('crunchyroll')) { itemBono = parseInt(storeConfig.incentiveCrunchyroll) || 0; itemBonoNombre = 'Crunchyroll'; }
                                     else if (prodMarca.includes('apple')) { itemBono = parseInt(storeConfig.incentiveApple) || 0; itemBonoNombre = 'Apple TV'; }
                                 }
-                                // Bloque Combos (Solo si no es individual)
+                                // Bloque Combos
                                 else if (cleanCat.includes('combo')) {
-                                    if (cleanCat.includes('combo2') || cleanCat.includes('combos2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
-                                    else if (cleanCat.includes('combo3') || cleanCat.includes('combos3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
-                                    else if (cleanCat.includes('combo4') || cleanCat.includes('combos4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
-                                    else if (cleanCat.includes('combo5') || cleanCat.includes('combos5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
+                                    if (cleanCat.includes('combo2')) { itemBono = parseInt(storeConfig.incentiveCombo2) || 0; itemBonoNombre = 'Combo 2 P.'; }
+                                    else if (cleanCat.includes('combo3')) { itemBono = parseInt(storeConfig.incentiveCombo3) || 0; itemBonoNombre = 'Combo 3 P.'; }
+                                    else if (cleanCat.includes('combo4')) { itemBono = parseInt(storeConfig.incentiveCombo4) || 0; itemBonoNombre = 'Combo 4 P.'; }
+                                    else if (cleanCat.includes('combo5')) { itemBono = parseInt(storeConfig.incentiveCombo5) || 0; itemBonoNombre = 'Combo 5+ P.'; }
                                 }
-                                // Bloque Promos (Solo si no es nada de lo anterior)
-                                else if (prodCat.includes('promo')) {
-                                    if (prodCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
+                                // Bloque Promos
+                                else if (cleanCat.includes('promo') || cleanCat.includes('promocion')) {
+                                    if (cleanCat.includes('finde')) { itemBono = parseInt(storeConfig.incentiveFinde) || 0; itemBonoNombre = 'Promo Finde'; }
                                     else { itemBono = parseInt(storeConfig.incentiveMes) || 0; itemBonoNombre = 'Promo Mes'; }
                                 }
 
@@ -4885,7 +4885,7 @@
                     let combo2Val = storeConfig.incentiveCombo2;
                     let enabledFlag = storeConfig.incentiveEnabled ? 'SI' : 'NO';
                     let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
-                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n❌ NO SUMÓ BONO.`) : '';
+                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n⚠️ Atención: Esta venta NO acumuló bono (verifica categorías o marcas en los productos).`) : '';
                     alert(`¡Cliente '${name}' registrado!` + bonusMsg);
                 } else {
                     alert(`¡Cliente '${name}' registrado en la DB exitosamente sin compras activas!`);
