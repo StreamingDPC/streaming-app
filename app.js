@@ -1416,10 +1416,10 @@ function setupEventListeners() {
                     else if (cleanCat.includes('combo')) {
                         let b = 0; let bName = '';
                         const combinedMatch = (cleanCat + prodMarca);
-                        if (combinedMatch.includes('combo2')) { b = parseInt(storeConfig.incentiveCombo2) || 0; bName = 'Combo 2 P.'; }
-                        else if (combinedMatch.includes('combo3')) { b = parseInt(storeConfig.incentiveCombo3) || 0; bName = 'Combo 3 P.'; }
-                        else if (combinedMatch.includes('combo4')) { b = parseInt(storeConfig.incentiveCombo4) || 0; bName = 'Combo 4 P.'; }
-                        else if (combinedMatch.includes('combo5')) { b = parseInt(storeConfig.incentiveCombo5) || 0; bName = 'Combo 5+ P.'; }
+                        if (combinedMatch.includes('combo2') || combinedMatch.includes('combos2')) { b = parseInt(storeConfig.incentiveCombo2) || 0; bName = 'Combo 2 P.'; }
+                        else if (combinedMatch.includes('combo3') || combinedMatch.includes('combos3')) { b = parseInt(storeConfig.incentiveCombo3) || 0; bName = 'Combo 3 P.'; }
+                        else if (combinedMatch.includes('combo4') || combinedMatch.includes('combos4')) { b = parseInt(storeConfig.incentiveCombo4) || 0; bName = 'Combo 4 P.'; }
+                        else if (combinedMatch.includes('combo5') || combinedMatch.includes('combos5')) { b = parseInt(storeConfig.incentiveCombo5) || 0; bName = 'Combo 5+ P.'; }
                         else {
                             if (prodMarca.includes('2pantalla')) { b = parseInt(storeConfig.incentiveCombo2) || 0; bName = 'Combo 2 P.'; }
                             else if (prodMarca.includes('3pantalla')) { b = parseInt(storeConfig.incentiveCombo3) || 0; bName = 'Combo 3 P.'; }
