@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración | Streaming DPC</title>
+    <title>Panel de AdministraciÃ³n | Streaming DPC</title>
     <link rel="stylesheet" href="style.css?v=3.7.2">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -249,14 +249,14 @@
         </div>
 
         <div class="admin-tabs">
-            <button class="admin-tab active" onclick="switchTab('productos', this)">📦 Productos</button>
-            <button class="admin-tab" onclick="switchTab('estrenos', this)">🎬 Estrenos</button>
-            <button class="admin-tab" onclick="switchTab('banners', this)">🖼️ Banners</button>
-            <button class="admin-tab" onclick="switchTab('vendedores', this)">👔 Vendedores</button>
-            <button class="admin-tab" onclick="switchTab('clientes', this)">👥 Clientes</button>
-            <button class="admin-tab" onclick="switchTab('ventas', this)">📈 Ventas</button>
-            <button class="admin-tab" onclick="switchTab('crm', this)">💬 Respuestas CRM</button>
-            <button class="admin-tab" onclick="switchTab('configuracion', this)">⚙️ Configuración</button>
+            <button class="admin-tab active" onclick="switchTab('productos', this)">ðŸ“¦ Productos</button>
+            <button class="admin-tab" onclick="switchTab('estrenos', this)">ðŸŽ¬ Estrenos</button>
+            <button class="admin-tab" onclick="switchTab('banners', this)">ðŸ–¼ï¸ Banners</button>
+            <button class="admin-tab" onclick="switchTab('vendedores', this)">ðŸ‘” Vendedores</button>
+            <button class="admin-tab" onclick="switchTab('clientes', this)">ðŸ‘¥ Clientes</button>
+            <button class="admin-tab" onclick="switchTab('ventas', this)">ðŸ“ˆ Ventas</button>
+            <button class="admin-tab" onclick="switchTab('crm', this)">ðŸ’¬ Respuestas CRM</button>
+            <button class="admin-tab" onclick="switchTab('configuracion', this)">âš™ï¸ ConfiguraciÃ³n</button>
         </div>
 
         <!-- TAB PRODUCTOS -->
@@ -277,7 +277,7 @@
                         <input type="number" id="new-seller-price" placeholder="Ej: 14000 (Opcional)">
                     </div>
                     <div class="form-col">
-                        <label>Categoría</label>
+                        <label>CategorÃ­a</label>
                         <select id="new-category">
                             <option value="individual">Individual</option>
                             <option value="combos2">Combo 2</option>
@@ -285,12 +285,12 @@
                             <option value="combos4">Combo 4</option>
                             <option value="combos5">Combo 5</option>
                             <option value="ventas_extras">Ventas Extras (Admin y Vendedores)</option>
-                            <option value="promociones_finde">Promoción fin de semana</option>
+                            <option value="promociones_finde">PromociÃ³n fin de semana</option>
                             <option value="promociones">Promociones del mes</option>
                         </select>
                     </div>
                     <div class="form-col" id="owner-col" style="display:none;">
-                        <label>Vendedor Dueño (solo Ventas Extras)</label>
+                        <label>Vendedor DueÃ±o (solo Ventas Extras)</label>
                         <select id="new-owner">
                             <option value="admin">Administrador (Global)</option>
                         </select>
@@ -300,8 +300,8 @@
                         <input type="text" id="new-brand" placeholder="Ej: Netflix, Combo, Disney+">
                     </div>
                     <div class="form-col" style="grid-column: span 2;">
-                        <label>Descripción Corta (Predeterminado: Pantalla original premium con garantía.)</label>
-                        <input type="text" id="new-desc" placeholder="Pantalla original premium con garantía.">
+                        <label>DescripciÃ³n Corta (Predeterminado: Pantalla original premium con garantÃ­a.)</label>
+                        <input type="text" id="new-desc" placeholder="Pantalla original premium con garantÃ­a.">
                     </div>
                     <div class="form-col" style="grid-column: span 2;">
                         <label>Imagen Personalizada (Ruta, URL, o Archivo Local)</label>
@@ -317,48 +317,48 @@
                             <button type="button" class="btn-icon" style="width: auto; padding: 0 1rem; border-radius: 12px; font-size: 0.9rem;" onclick="document.getElementById('new-image-file').click()"><i class="fa-solid fa-upload"></i> Archivo Local</button>
                         </div>
                         <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">
-                            * Si dejas esto vacío, el sistema intentará asignar un logo automáticamente basado en la
+                            * Si dejas esto vacÃ­o, el sistema intentarÃ¡ asignar un logo automÃ¡ticamente basado en la
                             Marca.
                         </p>
                     </div>
                     <div class="form-col">
-                        <label>Cantidad en Stock (Opcional, 0 = Sin límite)</label>
+                        <label>Cantidad en Stock (Opcional, 0 = Sin lÃ­mite)</label>
                         <input type="number" id="new-stock" placeholder="Ej: 5" value="0">
                     </div>
                     <div class="form-col" style="grid-column: 1 / -1; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                        <label>Habilitar para Renovación (Incluso Agotado)</label>
-                        <input type="text" id="search-allow-exhausted" placeholder="🔍 Buscar vendedor o cliente..." oninput="filterAllowExhausted()" style="margin-bottom: 0.5rem; background: var(--glass); color: white;">
+                        <label>Habilitar para RenovaciÃ³n (Incluso Agotado)</label>
+                        <input type="text" id="search-allow-exhausted" placeholder="ðŸ” Buscar vendedor o cliente..." oninput="filterAllowExhausted()" style="margin-bottom: 0.5rem; background: var(--glass); color: white;">
                         <select id="new-allow-exhausted-seller" multiple style="height: auto; min-height: 120px;">
                             <option value="">-- Ninguno --</option>
                         </select>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Mantén presionado 'Ctrl' o 'Cmd' para seleccionar varios.</p>
+                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">MantÃ©n presionado 'Ctrl' o 'Cmd' para seleccionar varios.</p>
                         
                         <div style="display:flex; gap:1rem; margin-top: 1rem; align-items:flex-start; flex-wrap:wrap;">
                             <div style="flex:1; min-width: 120px;">
                                 <label style="font-size: 0.85rem; color:white;">Stock Reservado (Cant. por usuario)</label>
                                 <input type="number" id="new-allow-exhausted-stock" placeholder="Ej: 1" style="margin-top:0.3rem;">
-                                <small style="color:#ccc;">Vacío para ilimitado, o ingresa el límite.</small>
+                                <small style="color:#ccc;">VacÃ­o para ilimitado, o ingresa el lÃ­mite.</small>
                             </div>
                             <div style="flex:1; min-width: 150px;">
                                 <label style="font-size: 0.85rem; color:white;">Fecha de Vencimiento de este stock</label>
                                 <input type="date" id="new-allow-exhausted-date" style="margin-top:0.3rem;">
-                                <small style="color:#ccc;">El stock se reiniciará si supera esta fecha.</small>
+                                <small style="color:#ccc;">El stock se reiniciarÃ¡ si supera esta fecha.</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <button class="save-btn" onclick="saveProduct()">Guardar Producto</button>
-                <button class="btn-cancel" id="btn-cancel" onclick="cancelEdit()">Cancelar Edición</button>
+                <button class="btn-cancel" id="btn-cancel" onclick="cancelEdit()">Cancelar EdiciÃ³n</button>
             </div>
 
             <div class="admin-form">
                 <h3>Gestionar Productos</h3>
                 <div class="search-bar">
-                    <input type="text" id="search-prod" placeholder="🔍 Buscar por nombre..."
+                    <input type="text" id="search-prod" placeholder="ðŸ” Buscar por nombre..."
                         onkeyup="renderAdminList()">
                     <select id="filter-cat" onchange="renderAdminList()">
-                        <option value="all">Todas las categorías</option>
+                        <option value="all">Todas las categorÃ­as</option>
                         <option value="individual">Individuales</option>
                         <option value="combos2">Combos 2</option>
                         <option value="combos3">Combos 3</option>
@@ -370,7 +370,7 @@
                     </select>
                 </div>
                 <div id="admin-list" class="admin-list">
-                    <!-- Se llenará con JS -->
+                    <!-- Se llenarÃ¡ con JS -->
                 </div>
             </div>
         </div>
@@ -378,10 +378,10 @@
         <!-- TAB ESTRENOS -->
         <div id="tab-estrenos" class="tab-content">
             <div class="admin-form">
-                <h3 id="estreno-form-title">Agregar Película / Estreno</h3>
+                <h3 id="estreno-form-title">Agregar PelÃ­cula / Estreno</h3>
                 <div class="form-grid">
                     <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Título de la Película</label>
+                        <label>TÃ­tulo de la PelÃ­cula</label>
                         <input type="text" id="new-estreno-title" placeholder="Ej: Deadpool 3">
                     </div>
                     <div class="form-col" style="margin-bottom: 1rem;">
@@ -404,14 +404,14 @@
                     </div>
                 </div>
                 <div class="form-col" style="margin-bottom: 1rem;">
-                    <label>Enlace del Tráiler (YouTube URL embed o link de video Mp4)</label>
+                    <label>Enlace del TrÃ¡iler (YouTube URL embed o link de video Mp4)</label>
                     <input type="text" id="new-estreno-url" placeholder="Ej: https://www.youtube.com/embed/... ">
                 </div>
                 <div style="display:flex; gap:1rem; align-items:center;">
                     <button class="save-btn" id="btn-save-estreno" onclick="saveEstreno()" style="flex:1;">Guardar
                         Estreno</button>
                     <button class="save-btn" id="btn-cancel-estreno" onclick="cancelEditEstreno()"
-                        style="flex:1; background:#ff4d4d; display:none;">Cancelar Edición</button>
+                        style="flex:1; background:#ff4d4d; display:none;">Cancelar EdiciÃ³n</button>
                 </div>
             </div>
             <div class="admin-form">
@@ -424,9 +424,9 @@
         <div id="tab-banners" class="tab-content">
             <div class="admin-form">
                 <h3 style="color: #ff416c; margin-bottom: 1rem;"><i class="fa-solid fa-star" style="color:#ff416c;"></i>
-                    Configuración General de Banners Principales</h3>
+                    ConfiguraciÃ³n General de Banners Principales</h3>
                 <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Muestra un gran banner promocional que
-                    cambia automáticamente en la parte superior de la página para enganchar a los clientes. (Máximo
+                    cambia automÃ¡ticamente en la parte superior de la pÃ¡gina para enganchar a los clientes. (MÃ¡ximo
                     recomendado: 5)</p>
                 <div class="form-col" style="margin-bottom: 1rem;">
                     <label>Activar Carrusel de Banners Principales</label>
@@ -445,23 +445,23 @@
                         <input type="text" id="new-banner-badge" placeholder="Ej: GRAN ESTRENO">
                     </div>
                     <div class="form-col">
-                        <label>Título Principal</label>
+                        <label>TÃ­tulo Principal</label>
                         <input type="text" id="new-banner-title" placeholder="Ej: Deadpool & Wolverine">
                     </div>
                     <div class="form-col" style="grid-column: 1 / -1;">
-                        <label>Descripción Corta</label>
-                        <input type="text" id="new-banner-desc" placeholder="Ej: Ya disponible en máxima calidad...">
+                        <label>DescripciÃ³n Corta</label>
+                        <input type="text" id="new-banner-desc" placeholder="Ej: Ya disponible en mÃ¡xima calidad...">
                     </div>
                     <div class="form-col" style="grid-column: 1 / -1;">
                         <label>URL de la Imagen de Fondo (Horizontal recomendada)</label>
                         <input type="text" id="new-banner-image" placeholder="Ej: https://.../imagen.jpg">
                     </div>
                     <div class="form-col">
-                        <label>Texto del Botón</label>
+                        <label>Texto del BotÃ³n</label>
                         <input type="text" id="new-banner-btntext" placeholder="Ej: Ver Estrenos">
                     </div>
                     <div class="form-col">
-                        <label>Acción del Botón (Pestaña o Link)</label>
+                        <label>AcciÃ³n del BotÃ³n (PestaÃ±a o Link)</label>
                         <input type="text" id="new-banner-btnlink" placeholder="Ej: estrenos (o una URL completa)">
                     </div>
                 </div>
@@ -469,7 +469,7 @@
                     <button class="save-btn" id="btn-save-banner" onclick="saveBanner()" style="flex:1;">Guardar
                         Banner</button>
                     <button class="save-btn" id="btn-cancel-banner" onclick="cancelEditBanner()"
-                        style="flex:1; background:#ff4d4d; display:none;">Cancelar Edición</button>
+                        style="flex:1; background:#ff4d4d; display:none;">Cancelar EdiciÃ³n</button>
                 </div>
             </div>
 
@@ -493,26 +493,26 @@
                         <input type="text" id="new-seller-whatsapp" placeholder="Ej: 573001234567">
                     </div>
                     <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Contraseña</label>
+                        <label>ContraseÃ±a</label>
                         <input type="text" id="new-seller-pass" placeholder="Ej: pWd123">
                     </div>
                     <div class="form-col" style="margin-bottom: 1rem;">
                         <label>Habilitar Ventas Extras</label>
                         <select id="new-seller-extras-enabled">
                             <option value="false">No (Inactivo)</option>
-                            <option value="true">Sí (Activo)</option>
+                            <option value="true">SÃ­ (Activo)</option>
                         </select>
                     </div>
                     <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Límite Prod. Extras (Cant.)</label>
+                        <label>LÃ­mite Prod. Extras (Cant.)</label>
                         <input type="number" id="new-seller-extras-limit" placeholder="Ej: 5" value="0">
                     </div>
                 </div>
                 <div style="display:flex; gap:1rem; align-items:center;">
-                    <button class="save-btn" id="btn-save-seller" onclick="saveSeller()" style="flex:1;">Añadir
+                    <button class="save-btn" id="btn-save-seller" onclick="saveSeller()" style="flex:1;">AÃ±adir
                         Vendedor</button>
                     <button class="save-btn" id="btn-cancel-seller" onclick="cancelEditSeller()"
-                        style="flex:1; background:#ff4d4d; display:none;">Cancelar Edición</button>
+                        style="flex:1; background:#ff4d4d; display:none;">Cancelar EdiciÃ³n</button>
                 </div>
             </div>
             <div class="admin-form">
@@ -529,13 +529,13 @@
                     <div>
                         <h3 style="margin-bottom:0;">Ventas de Vendedores & Recordatorios</h3>
                         <p style="font-size:0.85rem; color:#a0a0a0; margin-top:0.3rem;">Visualiza las ventas de cada
-                            vendedor y envíales un recordatorio de vencimiento para que contacten a sus clientes.</p>
+                            vendedor y envÃ­ales un recordatorio de vencimiento para que contacten a sus clientes.</p>
                     </div>
                     <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
-                        <input type="text" id="search-ventas-vendedores" placeholder="🔍 Buscar vendedor o cliente..." class="input-modern" style="margin-bottom:0; min-width: 250px;" oninput="renderSellerSalesStats()">
+                        <input type="text" id="search-ventas-vendedores" placeholder="ðŸ” Buscar vendedor o cliente..." class="input-modern" style="margin-bottom:0; min-width: 250px;" oninput="renderSellerSalesStats()">
                         <button class="save-btn" onclick="deleteSelectedSellerSales()"
                             style="background:#ff4d4d; margin:0; width:auto; padding: 8px 15px; font-size:0.9rem;"><i
-                                class="fa-solid fa-trash"></i> Eliminar Selección</button>
+                                class="fa-solid fa-trash"></i> Eliminar SelecciÃ³n</button>
                     </div>
                 </div>
                 <div id="admin-list-sellers-stats" class="admin-list"></div>
@@ -549,10 +549,10 @@
                 <div class="form-grid">
                     <div class="form-col">
                         <label>Nombre del Cliente</label>
-                        <input type="text" id="manual-client-name" placeholder="Ej: Juan Pérez">
+                        <input type="text" id="manual-client-name" placeholder="Ej: Juan PÃ©rez">
                     </div>
                     <div class="form-col">
-                        <label>Teléfono Celular</label>
+                        <label>TelÃ©fono Celular</label>
                         <input type="text" id="manual-client-phone" placeholder="Ej: 3001234567">
                     </div>
                     <div class="form-col">
@@ -563,7 +563,7 @@
                     <div class="form-col">
                         <label>Vendedor Asignado (Opcional)</label>
                         <select id="manual-client-seller" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--bg-dark); color: white;">
-                             <option value="Página Web Oficial">Página Web Oficial (Admin)</option>
+                             <option value="PÃ¡gina Web Oficial">PÃ¡gina Web Oficial (Admin)</option>
                         </select>
                     </div>
                     <div class="form-col">
@@ -580,12 +580,12 @@
                     <div class="form-col" style="grid-column: 1 / -1;">
                         <label>Seleccionar Pantalla(s) Inicial(es) a Asignar</label>
                         <select id="manual-client-product" multiple style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--bg-dark); color: white; min-height: 180px;" onchange="updateManualEmailsUI('manual')"></select>
-                        <p style="font-size:0.8rem; color:#a0a0a0; margin-top:0.3rem;">Mantén presionada la tecla Ctrl (o Cmd en tu teclado) y haz clic para seleccionar varias pantallas al mismo tiempo.</p>
+                        <p style="font-size:0.8rem; color:#a0a0a0; margin-top:0.3rem;">MantÃ©n presionada la tecla Ctrl (o Cmd en tu teclado) y haz clic para seleccionar varias pantallas al mismo tiempo.</p>
                     </div>
 
                     <div id="manual-emails-container" class="form-col" style="grid-column: 1 / -1; display:none; border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
-                        <label style="color: #f39c12; font-weight: bold;"><i class="fa-solid fa-envelope"></i> Configurar Emails Específicos por Pantalla (Combos)</label>
-                        <p style="font-size:0.75rem; color:#a0a0a0; margin-bottom: 1rem;">Si es un combo, puedes asignar un correo diferente a cada pantalla para que el CRM lo use automáticamente.</p>
+                        <label style="color: #f39c12; font-weight: bold;"><i class="fa-solid fa-envelope"></i> Configurar Emails EspecÃ­ficos por Pantalla (Combos)</label>
+                        <p style="font-size:0.75rem; color:#a0a0a0; margin-bottom: 1rem;">Si es un combo, puedes asignar un correo diferente a cada pantalla para que el CRM lo use automÃ¡ticamente.</p>
                         <div id="manual-emails-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
                     </div>
                 </div>
@@ -596,7 +596,7 @@
                 <h3>Buscar y Editar Cliente</h3>
                 <div class="form-grid">
                     <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Número de Teléfono del Cliente</label>
+                        <label>NÃºmero de TelÃ©fono del Cliente</label>
                         <div style="display:flex; gap:0.5rem;">
                             <input type="text" id="search-client-phone" placeholder="Ej: 3001234567" style="flex:1;">
                             <button class="save-btn" onclick="searchClient()"
@@ -618,8 +618,12 @@
                             <input type="text" id="edit-client-city">
                         </div>
                         <div class="form-col" style="margin-bottom: 1rem;">
-                            <label>Nuevo Número de Celular (Opcional):</label>
-                            <input type="text" id="edit-client-phone-new" placeholder="Solo si cambió de número">
+                            <label>Nuevo NÃºmero de Celular (Opcional):</label>
+                            <input type="text" id="edit-client-phone-new" placeholder="Solo si cambiÃ³ de nÃºmero">
+                        </div>
+                        <div class="form-col" style="margin-bottom: 1rem; grid-column: 1 / -1; display:flex; align-items:center; gap:10px; background: rgba(243, 156, 18, 0.1); padding: 5px 10px; border-radius: 8px; border: 1px solid rgba(243, 156, 18, 0.2);">
+                            <input type="checkbox" id="edit-client-update-all" style="width:20px; height:20px;">
+                            <label for="edit-client-update-all" style="margin-bottom:0; cursor:pointer; font-weight:bold; color:#f39c12;"><i class="fa-solid fa-triangle-exclamation"></i> ¿Actualizar Nombre/Ciudad en TODO el historial? (Marcas solo si es el mismo cliente real)</label>
                         </div>
                         <div class="form-col" style="margin-bottom: 1rem; grid-column: 1 / -1; background: rgba(255,0,0,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,0,0,0.1);">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -645,8 +649,8 @@
                             </div>
                         </div>
                         <div class="form-col" style="margin-bottom: 1rem;">
-                            <label>PIN de Acceso (4 dígitos):</label>
-                            <input type="text" id="edit-client-pin" placeholder="No asignado aún">
+                            <label>PIN de Acceso (4 dÃ­gitos):</label>
+                            <input type="text" id="edit-client-pin" placeholder="No asignado aÃºn">
                         </div>
 
 
@@ -661,18 +665,18 @@
                             
                             <label style="margin-top:0.5rem; display:block;">Asignar nueva compra al vendedor (Opcional):</label>
                             <select id="edit-client-add-seller" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg-dark); color: white; margin-bottom: 0.5rem;">
-                                <option value="Página Web Oficial">Página Web Oficial (Admin)</option>
+                                <option value="PÃ¡gina Web Oficial">PÃ¡gina Web Oficial (Admin)</option>
                             </select>
 
                             <select id="edit-client-add-product" multiple style="width: 100%; padding: 0.5rem; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: white; border-radius: 8px; min-height: 150px;" onchange="updateManualEmailsUI('edit')"></select>
-                            <p style="font-size:0.8rem; color:#a0a0a0; margin-top:0.3rem;">Ctrl (o Cmd en Mac) para selección múltiple.</p>
+                            <p style="font-size:0.8rem; color:#a0a0a0; margin-top:0.3rem;">Ctrl (o Cmd en Mac) para selecciÃ³n mÃºltiple.</p>
                             
                             <div id="edit-add-emails-container" class="form-col" style="display:none; border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 1rem;">
                                 <label style="color: #f39c12; font-weight: bold;"><i class="fa-solid fa-envelope"></i> Configurar Emails para estas nuevas pantallas:</label>
                                 <div id="edit-add-emails-list" style="display: flex; flex-direction: column; gap: 10px; margin-top:0.5rem;"></div>
                             </div>
 
-                            <button class="save-btn" style="background:#f39c12; margin-top: 1rem; width: auto; font-size: 0.9rem;" onclick="addProductsToExistingClient()"><i class="fa-solid fa-plus"></i> Añadir Pantallas como Nueva Compra</button>
+                            <button class="save-btn" style="background:#f39c12; margin-top: 1rem; width: auto; font-size: 0.9rem;" onclick="addProductsToExistingClient()"><i class="fa-solid fa-plus"></i> AÃ±adir Pantallas como Nueva Compra</button>
                         </div>
                     </div>
                     <div style="display:flex; gap:1rem; flex-wrap:wrap;">
@@ -686,19 +690,19 @@
             <div class="admin-form">
                 <h3>Lista de Todos los Clientes Registrados</h3>
                 <div style="display:flex; gap: 1rem; margin-bottom:1rem; align-items:center; flex-wrap:wrap;">
-                    <input type="text" id="filter-clients-text" placeholder="Buscar por número o nombre..."
+                    <input type="text" id="filter-clients-text" placeholder="Buscar por nÃºmero o nombre..."
                         class="input-modern" style="margin-bottom:0; flex:1; min-width: 200px;"
                         oninput="renderAllClientsList()">
                     <button class="save-btn" onclick="deleteSelectedClientSales()"
                         style="background:#ff4d4d; margin:0; width:auto; padding: 10px 20px;"><i
-                            class="fa-solid fa-trash"></i> Eliminar Selección</button>
+                            class="fa-solid fa-trash"></i> Eliminar SelecciÃ³n</button>
                 </div>
                 <div id="admin-list-all-clients" class="admin-list" style="max-height: 400px; overflow-y: auto;"></div>
 
                 <h4 style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;"><i
                         class="fa-solid fa-file-csv"></i> Importar Base de Datos (CSV)</h4>
                 <p style="font-size: 0.85rem; color: #a0a0a0; margin-bottom: 0.5rem;">Carga tu lista de clientes pegando
-                    su Teléfono, Nombre y PIN separados por comas.</p>
+                    su TelÃ©fono, Nombre y PIN separados por comas.</p>
                 <textarea id="import-clients-csv" rows="3" class="input-modern"
                     placeholder="Ejemplo:\n3001234567,Juan Perez,1234\n3129876543,Maria Lopez,4321"></textarea>
                 <div style="display:flex; gap: 1rem; margin-top: 0.5rem;">
@@ -720,14 +724,14 @@
         <div id="tab-crm" class="tab-content">
             <div class="admin-form" style="padding-bottom: 2rem;">
                 <h2><i class="fa-solid fa-comment-dots" style="color:var(--accent-primary);"></i> Respuestas y Mensajes CRM</h2>
-                <p style="color:#a0a0a0; margin-bottom:1.5rem;">Configura las plantillas de mensajes y las guías visuales que se envían por WhatsApp.</p>
+                <p style="color:#a0a0a0; margin-bottom:1.5rem;">Configura las plantillas de mensajes y las guÃ­as visuales que se envÃ­an por WhatsApp.</p>
 
                 <div style="background: rgba(155, 89, 182, 0.1); border: 2px solid #9b59b6; border-radius: 12px; padding: 1.2rem; margin-bottom: 2rem;">
                     <label style="color:#9b59b6; font-weight:bold; font-size: 1.1rem; display:block; margin-bottom:0.5rem;"><i class="fa-solid fa-toggle-on"></i> ACTIVAR SISTEMA DE RESPUESTAS (CRM)</label>
-                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 1rem;">Habilita el panel de respuestas automáticas y guías visuales para tus clientes.</p>
+                    <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 1rem;">Habilita el panel de respuestas automÃ¡ticas y guÃ­as visuales para tus clientes.</p>
                     <div style="display:flex; gap:0.5rem; align-items:center;">
                         <select id="main-conf-crmEnabled" style="flex:1; border:1px solid #9b59b6; background: #000; color: white; padding: 10px; border-radius: 8px;">
-                            <option value="true">SÍ - ACTIVAR CRM</option>
+                            <option value="true">SÃ - ACTIVAR CRM</option>
                             <option value="false">NO - DESACTIVAR CRM</option>
                         </select>
                         <button class="save-btn" onclick="saveConfig()"
@@ -739,7 +743,7 @@
                 <div class="form-grid" style="margin-bottom: 1rem;">
                     <div class="form-col">
                         <label>Plantilla de Mensaje (Paso 1)</label>
-                        <textarea id="conf-msgTemplate1" rows="3" style="flex:1;" placeholder="Ej: Hola {cliente}, su pantalla está lista."></textarea>
+                        <textarea id="conf-msgTemplate1" rows="3" style="flex:1;" placeholder="Ej: Hola {cliente}, su pantalla estÃ¡ lista."></textarea>
                     </div>
                     <div class="form-col">
                         <label>Plantilla de Mensaje (Paso 2)</label>
@@ -751,7 +755,7 @@
                         <label>Fotos / Textos para CRM</label>
                         <div id="crm-platforms-container"></div>
                         <button class="save-btn" onclick="addCRMPlatform()" style="background:var(--accent-primary); width:auto;">
-                            <i class="fa-solid fa-plus"></i> Añadir Plataforma CRM
+                            <i class="fa-solid fa-plus"></i> AÃ±adir Plataforma CRM
                         </button>
                     </div>
                 </div>
@@ -759,12 +763,12 @@
             </div>
         </div>
 
-        <!-- TAB CONFIGURACIÓN -->
+        <!-- TAB CONFIGURACIÃ“N -->
         <div id="tab-configuracion" class="tab-content">
             <div class="admin-form" style="padding-bottom: 2rem;">
                 <h2 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-gear" style="color:var(--accent-primary);"></i>
                     Panel
-                    de Configuración</h2>
+                    de ConfiguraciÃ³n</h2>
 
                 <!-- Sub Tabs Bar -->
                 <div
@@ -796,20 +800,20 @@
 
                 <!-- SUB TAB: MENSAJES ya no se usa aqui, se movio a TAB CRM independiente -->
                 <div id="sub-conf-mensajes" class="sub-conf-content" style="display:none;">
-                    <h3><i class="fa-solid fa-comment-dots"></i> Configuración Mensajes / CRM</h3>
-                    <button class="save-btn" onclick="switchTab('crm', document.querySelector('.admin-tab:nth-child(7)'))">Ir a la nueva pestaña CRM</button>
+                    <h3><i class="fa-solid fa-comment-dots"></i> ConfiguraciÃ³n Mensajes / CRM</h3>
+                    <button class="save-btn" onclick="switchTab('crm', document.querySelector('.admin-tab:nth-child(7)'))">Ir a la nueva pestaÃ±a CRM</button>
                 </div>
 
                 <!-- SUB TAB: CUENTAS DE CORREO -->
                 <div id="sub-conf-emails" class="sub-conf-content" style="display:none;">
                     <div style="background: rgba(42, 183, 202, 0.1); border: 1px solid #2ab7ca; border-radius: 12px; padding: 1rem; margin-bottom: 2rem;">
-                        <h3 style="color:#2ab7ca; margin-top:0;"><i class="fa-solid fa-circle-info"></i> Guía para Gmail</h3>
-                        <p style="font-size:0.9rem; color:#ccc;">Para usar Gmail, debes generar una <strong>Contraseña de Aplicación</strong>:</p>
+                        <h3 style="color:#2ab7ca; margin-top:0;"><i class="fa-solid fa-circle-info"></i> GuÃ­a para Gmail</h3>
+                        <p style="font-size:0.9rem; color:#ccc;">Para usar Gmail, debes generar una <strong>ContraseÃ±a de AplicaciÃ³n</strong>:</p>
                         <ol style="font-size:0.85rem; color:#aaa; padding-left:1.5rem;">
-                            <li>Activa la "Verificación en 2 pasos" en tu cuenta Google.</li>
-                            <li>Busca "Contraseñas de aplicaciones" en tu perfil.</li>
-                            <li>Genera una para "Correo" y copia el código de 16 letras.</li>
-                            <li>Usa ese código de 16 letras como contraseña aquí abajo.</li>
+                            <li>Activa la "VerificaciÃ³n en 2 pasos" en tu cuenta Google.</li>
+                            <li>Busca "ContraseÃ±as de aplicaciones" en tu perfil.</li>
+                            <li>Genera una para "Correo" y copia el cÃ³digo de 16 letras.</li>
+                            <li>Usa ese cÃ³digo de 16 letras como contraseÃ±a aquÃ­ abajo.</li>
                         </ol>
                     </div>
 
@@ -817,11 +821,11 @@
                     <div class="admin-form">
                         <div class="form-grid">
                             <div class="form-col">
-                                <label>Correo Electrónico (Gmail)</label>
+                                <label>Correo ElectrÃ³nico (Gmail)</label>
                                 <input type="email" id="new-email-addr" placeholder="ejemplo@gmail.com">
                             </div>
                             <div class="form-col">
-                                <label>Contraseña de Aplicación (16 letras)</label>
+                                <label>ContraseÃ±a de AplicaciÃ³n (16 letras)</label>
                                 <input type="text" id="new-email-pass" placeholder="xxxx xxxx xxxx xxxx">
                             </div>
                         </div>
@@ -841,15 +845,15 @@
                     <div class="form-grid" style="margin-bottom: 2rem; border: 2px solid #f39c12; border-radius: 12px; padding: 1rem; background: rgba(243, 156, 18, 0.05);">
                         <div class="form-col" style="grid-column: 1 / -1;">
                             <label style="color:#f39c12; font-weight:bold; font-size: 1.1rem;"><i class="fa-solid fa-trophy"></i> ACTIVAR SISTEMA DE BONOS (VENDEDORES)</label>
-                            <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 0.5rem;">Habilita el cálculo automático de comisiones para tus vendedores según el producto vendido.</p>
+                            <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 0.5rem;">Habilita el cÃ¡lculo automÃ¡tico de comisiones para tus vendedores segÃºn el producto vendido.</p>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-incentiveEnabled" style="flex:1; border:1px solid #f39c12; background: #000; color: white; padding: 10px; border-radius: 8px;">
-                                    <option value="true">SÍ - ACTIVAR BONOS</option>
+                                    <option value="true">SÃ - ACTIVAR BONOS</option>
                                     <option value="false">NO - DESACTIVAR BONOS</option>
                                 </select>
                                 <button class="save-btn" onclick="saveConfig()"
                                     style="margin:0; padding:10px 20px; width:auto; background:#f39c12; color: black; font-weight: bold; border-radius: 8px;"
-                                    title="Guardar Cambios"><i class="fa-solid fa-floppy-disk"></i> GUARDAR CONFIGURACIÓN</button>
+                                    title="Guardar Cambios"><i class="fa-solid fa-floppy-disk"></i> GUARDAR CONFIGURACIÃ“N</button>
                             </div>
                         </div>
                     </div>
@@ -862,7 +866,7 @@
                             <label>Modo Mantenimiento (Apagar tienda visible)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-maintenanceEnabled" style="flex:1;">
-                                    <option value="false">Inactivo / En Línea</option>
+                                    <option value="false">Inactivo / En LÃ­nea</option>
                                     <option value="true">Activo / En Mantenimiento</option>
                                 </select>
                                 <button class="save-btn" onclick="saveConfig()"
@@ -883,7 +887,7 @@
                     </div>
 
                     <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Número de WhatsApp (Ej: 573155182545)</label>
+                        <label>NÃºmero de WhatsApp (Ej: 573155182545)</label>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
                             <input type="text" id="conf-whatsapp" style="flex:1;">
                             <button class="save-btn" onclick="saveConfig()"
@@ -953,7 +957,7 @@
                     </div>
 
                     <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Información de Pagos (Mensaje de WhatsApp)</label>
+                        <label>InformaciÃ³n de Pagos (Mensaje de WhatsApp)</label>
                         <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                             <textarea id="conf-paymentInfo" style="flex:1;"></textarea>
                             <button class="save-btn" onclick="saveConfig()"
@@ -966,10 +970,10 @@
                         style="margin-bottom: 1rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
                         <div class="form-col" style="grid-column: 1 / -1;">
                             <h3 style="margin-bottom: 0.5rem; color: #f39c12;"><i class="fa-solid fa-list"
-                                    style="color:#f39c12;"></i> Orden de Pestañas</h3>
+                                    style="color:#f39c12;"></i> Orden de PestaÃ±as</h3>
                             <p style="font-size:0.85rem; color:#a0a0a0; margin-bottom:1rem;">Define el orden en el que
                                 quieres
-                                que aparezcan las pestañas. Separa cada una por comas. (Valores:
+                                que aparezcan las pestaÃ±as. Separa cada una por comas. (Valores:
                                 individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all)
                             </p>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
@@ -985,11 +989,11 @@
 
                 <!-- SUB TAB: CLIENTES -->
                 <div id="sub-conf-clientes" class="sub-conf-content" style="display:none;">
-                    <h3>Configuración Exclusiva para Clientes</h3>
+                    <h3>ConfiguraciÃ³n Exclusiva para Clientes</h3>
 
                     <div class="form-grid" style="margin-bottom: 1rem;">
                         <div class="form-col">
-                            <label>Descuento CLIENTES FINALES (Múltiples pantallas)</label>
+                            <label>Descuento CLIENTES FINALES (MÃºltiples pantallas)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-discountEnabled" style="flex:1;">
                                     <option value="true">Activo / Habilitado</option>
@@ -1029,7 +1033,7 @@
                             <label>Texto Anuncio Clientes</label>
                             <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                                 <textarea id="conf-clientBannerText" rows="2" style="flex:1;"
-                                    placeholder="Ej: ¡Lleva 2 pantallas y ahorra $1000!"></textarea>
+                                    placeholder="Ej: Â¡Lleva 2 pantallas y ahorra $1000!"></textarea>
                                 <button class="save-btn" onclick="saveConfig()"
                                     style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
                                     title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
@@ -1039,7 +1043,7 @@
 
                     <div class="form-grid" style="margin-bottom: 1rem;">
                         <div class="form-col">
-                            <label>Valor descuento PROMOCIÓN Clientes ($)</label>
+                            <label>Valor descuento PROMOCIÃ“N Clientes ($)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <input type="number" id="conf-clientPromoDiscount" placeholder="Ej: 1000"
                                     style="flex:1;">
@@ -1049,14 +1053,14 @@
                             </div>
                         </div>
                         <div class="form-col">
-                            <label>Límite de pantallas (P/Cliente)</label>
+                            <label>LÃ­mite de pantallas (P/Cliente)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <input type="number" id="conf-clientPromoLimit" placeholder="Ej: 2" style="flex:1;">
                                 <button class="save-btn" onclick="saveConfig()"
                                     style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
                                     title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
                             </div>
-                            <span style="font-size:0.75rem; color:#ccc;">Las que excedan este límite se cobrarán a
+                            <span style="font-size:0.75rem; color:#ccc;">Las que excedan este lÃ­mite se cobrarÃ¡n a
                                 precio normal
                                 sin descuento.</span>
                         </div>
@@ -1065,7 +1069,7 @@
                     <div class="form-grid"
                         style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
                         <div class="form-col">
-                            <label>Botón Obtener Código Netflix</label>
+                            <label>BotÃ³n Obtener CÃ³digo Netflix</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-netflixEnabled" style="flex:1;">
                                     <option value="true">Mostrar Visible</option>
@@ -1077,7 +1081,7 @@
                             </div>
                         </div>
                         <div class="form-col">
-                            <label>Botón Obtener Código Disney</label>
+                            <label>BotÃ³n Obtener CÃ³digo Disney</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-disneyEnabled" style="flex:1;">
                                     <option value="true">Mostrar Visible</option>
@@ -1092,7 +1096,7 @@
 
                     <div class="form-col"
                         style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <label>Mensaje Recordatorio Renovación (Usa {cliente} y {pantallas} para autocompletar)</label>
+                        <label>Mensaje Recordatorio RenovaciÃ³n (Usa {cliente} y {pantallas} para autocompletar)</label>
                         <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                             <textarea id="conf-reminderTemplate"
                                 style="height: 150px; padding: 10px; flex:1;"></textarea>
@@ -1100,13 +1104,13 @@
                                 style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
                                 title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
                         </div>
-                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Este mensaje se mandará por
+                        <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Este mensaje se mandarÃ¡ por
                             WhatsApp
                             para los que vencen HOY.</p>
                     </div>
 
                     <div class="form-col" style="margin-bottom: 2rem;">
-                        <label>Mensaje Vencimiento MAÑANA (Aviso Previo)</label>
+                        <label>Mensaje Vencimiento MAÃ‘ANA (Aviso Previo)</label>
                         <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                             <textarea id="conf-reminderTomorrowTemplate"
                                 style="height: 100px; padding: 10px; flex:1;"></textarea>
@@ -1115,12 +1119,12 @@
                                 title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
                         </div>
                         <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Mensaje suave que se manda 1
-                            día
+                            dÃ­a
                             antes.</p>
                     </div>
 
                     <div class="form-col" style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
-                        <label>Mensaje para VENDEDORES (Vencimiento HOY / YA VENCIÓ)</label>
+                        <label>Mensaje para VENDEDORES (Vencimiento HOY / YA VENCIÃ“)</label>
                         <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                             <textarea id="conf-sellerReminderTemplate"
                                 style="height: 120px; padding: 10px; flex:1;"></textarea>
@@ -1132,7 +1136,7 @@
                     </div>
 
                     <div class="form-col" style="margin-bottom: 2rem;">
-                        <label>Mensaje para VENDEDORES (Aviso MAÑANA)</label>
+                        <label>Mensaje para VENDEDORES (Aviso MAÃ‘ANA)</label>
                         <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                             <textarea id="conf-sellerReminderTomorrowTemplate"
                                 style="height: 100px; padding: 10px; flex:1;"></textarea>
@@ -1166,7 +1170,7 @@
 
                     <div class="form-grid" style="margin-bottom: 1rem;">
                         <div class="form-col">
-                            <label>Asistente Automático Vencimiento HOY</label>
+                            <label>Asistente AutomÃ¡tico Vencimiento HOY</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-autoReminderEnabled" style="flex:1;">
                                     <option value="true">Activo / Encendido</option>
@@ -1181,7 +1185,7 @@
                                 que vencen hoy.</p>
                         </div>
                         <div class="form-col">
-                            <label>Asistente Automático Aviso MAÑANA</label>
+                            <label>Asistente AutomÃ¡tico Aviso MAÃ‘ANA</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-autoReminderTomorrowEnabled" style="flex:1;">
                                     <option value="true">Activo / Encendido</option>
@@ -1193,12 +1197,12 @@
                             </div>
                             <p style="font-size: 0.75rem; color: #a0a0a0; margin-top: 5px;">Abre las ventanas de
                                 WhatsApp para
-                                los que vencen mañana.</p>
+                                los que vencen maÃ±ana.</p>
                         </div>
                     </div>
 
                     <div class="form-col" style="margin-bottom: 1rem;">
-                        <label>Hora de Activación (Formato 24h: 0 a 23)</label>
+                        <label>Hora de ActivaciÃ³n (Formato 24h: 0 a 23)</label>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
                             <input type="number" id="conf-autoReminderHour" min="0" max="23"
                                 placeholder="Ej: 8 para 8:00 AM" style="margin-bottom: 5px; flex:1;">
@@ -1208,17 +1212,17 @@
                         </div>
                         <button class="save-btn" onclick="checkDailyAutoReminders(true)"
                             style="background:#f39c12; margin-top:5px; width:auto; padding: 8px 15px; font-size:0.8rem;"><i
-                                class="fa-solid fa-play"></i> Forzar Envíos de Hoy AHORA</button>
+                                class="fa-solid fa-play"></i> Forzar EnvÃ­os de Hoy AHORA</button>
                     </div>
                 </div>
 
                 <!-- SUB TAB: VENTAS / VENDEDORES -->
                 <div id="sub-conf-ventas" class="sub-conf-content" style="display:none;">
-                    <h3>Configuración Exclusiva Vendedores</h3>
+                    <h3>ConfiguraciÃ³n Exclusiva Vendedores</h3>
 
                     <div class="form-grid" style="margin-bottom: 1rem;">
                         <div class="form-col">
-                            <label>Descuento EXCLUSIVO VENDEDORES (Múltiples pantallas)</label>
+                            <label>Descuento EXCLUSIVO VENDEDORES (MÃºltiples pantallas)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <select id="conf-sellerDiscountEnabled" style="flex:1;">
                                     <option value="true">Activo / Habilitado</option>
@@ -1258,7 +1262,7 @@
                             <label>Texto Anuncio Vendedores</label>
                             <div style="display:flex; gap:0.5rem; align-items:flex-start;">
                                 <textarea id="conf-sellerBannerText" rows="2" style="flex:1;"
-                                    placeholder="Ej: ¡Aprovecha el descuento mayorista hoy!"></textarea>
+                                    placeholder="Ej: Â¡Aprovecha el descuento mayorista hoy!"></textarea>
                                 <button class="save-btn" onclick="saveConfig()"
                                     style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
                                     title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
@@ -1268,7 +1272,7 @@
 
                     <div class="form-grid" style="margin-bottom: 1rem;">
                         <div class="form-col">
-                            <label>Valor descuento PROMOCIÓN Vendedores ($)</label>
+                            <label>Valor descuento PROMOCIÃ“N Vendedores ($)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <input type="number" id="conf-sellerPromoDiscount" placeholder="Ej: 2000"
                                     style="flex:1;">
@@ -1278,7 +1282,7 @@
                             </div>
                         </div>
                         <div class="form-col">
-                            <label>Límite de pantallas (P/Vendedor)</label>
+                            <label>LÃ­mite de pantallas (P/Vendedor)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <input type="number" id="conf-sellerPromoLimit" placeholder="Ej: 5" style="flex:1;">
                                 <button class="save-btn" onclick="saveConfig()"
@@ -1286,8 +1290,8 @@
                                     title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
                             </div>
                             <span style="font-size:0.75rem; color:#ccc;">Al habilitar el anuncio, este descuento
-                                reemplazará al
-                                descuento múltiple común y corriente.</span>
+                                reemplazarÃ¡ al
+                                descuento mÃºltiple comÃºn y corriente.</span>
                         </div>
                     </div>
 
@@ -1448,8 +1452,8 @@
                         </div>
                     </div>
                     <div style="margin-top: 1.5rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
-                        <label style="display:block; margin-bottom:0.5rem; font-weight:bold; color:var(--accent-primary);">Mensaje de Bonos / Felicitación (WhatsApp)</label>
-                        <textarea id="conf-incentiveMessage" placeholder="Ej: ¡Felicidades {vendedor}! Has ganado un bono de {monto} por tu venta de {items}. ¡Sigue así! 🚀" 
+                        <label style="display:block; margin-bottom:0.5rem; font-weight:bold; color:var(--accent-primary);">Mensaje de Bonos / FelicitaciÃ³n (WhatsApp)</label>
+                        <textarea id="conf-incentiveMessage" placeholder="Ej: Â¡Felicidades {vendedor}! Has ganado un bono de {monto} por tu venta de {items}. Â¡Sigue asÃ­! ðŸš€" 
                             style="width:100%; height:100px; border-radius:10px; padding:15px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.3); color:white; font-size:0.95rem; line-height:1.5;"></textarea>
                         <button class="save-btn" onclick="saveConfig()" style="margin-top:0.8rem; width:100%; background:var(--accent-primary); height:45px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:10px;">
                             <i class="fa-solid fa-floppy-disk"></i> Guardar Mensaje de Bonos
@@ -1477,11 +1481,11 @@
 
                 <!-- SUB TAB: SEGURIDAD Y ACCESOS -->
                 <div id="sub-conf-seguridad" class="sub-conf-content" style="display:none;">
-                    <h3>Contraseñas de Sistema</h3>
+                    <h3>ContraseÃ±as de Sistema</h3>
 
                     <div class="form-col"
                         style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
-                        <label>Contraseña Acceso Vendedores</label>
+                        <label>ContraseÃ±a Acceso Vendedores</label>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
                             <input type="text" id="conf-sellerPassword" placeholder="Ej: misvendedores123"
                                 style="flex:1;">
@@ -1491,11 +1495,11 @@
                         </div>
                         <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en la
                             tienda
-                            verá los Precios de Vendedor.</p>
+                            verÃ¡ los Precios de Vendedor.</p>
                     </div>
 
                     <div class="form-col" style="margin-bottom: 2rem;">
-                        <label>Contraseña de Acceso Administrador (Este Panel)</label>
+                        <label>ContraseÃ±a de Acceso Administrador (Este Panel)</label>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
                             <input type="text" id="conf-adminPassword" placeholder="Ej: admin123" style="flex:1;">
                             <button class="save-btn" onclick="saveConfig()"
@@ -1504,14 +1508,14 @@
                         </div>
                         <p style="font-size: 0.8rem; color: #a0a0a0; margin-top: 0.3rem;">Quien digite esta clave en el
                             login de
-                            administradores podrá acceder y modificar toda la tienda.</p>
+                            administradores podrÃ¡ acceder y modificar toda la tienda.</p>
                     </div>
 
                     <div class="form-col"
                         style="margin-bottom: 2rem; border-top: 1px solid var(--glass-border); padding-top:1rem;">
                         <label>Respaldo de Sistema Completo</label>
                         <p style="font-size: 0.8rem; color: #a0a0a0; margin-bottom: 0.8rem;">Descarga una copia de
-                            seguridad o restaura un respaldo previo. Cuando descargues, guárdalo en tu carpeta
+                            seguridad o restaura un respaldo previo. Cuando descargues, guÃ¡rdalo en tu carpeta
                             <strong>F:\Resp Antigravity</strong>.
                         </p>
                         <div style="display:flex; gap:1rem; flex-wrap:wrap;">
@@ -1545,7 +1549,7 @@
             <h2 style="color:var(--accent-primary); margin-bottom:1rem; display:flex; align-items:center; gap:0.8rem;">
                 <i class="fa-solid fa-comment-dots"></i> Enviar Respuestas (CRM)
             </h2>
-            <p style="color:#ccc; font-size:0.9rem; margin-bottom:1rem;">Selecciona la plataforma que el cliente está comprando:</p>
+            <p style="color:#ccc; font-size:0.9rem; margin-bottom:1rem;">Selecciona la plataforma que el cliente estÃ¡ comprando:</p>
             
             <!-- BUSCADOR DE PLATAFORMAS -->
             <div style="margin-bottom:1.5rem; position:relative;">
@@ -1561,14 +1565,14 @@
             
             <div style="margin-top:2rem; display:flex; justify-content:center;">
                 <button onclick="closeCRMSelector()" class="save-btn" style="width:auto; padding:10px 40px; background:#444; border:1px solid #555;">
-                    <i class="fa-solid fa-check"></i> Finalizar Envíos
+                    <i class="fa-solid fa-check"></i> Finalizar EnvÃ­os
                 </button>
             </div>
         </div>
     </div>
 
     <script>
-        // Protcción de página
+        // ProtcciÃ³n de pÃ¡gina
         if (localStorage.getItem('adminLoggedIn') !== 'true') {
             window.location.href = 'login.html';
         }
@@ -1602,7 +1606,7 @@
                 
                 const keys = Object.keys(accounts);
                 if (keys.length === 0) {
-                    list.innerHTML = '<p style="color:#777; text-align:center;">No hay cuentas de correo vinculadas aún.</p>';
+                    list.innerHTML = '<p style="color:#777; text-align:center;">No hay cuentas de correo vinculadas aÃºn.</p>';
                     return;
                 }
 
@@ -1618,7 +1622,7 @@
                         <div style="color:var(--accent-primary); font-size:1.5rem;"><i class="fa-solid fa-envelope"></i></div>
                         <div style="flex:1;">
                             <strong style="color:white; font-size:1rem;">${acc.email}</strong><br>
-                            <span style="font-size:0.8rem; color:#888;">Contraseña: <span style="color:#2ab7ca; font-weight:bold;">${masked}</span></span>
+                            <span style="font-size:0.8rem; color:#888;">ContraseÃ±a: <span style="color:#2ab7ca; font-weight:bold;">${masked}</span></span>
                         </div>
                         <div class="item-actions">
                             <button class="btn-icon btn-edit" onclick="editEmailAccount('${key}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
@@ -1634,8 +1638,8 @@
             const email = document.getElementById('new-email-addr').value.trim();
             const pass = document.getElementById('new-email-pass').value.trim();
 
-            if (!email || !pass) return alert('Debes completar el correo y la contraseña.');
-            if (!email.includes('@')) return alert('Ingresa un correo válido.');
+            if (!email || !pass) return alert('Debes completar el correo y la contraseÃ±a.');
+            if (!email.includes('@')) return alert('Ingresa un correo vÃ¡lido.');
 
             db.ref('emailAccounts').push({
                 email: email,
@@ -1657,10 +1661,10 @@
             const newEmail = prompt("Editar Correo:", current.email);
             if (newEmail === null) return;
             
-            const newPass = prompt("Editar Contraseña de Aplicación:", current.password);
+            const newPass = prompt("Editar ContraseÃ±a de AplicaciÃ³n:", current.password);
             if (newPass === null) return;
 
-            if (!newEmail || !newPass) return alert("Los campos no pueden estar vacíos.");
+            if (!newEmail || !newPass) return alert("Los campos no pueden estar vacÃ­os.");
 
             db.ref('emailAccounts/' + key).update({
                 email: newEmail.trim(),
@@ -1671,7 +1675,7 @@
         }
 
         window.deleteEmailAccount = function(key) {
-            if (confirm('¿Estás seguro de que quieres eliminar esta cuenta de correo? El lector de PIN dejará de funcionar para los clientes asociados a este email.')) {
+            if (confirm('Â¿EstÃ¡s seguro de que quieres eliminar esta cuenta de correo? El lector de PIN dejarÃ¡ de funcionar para los clientes asociados a este email.')) {
                 db.ref('emailAccounts/' + key).remove();
             }
         }
@@ -1711,7 +1715,7 @@
                 const keys = Object.keys(monthlyTotals).map(Number).sort((a, b) => b - a);
 
                 if (keys.length === 0) {
-                    html += '<li style="color:#a0a0a0;">No hay ventas registradas o aprobadas aún.</li>';
+                    html += '<li style="color:#a0a0a0;">No hay ventas registradas o aprobadas aÃºn.</li>';
                 } else {
                     keys.forEach(k => {
                         const data = monthlyTotals[k];
@@ -1752,14 +1756,14 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                alert('Copia de seguridad realizada con éxito. Guarda el archivo en la carpeta "F:\\Resp Antigravity".');
+                alert('Copia de seguridad realizada con Ã©xito. Guarda el archivo en la carpeta "F:\\Resp Antigravity".');
             } catch (e) {
                 alert('Error al realizar el respaldo: ' + e.message);
             }
         }
 
         function triggerRestoreBackup() {
-            if (confirm('⚠️ ADVERTENCIA: Restaurar un respaldo SOBREESCRIBIRÁ TODA la base de datos actual y perderás todos los clientes, ventas y configuraciones más recientes. ¿Estás seguro de continuar?')) {
+            if (confirm('âš ï¸ ADVERTENCIA: Restaurar un respaldo SOBREESCRIBIRÃ TODA la base de datos actual y perderÃ¡s todos los clientes, ventas y configuraciones mÃ¡s recientes. Â¿EstÃ¡s seguro de continuar?')) {
                 document.getElementById('restore-backup-file').click();
             }
         }
@@ -1773,10 +1777,10 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     await db.ref('/').set(data);
-                    alert('¡Base de datos restaurada con éxito! La página se recargará.');
+                    alert('Â¡Base de datos restaurada con Ã©xito! La pÃ¡gina se recargarÃ¡.');
                     window.location.reload();
                 } catch (err) {
-                    alert('Error al procesar el archivo. Asegúrate de que es un archivo JSON de respaldo válido.');
+                    alert('Error al procesar el archivo. AsegÃºrate de que es un archivo JSON de respaldo vÃ¡lido.');
                 }
             };
             reader.readAsText(file);
@@ -1785,7 +1789,7 @@
         let dynamicProducts = [];
         let storeConfig = {
             whatsappNumber: "573155182545",
-            paymentInfo: "*Medios de pago:*\n💳 Nequi o Daviplata: 3155182545\n🔑 Llave Nequi @NEQUICEC36\n🔑 Llave Daviplata @PLATA3155182545\n🔑 Llave Nu @CMA736\n🔑 Llave Be @BE346516",
+            paymentInfo: "*Medios de pago:*\nðŸ’³ Nequi o Daviplata: 3155182545\nðŸ”‘ Llave Nequi @NEQUICEC36\nðŸ”‘ Llave Daviplata @PLATA3155182545\nðŸ”‘ Llave Nu @CMA736\nðŸ”‘ Llave Be @BE346516",
             discountEnabled: true,
             discountAmount: 1000,
             netflixEnabled: true,
@@ -1793,7 +1797,7 @@
             crmEnabled: true,
             sellers: [],
             estrenos: [],
-            reminderTemplate: "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*"
+            reminderTemplate: "Hola {cliente} ðŸ˜Š Buen dia\nTU {pantallas} finaliza \nðŸ‘‰ *HOY* ðŸ‘ˆ\nðŸ‘‰ ðŸ˜±... \nâš ï¸ Si deseas continuar, realiza el pago y me envÃ­as la foto del comprobanteðŸ§¾ (sin comprobante no cuenta como pago vÃ¡lido) âš ï¸\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*"
         };
         let adminInitialized = false;
         let editEstrenoIndex = -1;
@@ -1883,7 +1887,7 @@
             }
 
             if (document.getElementById('conf-reminderTemplate')) {
-                document.getElementById('conf-reminderTemplate').value = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*";
+                document.getElementById('conf-reminderTemplate').value = storeConfig.reminderTemplate || "Hola {cliente} ðŸ˜Š Buen dia\nTU {pantallas} finaliza \nðŸ‘‰ *HOY* ðŸ‘ˆ\nðŸ‘‰ ðŸ˜±... \nâš ï¸ Si deseas continuar, realiza el pago y me envÃ­as la foto del comprobanteðŸ§¾ (sin comprobante no cuenta como pago vÃ¡lido) âš ï¸\n\n*Medios de Pago:*\n*Nequi o Daviplata 3155182545*\n\n*Llave Nequi @NEQUICEC36* \n*Llave Daviplata @PLATA3155182545* \n*Llave Nu @CMA736*\n*Llave Be @BE346516*";
             }
 
             if (document.getElementById('conf-netflixEnabled')) document.getElementById('conf-netflixEnabled').value = storeConfig.netflixEnabled !== false ? 'true' : 'false';
@@ -1893,20 +1897,20 @@
             if (document.getElementById('conf-autoReminderTomorrowEnabled')) document.getElementById('conf-autoReminderTomorrowEnabled').value = storeConfig.autoReminderTomorrowEnabled === false ? "false" : "true";
             if (document.getElementById('conf-autoReminderHour')) document.getElementById('conf-autoReminderHour').value = storeConfig.autoReminderHour || "0";
             if (document.getElementById('conf-reminderTomorrowTemplate')) {
-                document.getElementById('conf-reminderTomorrowTemplate').value = storeConfig.reminderTomorrowTemplate || "Hola {cliente} 😊 Buen dia\nTe avisamos que TU {pantallas} finaliza \n👉 *MAÑANA* 👈\n⚠️ Para evitar la suspensión, por favor realiza el pago con tiempo ⚠️";
+                document.getElementById('conf-reminderTomorrowTemplate').value = storeConfig.reminderTomorrowTemplate || "Hola {cliente} ðŸ˜Š Buen dia\nTe avisamos que TU {pantallas} finaliza \nðŸ‘‰ *MAÃ‘ANA* ðŸ‘ˆ\nâš ï¸ Para evitar la suspensiÃ³n, por favor realiza el pago con tiempo âš ï¸";
             }
             if (document.getElementById('conf-sellerReminderTemplate')) {
-                document.getElementById('conf-sellerReminderTemplate').value = storeConfig.sellerReminderTemplate || "Hola *{vendedor}* 👋\n\nTe recuerdo que la cuenta de tu cliente *{cliente}* (📱 {celular})\n\nCon: {pantallas}\n👉 *FINALIZA PRONTO o YA VENCIÓ* 👈\n\nPor favor contáctalo para gestionar su renovación.\n\nCelular: {celular} y Pin: {pin}\n💰 *Total:* ${total}";
+                document.getElementById('conf-sellerReminderTemplate').value = storeConfig.sellerReminderTemplate || "Hola *{vendedor}* ðŸ‘‹\n\nTe recuerdo que la cuenta de tu cliente *{cliente}* (ðŸ“± {celular})\n\nCon: {pantallas}\nðŸ‘‰ *FINALIZA PRONTO o YA VENCIÃ“* ðŸ‘ˆ\n\nPor favor contÃ¡ctalo para gestionar su renovaciÃ³n.\n\nCelular: {celular} y Pin: {pin}\nðŸ’° *Total:* ${total}";
             }
             if (document.getElementById('conf-sellerReminderTomorrowTemplate')) {
-                document.getElementById('conf-sellerReminderTomorrowTemplate').value = storeConfig.sellerReminderTomorrowTemplate || "Hola *{vendedor}* 👋\n\nTe damos Aviso Previo que la cuenta de tu cliente *{cliente}* (📱 {celular})\n\nCon: {pantallas}\n👉 *FINALIZA MAÑANA* 👈\n\nPor favor contáctalo para gestionar su renovación y evitar cortes.\n\nCelular: {celular} y Pin: {pin}\n💰 *Total:* ${total}";
+                document.getElementById('conf-sellerReminderTomorrowTemplate').value = storeConfig.sellerReminderTomorrowTemplate || "Hola *{vendedor}* ðŸ‘‹\n\nTe damos Aviso Previo que la cuenta de tu cliente *{cliente}* (ðŸ“± {celular})\n\nCon: {pantallas}\nðŸ‘‰ *FINALIZA MAÃ‘ANA* ðŸ‘ˆ\n\nPor favor contÃ¡ctalo para gestionar su renovaciÃ³n y evitar cortes.\n\nCelular: {celular} y Pin: {pin}\nðŸ’° *Total:* ${total}";
             }
             
             if (document.getElementById('conf-renovadaSingularTemplate')) {
-                document.getElementById('conf-renovadaSingularTemplate').value = storeConfig.renovadaSingularTemplate || "♦️♦️♦️ ** Tu Pantalla de *{pantallas}* ha sido Renovada* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence {mes}*";
+                document.getElementById('conf-renovadaSingularTemplate').value = storeConfig.renovadaSingularTemplate || "â™¦ï¸â™¦ï¸â™¦ï¸ ** Tu Pantalla de *{pantallas}* ha sido Renovada* con los mismos datos que tenga buen dÃ­a que la disfrute â™¦ï¸â™¦ï¸â™¦ï¸ *vence {mes}*";
             }
             if (document.getElementById('conf-renovadaPluralTemplate')) {
-                document.getElementById('conf-renovadaPluralTemplate').value = storeConfig.renovadaPluralTemplate || "♦️♦️♦️ ** Tus Pantallas de *{pantallas}* han sido Renovadas* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence {mes}*";
+                document.getElementById('conf-renovadaPluralTemplate').value = storeConfig.renovadaPluralTemplate || "â™¦ï¸â™¦ï¸â™¦ï¸ ** Tus Pantallas de *{pantallas}* han sido Renovadas* con los mismos datos que tenga buen dÃ­a que la disfrute â™¦ï¸â™¦ï¸â™¦ï¸ *vence {mes}*";
             }
 
             if (document.getElementById('conf-sellerPassword')) document.getElementById('conf-sellerPassword').value = storeConfig.sellerPassword || 'admin';
@@ -2111,10 +2115,10 @@
                 if (document.getElementById('conf-useLocalRobotCRM')) storeConfig.useLocalRobotCRM = document.getElementById('conf-useLocalRobotCRM').value === "true";
 
                 await db.ref('storeConfig').set(storeConfig);
-                alert('¡Configuración guardada exitosamente en la base de datos!');
+                alert('Â¡ConfiguraciÃ³n guardada exitosamente en la base de datos!');
             } catch (err) {
                 console.error(err);
-                alert('Error al guardar configuración: ' + err.message);
+                alert('Error al guardar configuraciÃ³n: ' + err.message);
             }
         }
 
@@ -2146,7 +2150,7 @@
                 sellers.forEach(s => {
                     const opt = document.createElement('option');
                     opt.value = s.name;
-                    opt.text = "👔 " + s.name;
+                    opt.text = "ðŸ‘” " + s.name;
                     if (currentAllows.includes(s.name)) {
                         opt.selected = true;
                     }
@@ -2157,7 +2161,7 @@
                         const name = window.allClientProfiles[phone].name || phone;
                         const opt = document.createElement('option');
                         opt.value = phone;
-                        opt.text = "👥 " + name + " (" + phone + ")";
+                        opt.text = "ðŸ‘¥ " + name + " (" + phone + ")";
                         if (currentAllows.includes(phone)) {
                             opt.selected = true;
                         }
@@ -2377,7 +2381,7 @@
                     const limit = s.extraProductsLimit || 0;
                     const currentlyInSystem = dynamicProducts.filter(dp => dp.category === 'ventas_extras' && dp.owner === owner && (editIndex === -1 || dp.id !== dynamicProducts[editIndex].id)).length;
                     if (limit > 0 && currentlyInSystem >= limit) {
-                        return alert('Atención: Este vendedor ha alcanzado su límite de ' + limit + ' productos extras permitidos según su plan.');
+                        return alert('AtenciÃ³n: Este vendedor ha alcanzado su lÃ­mite de ' + limit + ' productos extras permitidos segÃºn su plan.');
                     }
                 }
             }
@@ -2459,12 +2463,12 @@
                     </button>
                 </div>
                 <div style="margin-bottom:1rem; background:rgba(42, 183, 202, 0.1); padding:8px; border-radius:8px; border:1px solid rgba(42, 183, 202, 0.3);">
-                    <label style="font-size:0.75rem; color:#2ab7ca; display:block; margin-bottom:4px; font-weight:bold;">URL DE LA GUÍA (BOTÓN PARA EL CLIENTE):</label>
+                    <label style="font-size:0.75rem; color:#2ab7ca; display:block; margin-bottom:4px; font-weight:bold;">URL DE LA GUÃA (BOTÃ“N PARA EL CLIENTE):</label>
                     <input type="text" class="platform-guide-url" placeholder="https://ejemplo.com/guia-netflix" style="width:100%; font-size:0.85rem; border-radius:6px; padding:6px; border:1px solid rgba(42,183,202,0.2);" value="${dataItems.guideUrl || ''}">
                 </div>
                 <div class="platform-photos-list" style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:0.8rem;"></div>
                 <button class="save-btn" style="background:rgba(255,255,255,0.1); border:1px dashed rgba(255,255,255,0.3); font-size:0.85rem; padding:8px 12px; width:auto; text-align:left;" onclick="addPhotoTextToPlatform('${platformId}')">
-                    <i class="fa-solid fa-plus"></i> Añadir Foto/Texto a esta Pantalla
+                    <i class="fa-solid fa-plus"></i> AÃ±adir Foto/Texto a esta Pantalla
                 </button>
             `;
             container.appendChild(div);
@@ -2541,7 +2545,7 @@
                 addCRMPlatform('General', storeConfig.crmGallery);
             }
             
-            // Si está vacío, añadir uno de sugerencia para que el usuario pueda empezar
+            // Si estÃ¡ vacÃ­o, aÃ±adir uno de sugerencia para que el usuario pueda empezar
             if (container.children.length === 0) {
                 addCRMPlatform('Netflix', []);
             }
@@ -2562,7 +2566,7 @@
         }
 
         function deleteProduct(index) {
-            if (confirm(`¿Estás seguro de que quieres eliminar "${dynamicProducts[index].name}"?`)) {
+            if (confirm(`Â¿EstÃ¡s seguro de que quieres eliminar "${dynamicProducts[index].name}"?`)) {
                 dynamicProducts.splice(index, 1);
                 saveProductsToStorage();
                 renderAdminList();
@@ -2712,7 +2716,7 @@
             storeConfig.crmGallery = []; 
 
             db.ref('storeConfig').set(storeConfig).then(() => {
-                alert('¡Configuración guardada exitosamente!');
+                alert('Â¡ConfiguraciÃ³n guardada exitosamente!');
             });
         }
 
@@ -2753,7 +2757,7 @@
             document.getElementById('new-estreno-url').value = e.url;
             if (e.month) document.getElementById('new-estreno-month').value = e.month;
 
-            document.getElementById('estreno-form-title').innerText = "Editar Película / Estreno";
+            document.getElementById('estreno-form-title').innerText = "Editar PelÃ­cula / Estreno";
             document.getElementById('btn-save-estreno').innerText = "Actualizar Estreno";
             document.getElementById('btn-cancel-estreno').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2764,7 +2768,7 @@
             document.getElementById('new-estreno-title').value = '';
             document.getElementById('new-estreno-url').value = '';
             document.getElementById('new-estreno-month').value = 'Enero';
-            document.getElementById('estreno-form-title').innerText = "Agregar Película / Estreno";
+            document.getElementById('estreno-form-title').innerText = "Agregar PelÃ­cula / Estreno";
             document.getElementById('btn-save-estreno').innerText = "Guardar Estreno";
             document.getElementById('btn-cancel-estreno').style.display = 'none';
         }
@@ -2773,7 +2777,7 @@
             const title = document.getElementById('new-estreno-title').value.trim();
             const url = document.getElementById('new-estreno-url').value.trim();
             const month = document.getElementById('new-estreno-month').value;
-            if (!title || !url) return alert('Completa título y enlace.');
+            if (!title || !url) return alert('Completa tÃ­tulo y enlace.');
 
             if (!storeConfig.estrenos) storeConfig.estrenos = [];
 
@@ -2790,7 +2794,7 @@
         }
 
         function deleteEstreno(index) {
-            if (confirm('¿Eliminar película?')) {
+            if (confirm('Â¿Eliminar pelÃ­cula?')) {
                 storeConfig.estrenos.splice(index, 1);
                 db.ref('storeConfig').set(storeConfig);
                 renderEstrenosList();
@@ -2880,14 +2884,14 @@
             const btnText = document.getElementById('new-banner-btntext').value.trim();
             const btnLink = document.getElementById('new-banner-btnlink').value.trim();
 
-            if (!title) return alert('El título es requerido.');
+            if (!title) return alert('El tÃ­tulo es requerido.');
 
             if (!storeConfig.mainBanners) storeConfig.mainBanners = [];
 
             if (editBannerIndex !== -1) {
                 storeConfig.mainBanners[editBannerIndex] = { badge, title, desc, img, btnText, btnLink };
             } else {
-                if (storeConfig.mainBanners.length >= 10) return alert('El máximo de banners permitidos es 10. Elimina uno primero.');
+                if (storeConfig.mainBanners.length >= 10) return alert('El mÃ¡ximo de banners permitidos es 10. Elimina uno primero.');
                 storeConfig.mainBanners.push({ badge, title, desc, img, btnText, btnLink });
             }
 
@@ -2898,7 +2902,7 @@
         }
 
         function deleteBanner(index) {
-            if (confirm('¿Eliminar banner?')) {
+            if (confirm('Â¿Eliminar banner?')) {
                 storeConfig.mainBanners.splice(index, 1);
                 db.ref('storeConfig').set(storeConfig);
                 renderBannersList();
@@ -2937,7 +2941,7 @@
                     <div>
                         <strong style="color: white; font-size:1.1rem">${s.name}</strong><br>
                         <span style="font-size: 0.8rem; color: #a0a0a0;">Wa: ${s.whatsapp || 'No registrado'} | Pass: ${s.password}</span><br>
-                        <span style="font-size: 0.8rem; color: #f39c12;">Ventas Extras: ${s.extraSalesEnabled ? 'Sí (Límite ' + (s.extraProductsLimit || 0) + ')' : 'No'}</span>
+                        <span style="font-size: 0.8rem; color: #f39c12;">Ventas Extras: ${s.extraSalesEnabled ? 'SÃ­ (LÃ­mite ' + (s.extraProductsLimit || 0) + ')' : 'No'}</span>
                     </div>
                     <div class="item-actions">
                         <button class="btn-icon btn-edit" onclick="editSeller(${index})" title="Editar Vendedor">
@@ -2979,7 +2983,7 @@
             if (selExtras) selExtras.value = 'false';
             const selLimit = document.getElementById('new-seller-extras-limit');
             if (selLimit) selLimit.value = '0';
-            document.getElementById('btn-save-seller').innerText = "Añadir Vendedor";
+            document.getElementById('btn-save-seller').innerText = "AÃ±adir Vendedor";
             document.getElementById('btn-cancel-seller').style.display = 'none';
         }
 
@@ -2988,7 +2992,7 @@
             const waInput = document.getElementById('new-seller-whatsapp');
             const whatsapp = waInput ? waInput.value.trim().replace(/\D/g, '') : '';
             const password = document.getElementById('new-seller-pass').value.trim();
-            if (!name || !password) return alert('Completa nombre y contraseña.');
+            if (!name || !password) return alert('Completa nombre y contraseÃ±a.');
 
             const selExtras = document.getElementById('new-seller-extras-enabled');
             const extraSalesEnabled = selExtras ? selExtras.value === 'true' : false;
@@ -3007,12 +3011,12 @@
             db.ref('storeConfig').set(storeConfig).then(() => {
                 cancelEditSeller();
                 renderSellersList();
-                alert(editSellerIndex !== -1 ? 'Vendedor actualizado con éxito.' : 'Vendedor añadido con éxito en la Nube.');
+                alert(editSellerIndex !== -1 ? 'Vendedor actualizado con Ã©xito.' : 'Vendedor aÃ±adido con Ã©xito en la Nube.');
             });
         }
 
         function deleteSeller(index) {
-            if (confirm('¿Eliminar/Bloquear este vendedor? Perderá su acceso.')) {
+            if (confirm('Â¿Eliminar/Bloquear este vendedor? PerderÃ¡ su acceso.')) {
                 let sellersRaw = storeConfig.sellers || [];
                 storeConfig.sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw || {});
                 storeConfig.sellers.splice(index, 1);
@@ -3123,7 +3127,7 @@
 
                         const itemsStr = sale.items ? sale.items.map(i => {
                             let formatName = i.name;
-                            if (i.category && i.category.startsWith('combos')) formatName = `🎬 *${i.name}* (Combo Prediseñado)`;
+                            if (i.category && i.category.startsWith('combos')) formatName = `ðŸŽ¬ *${i.name}* (Combo PrediseÃ±ado)`;
                             return formatName;
                         }).join(', ') : 'Pantallas';
                         const safeClient = safeDecode(sale.clientName || 'Desconocido');
@@ -3145,7 +3149,7 @@
                                     ${safeClient}
                                 </strong>
                                 <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
-                                    ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
+                                    ${!isExpired ? `Vence en ${daysLeft} dÃ­as` : 'Vencida'}
                                 </span>
                             </div>
                             <div style="margin-bottom:0.5rem; display:flex;">
@@ -3155,10 +3159,10 @@
                                 </button>
                             </div>
                             <p style="font-size:0.8rem; color:#ccc; margin-bottom:0.8rem; line-height:1.4;">
-                                📱 ${sale.clientPhone || 'N/A'} | 📍 ${sale.clientCity || 'N/A'}<br>
-                                📅 Inicio: ${startDate} | ⏳ Fin: ${endDate}<br>
-                                📺 Compra: ${itemsStr}<br>
-                                💰 Valor pagado: ${totalDisp}
+                                ðŸ“± ${sale.clientPhone || 'N/A'} | ðŸ“ ${sale.clientCity || 'N/A'}<br>
+                                ðŸ“… Inicio: ${startDate} | â³ Fin: ${endDate}<br>
+                                ðŸ“º Compra: ${itemsStr}<br>
+                                ðŸ’° Valor pagado: ${totalDisp}
                             </p>
                             <div style="display:flex; gap:0.5rem;">
                                 <button onclick="sendAdminReminderToSeller('${safeSeller}', '${encodeURIComponent(safeClient)}', '${encodeURIComponent(itemsStr)}', '${sale.clientPhone || ''}', ${sale.total || 0})" 
@@ -3194,7 +3198,7 @@
         }
 
         function deleteSellerSale(sellerName, saleId) {
-            if (confirm('¿Estás seguro de que quieres eliminar este registro? (Útil si fue una prueba o error)')) {
+            if (confirm('Â¿EstÃ¡s seguro de que quieres eliminar este registro? (Ãštil si fue una prueba o error)')) {
                 db.ref(`sellerSales/${sellerName}/${saleId}`).remove().then(() => {
                     alert('Registro eliminado de las ventas del vendedor.');
                     fetchSellerSalesStats();
@@ -3206,7 +3210,7 @@
             const checkboxes = document.querySelectorAll('.seller-sale-checkbox:checked');
             if (checkboxes.length === 0) return alert('Selecciona al menos una venta marcando la casilla correspondiente para eliminar.');
 
-            if (confirm(`¿Estás seguro de eliminar ${checkboxes.length} registro(s) seleccionado(s) de los vendedores?`)) {
+            if (confirm(`Â¿EstÃ¡s seguro de eliminar ${checkboxes.length} registro(s) seleccionado(s) de los vendedores?`)) {
                 let updates = {};
                 checkboxes.forEach(cb => {
                     const [seller, id] = cb.value.split('|');
@@ -3225,12 +3229,12 @@
         }
 
         async function sendAdminRenovadaMessage(clientNameEnc, clientPhone, itemsEncoded, isMultiple, expirationDateTS, saleId, sourceNameEnc, sourceType) {
-            if (!clientPhone) return alert('Este cliente no tiene número registrado.');
+            if (!clientPhone) return alert('Este cliente no tiene nÃºmero registrado.');
             const clientName = safeDecode(clientNameEnc);
             const sourceName = safeDecode(sourceNameEnc);
             const itemsStr = decodeURIComponent(itemsEncoded);
 
-            const autoRenew = confirm(`¿Deseas REGISTRAR esta RENOVACIÓN en el sistema ahora?\n\n- Se extenderán 30 días adicionales.\n- Se marcará como PAGADO.\n\n(Si pulsas Cancelar, solo se enviará el mensaje de WhatsApp)`);
+            const autoRenew = confirm(`Â¿Deseas REGISTRAR esta RENOVACIÃ“N en el sistema ahora?\n\n- Se extenderÃ¡n 30 dÃ­as adicionales.\n- Se marcarÃ¡ como PAGADO.\n\n(Si pulsas Cancelar, solo se enviarÃ¡ el mensaje de WhatsApp)`);
 
             if (autoRenew) {
                 try {
@@ -3282,11 +3286,11 @@
 
                     if (Object.keys(updates).length > 0) {
                         await db.ref('/').update(updates);
-                        alert("¡Sistema Actualizado con éxito! Fecha extendida y pago registrado.");
+                        alert("Â¡Sistema Actualizado con Ã©xito! Fecha extendida y pago registrado.");
                         fetchSellerSalesStats();
                         fetchClientSalesHistory();
                     } else {
-                        alert("No se encontró el registro para actualizar en la base de datos.");
+                        alert("No se encontrÃ³ el registro para actualizar en la base de datos.");
                     }
                 } catch (e) {
                     console.error(e);
@@ -3296,7 +3300,7 @@
 
             // Preparar y enviar mensaje
             const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-            let monthText = 'el próximo mes';
+            let monthText = 'el prÃ³ximo mes';
             if (expirationDateTS && expirationDateTS !== 0) {
                 const d = new Date(parseInt(expirationDateTS));
                 monthText = `${d.getDate()} ${months[d.getMonth()]}`;
@@ -3304,10 +3308,10 @@
 
             let msg = '';
             if (isMultiple) {
-                const template = storeConfig.renovadaPluralTemplate || "♦️♦️♦️ ** Tus Pantallas de *{pantallas}* han sido Renovadas* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence {mes}*";
+                const template = storeConfig.renovadaPluralTemplate || "â™¦ï¸â™¦ï¸â™¦ï¸ ** Tus Pantallas de *{pantallas}* han sido Renovadas* con los mismos datos que tenga buen dÃ­a que la disfrute â™¦ï¸â™¦ï¸â™¦ï¸ *vence {mes}*";
                 msg = template.replace(/{cliente}/g, clientName).replace(/{pantallas}/g, itemsStr).replace(/{mes}/g, monthText);
             } else {
-                const template = storeConfig.renovadaSingularTemplate || "♦️♦️♦️ ** Tu Pantalla de *{pantallas}* ha sido Renovada* con los mismos datos que tenga buen día que la disfrute ♦️♦️♦️ *vence {mes}*";
+                const template = storeConfig.renovadaSingularTemplate || "â™¦ï¸â™¦ï¸â™¦ï¸ ** Tu Pantalla de *{pantallas}* ha sido Renovada* con los mismos datos que tenga buen dÃ­a que la disfrute â™¦ï¸â™¦ï¸â™¦ï¸ *vence {mes}*";
                 msg = template.replace(/{cliente}/g, clientName).replace(/{pantallas}/g, itemsStr).replace(/{mes}/g, monthText);
             }
 
@@ -3315,10 +3319,10 @@
             
             // Si el cliente pertenece a un vendedor, el mensaje debe llegar al vendedor y no al cliente
             const sNameOrPhone = sourceName;
-            if (sNameOrPhone && sNameOrPhone !== 'Página Web Oficial' && sNameOrPhone !== 'Admin' && sNameOrPhone !== clientPhone) {
+            if (sNameOrPhone && sNameOrPhone !== 'PÃ¡gina Web Oficial' && sNameOrPhone !== 'Admin' && sNameOrPhone !== clientPhone) {
                 db.ref(`sellerStores/${sNameOrPhone}/whatsapp`).once('value').then(snap => {
                     const sWpp = snap.val();
-                    let sellerMsg = `✅ *Actualización de Renovación - Streaming DPC*\n\nHola *${sNameOrPhone}*, te informamos que la cuenta de tu cliente *${clientName}* (${clientPhone}) ha sido *RENOVADA* exitosamente.\n\n${msg}`;
+                    let sellerMsg = `âœ… *ActualizaciÃ³n de RenovaciÃ³n - Streaming DPC*\n\nHola *${sNameOrPhone}*, te informamos que la cuenta de tu cliente *${clientName}* (${clientPhone}) ha sido *RENOVADA* exitosamente.\n\n${msg}`;
                     if (sWpp) {
                         let sPhone = sWpp.toString().replace(/\D/g, '');
                         if (sPhone.length === 10 && sPhone.startsWith('3')) sPhone = '57' + sPhone;
@@ -3337,7 +3341,7 @@
         window.openManualCRM = function() {
             const saleKey = document.getElementById('edit-client-select-sale').value;
             if (!saleKey || !window.currentClientSales || !window.currentClientSales[saleKey]) {
-                return alert('Por favor selecciona una venta válida primero.');
+                return alert('Por favor selecciona una venta vÃ¡lida primero.');
             }
             
             const sale = window.currentClientSales[saleKey];
@@ -3347,7 +3351,7 @@
             const endDate = sale.expirationDate ? new Date(sale.expirationDate).toLocaleDateString() : 'N/A';
             const pin = document.getElementById('edit-client-pin').value || '';
             const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantalla';
-            const sellerName = sale.sellerName || 'Página Web Oficial';
+            const sellerName = sale.sellerName || 'PÃ¡gina Web Oficial';
             
             const fullItems = sale.items || [];
             
@@ -3383,7 +3387,7 @@
             };
             const modal = document.getElementById('crm-selector-modal');
             const searchInput = document.getElementById('crm-platform-search');
-            if (searchInput) searchInput.value = ''; // Limpiar búsqueda previa
+            if (searchInput) searchInput.value = ''; // Limpiar bÃºsqueda previa
 
             if (!modal) return;
             renderCRMPlatformsList(''); // Renderizar todo inicialmente
@@ -3414,7 +3418,7 @@
 
             keys.forEach(k => {
                 const kLower = k.toLowerCase();
-                // Ver si la clave está mencionada en lo que compró el cliente (ej: "Netflix" en "Combo: Netflix + Disney")
+                // Ver si la clave estÃ¡ mencionada en lo que comprÃ³ el cliente (ej: "Netflix" en "Combo: Netflix + Disney")
                 if (purchasedItemsStr.includes(kLower)) {
                     recommended.push(k);
                 } else {
@@ -3423,7 +3427,7 @@
             });
 
             if (keys.length === 0) {
-                list.innerHTML = `<p style="color:#777; grid-column: 1 / -1; text-align:center; padding:20px;">No se encontraron categorías.</p>`;
+                list.innerHTML = `<p style="color:#777; grid-column: 1 / -1; text-align:center; padding:20px;">No se encontraron categorÃ­as.</p>`;
                 return;
             }
 
@@ -3468,7 +3472,7 @@
                 sendCRMStep1Message(k);
                 btn.style.opacity = '0.5';
                 btn.style.filter = 'grayscale(1)';
-                btn.innerHTML += '<br><small style="color:#2ecc71; font-size:0.7rem;">¡Enviado!</small>';
+                btn.innerHTML += '<br><small style="color:#2ecc71; font-size:0.7rem;">Â¡Enviado!</small>';
                 btn.disabled = true;
             };
 
@@ -3512,14 +3516,14 @@
 
             let targetEmail = _crmTargetClient.email && _crmTargetClient.email.trim() ? _crmTargetClient.email : 'N/A';
             
-            // Buscar email específico para esta plataforma en los items de la venta
+            // Buscar email especÃ­fico para esta plataforma en los items de la venta
             const fullItemsRaw = _crmTargetClient.fullItems || [];
             const fullItems = Array.isArray(fullItemsRaw) ? fullItemsRaw : Object.values(fullItemsRaw || {});
             
             if (fullItems.length > 0) {
                 fullItems.forEach(it => {
                     if (it.specificEmails && Array.isArray(it.specificEmails)) {
-                        // Intentar coincidencia exacta o por inclusión
+                        // Intentar coincidencia exacta o por inclusiÃ³n
                         const match = it.specificEmails.find(se => 
                             se.platform && (
                             se.platform.toLowerCase() === platformName.toLowerCase() || 
@@ -3539,25 +3543,25 @@
                 profile: _crmTargetClient.profile
             };
 
-            let template = storeConfig.msgTemplate1 || "¡Hola {cliente}! Aquí tienes los datos de tu pantalla de {pantalla}:";
+            let template = storeConfig.msgTemplate1 || "Â¡Hola {cliente}! AquÃ­ tienes los datos de tu pantalla de {pantalla}:";
             let mainText = replaceCRMVars(template, dataVars);
             
             let allLocalPhotos = [];
             let extraText = "";
 
-            // Añadir fotos y sus textos
+            // AÃ±adir fotos y sus textos
             if (items.length > 0) {
-                extraText += "\n\n🚀 *DETALLES Y GUÍA:*";
+                extraText += "\n\nðŸš€ *DETALLES Y GUÃA:*";
                 items.forEach((item, index) => {
                     let itemText = replaceCRMVars(item.text, dataVars);
-                    if (itemText) extraText += `\n\n📌 *Paso ${index+1}:* ${itemText}`;
+                    if (itemText) extraText += `\n\nðŸ“Œ *Paso ${index+1}:* ${itemText}`;
                     
                     if (item.photo) {
                         const urls = item.photo.split(/[,,;]/).map(u => u.trim()).filter(u => u);
                         if (storeConfig.useLocalRobotCRM) {
                             urls.forEach(url => allLocalPhotos.push(url));
                         } else {
-                            urls.forEach(url => extraText += `\n🔗 Foto guía: ${url}`);
+                            urls.forEach(url => extraText += `\nðŸ”— Foto guÃ­a: ${url}`);
                         }
                     }
                 });
@@ -3568,10 +3572,10 @@
             let targetWhatsAppStr = phone;
             let isTargetingSeller = false;
 
-            if (sellerName && sellerName !== 'Página Web Oficial' && storeConfig.sellers) {
+            if (sellerName && sellerName !== 'PÃ¡gina Web Oficial' && storeConfig.sellers) {
                 const sellerInfo = storeConfig.sellers.find(s => s.name === sellerName);
                 if (sellerInfo && sellerInfo.whatsapp) {
-                    if (confirm(`📦 Esta venta pertenece al vendedor "${sellerName}".\n\n¿Deseas enviar el CRM al VENDEDOR para que él se lo entregue a su cliente?\n\n- Aceptar (OK) = Enviar al Vendedor\n- Cancelar = Enviar directo al Cliente`)) {
+                    if (confirm(`ðŸ“¦ Esta venta pertenece al vendedor "${sellerName}".\n\nÂ¿Deseas enviar el CRM al VENDEDOR para que Ã©l se lo entregue a su cliente?\n\n- Aceptar (OK) = Enviar al Vendedor\n- Cancelar = Enviar directo al Cliente`)) {
                         targetWhatsAppStr = sellerInfo.whatsapp;
                         isTargetingSeller = true;
                     }
@@ -3579,21 +3583,21 @@
             }
 
             if (storeConfig.useLocalRobotCRM) {
-                // OPCIÓN 2: ENVIAR COMANDO AL ROBOT PROPIO
+                // OPCIÃ“N 2: ENVIAR COMANDO AL ROBOT PROPIO
                 const adminPhone = storeConfig.whatsappNumber || '';
-                if (!adminPhone) return alert('Debes configurar tu número de WhatsApp en la pestaña Datos Generales.');
+                if (!adminPhone) return alert('Debes configurar tu nÃºmero de WhatsApp en la pestaÃ±a Datos Generales.');
                 
                 let cleanAdmin = adminPhone.replace(/\D/g, '');
                 if (cleanAdmin.length === 10 && cleanAdmin.startsWith('3')) cleanAdmin = '57' + cleanAdmin;
 
-                // El robot captará este comando y enviará todo al target
+                // El robot captarÃ¡ este comando y enviarÃ¡ todo al target
                 const command = `CMD_CRM@@@TEL:${targetWhatsAppStr}@@@TX:${fullMsgForClient}@@@IMG:${allLocalPhotos.join(',')}`;
                 
-                if (confirm(`Se enviará una orden a tu Robot Local para enviar las credenciales y fotos ${isTargetingSeller ? 'al VENDEDOR' : 'al CLIENTE'}. ¿Continuar?`)) {
+                if (confirm(`Se enviarÃ¡ una orden a tu Robot Local para enviar las credenciales y fotos ${isTargetingSeller ? 'al VENDEDOR' : 'al CLIENTE'}. Â¿Continuar?`)) {
                     window.open(`https://wa.me/${cleanAdmin}?text=${encodeURIComponent(command)}`, '_blank');
                 }
             } else {
-                // OPCIÓN 1: ENVÍO DIRECTO TRADICIONAL
+                // OPCIÃ“N 1: ENVÃO DIRECTO TRADICIONAL
                 const encodedMsg = encodeURIComponent(fullMsgForClient);
                 let waPhone = targetWhatsAppStr.replace(/\D/g, '');
                 if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
@@ -3617,7 +3621,7 @@
                 } catch(e) {}
             }
 
-            let template = storeConfig.sellerReminderTemplate || "Hola *{vendedor}* 👋\n\nTe recuerdo que la cuenta de tu cliente *{cliente}* (📱 {celular})\n\nCon: {pantallas}\n👉 *FINALIZA PRONTO o YA VENCIÓ* 👈\n\nPor favor contáctalo para gestionar su renovación.\n\nCelular: {celular} y Pin: {pin}\n💰 *Total:* ${total}";
+            let template = storeConfig.sellerReminderTemplate || "Hola *{vendedor}* ðŸ‘‹\n\nTe recuerdo que la cuenta de tu cliente *{cliente}* (ðŸ“± {celular})\n\nCon: {pantallas}\nðŸ‘‰ *FINALIZA PRONTO o YA VENCIÃ“* ðŸ‘ˆ\n\nPor favor contÃ¡ctalo para gestionar su renovaciÃ³n.\n\nCelular: {celular} y Pin: {pin}\nðŸ’° *Total:* ${total}";
             
             let finalMsg = template
                 .replace(/{vendedor}/g, sellerName)
@@ -3635,12 +3639,12 @@
         function redeemSellerBonuses(sellerName, maxAmount) {
             if (maxAmount <= 0) return alert('Este vendedor no tiene saldo activo para canjear en este momento.');
 
-            const p = prompt(`Saldo Activo de ${sellerName}: $${maxAmount.toLocaleString()}\n\n¿Cuánto dinero deseas "CANJEAR" (restar) de su saldo?\nEscribe solo números, sin puntos ni comas.`);
+            const p = prompt(`Saldo Activo de ${sellerName}: $${maxAmount.toLocaleString()}\n\nÂ¿CuÃ¡nto dinero deseas "CANJEAR" (restar) de su saldo?\nEscribe solo nÃºmeros, sin puntos ni comas.`);
             if (!p) return;
 
             const deduct = parseInt(p.trim());
-            if (isNaN(deduct) || deduct <= 0) return alert('Ingresa un valor numérico válido.');
-            if (deduct > maxAmount) return alert('No puedes canjear más dinero del saldo que tiene disponible el vendedor.');
+            if (isNaN(deduct) || deduct <= 0) return alert('Ingresa un valor numÃ©rico vÃ¡lido.');
+            if (deduct > maxAmount) return alert('No puedes canjear mÃ¡s dinero del saldo que tiene disponible el vendedor.');
 
             let sellersRaw = storeConfig.sellers || [];
             storeConfig.sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
@@ -3665,7 +3669,7 @@
             const blocked = storeConfig.blockedClients || [];
 
             if (blocked.length === 0) {
-                listDiv.innerHTML = '<p style="color:#a0a0a0; padding:1rem;">Nadie está bloqueado actualmente.</p>';
+                listDiv.innerHTML = '<p style="color:#a0a0a0; padding:1rem;">Nadie estÃ¡ bloqueado actualmente.</p>';
             }
 
             blocked.forEach((phone, index) => {
@@ -3731,17 +3735,17 @@
                 }
             }
 
-            if (count > 0 && confirm(`¿Subir ${count} clientes a la base de datos?`)) {
+            if (count > 0 && confirm(`Â¿Subir ${count} clientes a la base de datos?`)) {
                 try {
                     await db.ref().update(updates);
-                    alert('¡Clientes importados exitosamente!');
+                    alert('Â¡Clientes importados exitosamente!');
                     document.getElementById('import-clients-csv').value = '';
                 } catch (e) {
                     console.error(e);
                     alert('Error subiendo base de datos.');
                 }
             } else if (count === 0) {
-                alert('No se detectaron filas válidas. Revisa el formato.');
+                alert('No se detectaron filas vÃ¡lidas. Revisa el formato.');
             }
         }
 
@@ -3759,7 +3763,7 @@
 
             const itemsStr = items.map(i => {
                 let formatName = i.name;
-                if (i.category && i.category.startsWith('combos')) formatName = `🎬 * ${i.name}* (Combo Prediseñado)`;
+                if (i.category && i.category.startsWith('combos')) formatName = `ðŸŽ¬ * ${i.name}* (Combo PrediseÃ±ado)`;
                 return formatName;
             }).join(', ') || 'Pantallas';
             const safeClientName = safeDecode(clientObj.name || '').replace(/'/g, '');
@@ -3781,12 +3785,12 @@
                         style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #2ab7ca; background: rgba(42, 183, 202, 0.1); color:#2ab7ca; font-size:0.8rem; min-width: 100px;">
                         <i class="fa-brands fa-whatsapp"></i> Recordar
                     </button>
-                    <button onclick="sendAdminRenovadaMessage('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}', '${encodeURIComponent(sale.sellerName || 'Página Web Oficial')}', 'client')" 
+                    <button onclick="sendAdminRenovadaMessage('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}', '${encodeURIComponent(sale.sellerName || 'PÃ¡gina Web Oficial')}', 'client')" 
                         style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem; min-width: 100px;">
                         <i class="fa-brands fa-whatsapp"></i> Renovada
                     </button>
                     ${storeConfig.crmEnabled !== false ? `
-                    <button onclick="openCRMPlatformSelector('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${startDate}', '${endDate}', '${(allClientProfiles[clientObj.phone] ? allClientProfiles[clientObj.phone].pin : '')}', '${encodeURIComponent(itemsStr)}', '${(sale.email || '').replace(/'/g, "\\'")}', '${(sale.password || '').replace(/'/g, "\\'")}', '${(sale.profile || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${encodeURIComponent(sale.sellerName || 'Página Web Oficial')}')" 
+                    <button onclick="openCRMPlatformSelector('${encodeURIComponent(clientObj.name)}', '${clientObj.phone}', '${startDate}', '${endDate}', '${(allClientProfiles[clientObj.phone] ? allClientProfiles[clientObj.phone].pin : '')}', '${encodeURIComponent(itemsStr)}', '${(sale.email || '').replace(/'/g, "\\'")}', '${(sale.password || '').replace(/'/g, "\\'")}', '${(sale.profile || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${encodeURIComponent(sale.sellerName || 'PÃ¡gina Web Oficial')}')" 
                         style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #9b59b6; background: rgba(155, 89, 182, 0.1); color:#9b59b6; font-size:0.8rem; min-width: 100px;">
                         <i class="fa-solid fa-comment-dots"></i> RESPUESTAS
                     </button>
@@ -3805,7 +3809,7 @@
                         ${new Date(sale.date).toLocaleDateString()}
                     </span>
                     <span style="background:${statusColor}; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold; margin-left: auto;">
-                        ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
+                        ${!isExpired ? `Vence en ${daysLeft} dÃ­as` : 'Vencida'}
                     </span>
                 </div>
                 ${!isExpired ? `
@@ -3817,9 +3821,9 @@
                 </div>
                 ` : ''}
                 <p style="font-size:0.8rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '0.8rem'}; line-height:1.4;">
-                    📺 ${itemsStr}<br>
-                    💰 Valor: ${totalDisp}<br>
-                    📅 Inicio: ${startDate} | ⏳ Fin: ${endDate}
+                    ðŸ“º ${itemsStr}<br>
+                    ðŸ’° Valor: ${totalDisp}<br>
+                    ðŸ“… Inicio: ${startDate} | â³ Fin: ${endDate}
                 </p>
                 ${buttonsHtml}
             `;
@@ -3880,7 +3884,7 @@
                         <div><i class="fa-solid fa-user" style="color:#2ab7ca; font-size:1.5rem"></i></div>
                         <div style="flex:1;">
                             <strong style="color: white; font-size:1.1rem">${safeDecode(c.name)}</strong> <span style="font-size:0.8rem; color:#ccc;">(${c.count} compras)</span><br>
-                            <span style="font-size: 0.8rem; color: #a0a0a0;">📱 ${c.phone} | 📍 ${c.city}</span>
+                            <span style="font-size: 0.8rem; color: #a0a0a0;">ðŸ“± ${c.phone} | ðŸ“ ${c.city}</span>
                         </div>
                         <div class="item-actions">
                             <button class="btn-icon btn-edit" onclick="clickEditClient('${c.phone}')" title="Editar Cliente">
@@ -3952,7 +3956,7 @@
         }
 
         function deleteClientSale(phone, saleId) {
-            if (confirm('¿Estás seguro de que quieres eliminar este registro? (Útil si fue una prueba o error)')) {
+            if (confirm('Â¿EstÃ¡s seguro de que quieres eliminar este registro? (Ãštil si fue una prueba o error)')) {
                 db.ref(`clientSales/${phone}/${saleId}`).remove().then(() => {
                     alert('Registro eliminado del historial del cliente.');
                     fetchClientSalesHistory();
@@ -3965,14 +3969,14 @@
             try {
                 await db.ref(dbPath).update({ isPaid: newStatus });
                 if (newStatus && phoneString) {
-                    if (confirm('¿Deseas enviar el mensaje de Pago Verificado por WhatsApp al cliente/vendedor?')) {
-                        const msg = "¡Hola! Te confirmamos que tu *pago ha sido verificado y registrado exitosamente*. ✅\n\nGracias por tu confianza.";
+                    if (confirm('Â¿Deseas enviar el mensaje de Pago Verificado por WhatsApp al cliente/vendedor?')) {
+                        const msg = "Â¡Hola! Te confirmamos que tu *pago ha sido verificado y registrado exitosamente*. âœ…\n\nGracias por tu confianza.";
                         
                         // NEW LOGIC: If it's a seller's sale, personId is the seller name
-                        if (type === 'seller' && personId !== 'Página Web Oficial' && personId !== 'Admin') {
+                        if (type === 'seller' && personId !== 'PÃ¡gina Web Oficial' && personId !== 'Admin') {
                             db.ref(`sellerStores/${personId}/whatsapp`).once('value').then(snap => {
                                 const sWpp = snap.val();
-                                let sellerMsg = `✅ *Pago Verificado - Streaming DPC*\n\nHola *${personId}*, te confirmamos que el pago de la cuenta de tu cliente (${phoneString}) ha sido *VERIFICADO*.`;
+                                let sellerMsg = `âœ… *Pago Verificado - Streaming DPC*\n\nHola *${personId}*, te confirmamos que el pago de la cuenta de tu cliente (${phoneString}) ha sido *VERIFICADO*.`;
                                 if (sWpp) {
                                     let sPhone = sWpp.toString().replace(/\D/g, '');
                                     if (sPhone.length === 10 && sPhone.startsWith('3')) sPhone = '57' + sPhone;
@@ -4000,7 +4004,7 @@
             const checkboxes = document.querySelectorAll('.client-sale-checkbox:checked');
             if (checkboxes.length === 0) return alert('Selecciona al menos un registro marcando la casilla correspondiente para eliminar.');
 
-            if (confirm(`¿Estás seguro de eliminar ${checkboxes.length} registro(s) seleccionado(s) de los clientes directos?`)) {
+            if (confirm(`Â¿EstÃ¡s seguro de eliminar ${checkboxes.length} registro(s) seleccionado(s) de los clientes directos?`)) {
                 let updates = {};
                 checkboxes.forEach(cb => {
                     const [phone, id] = cb.value.split('|');
@@ -4021,11 +4025,11 @@
         async function sendAdminReminderToDirectClient(clientName, itemsEncoded, clientPhone, saleTotal) {
             const itemsStr = safeDecode(itemsEncoded);
             const cName = safeDecode(clientName);
-            let template = storeConfig.reminderTemplate || "Hola {cliente} 😊 Buen dia\nTU {pantallas} finaliza \n👉 *HOY* 👈\n👉 😱... \n⚠️ Si deseas continuar, realiza el pago y me envías la foto del comprobante🧾 (sin comprobante no cuenta como pago válido) ⚠️";
+            let template = storeConfig.reminderTemplate || "Hola {cliente} ðŸ˜Š Buen dia\nTU {pantallas} finaliza \nðŸ‘‰ *HOY* ðŸ‘ˆ\nðŸ‘‰ ðŸ˜±... \nâš ï¸ Si deseas continuar, realiza el pago y me envÃ­as la foto del comprobanteðŸ§¾ (sin comprobante no cuenta como pago vÃ¡lido) âš ï¸";
             let msg = template.replace(/{cliente}/g, cName).replace(/{pantallas}/g, itemsStr);
 
             if (saleTotal > 0) {
-                msg += `\n\n💰 *Total a Renovar:* $${saleTotal.toLocaleString()}`;
+                msg += `\n\nðŸ’° *Total a Renovar:* $${saleTotal.toLocaleString()}`;
             }
 
             if (storeConfig.paymentInfo) {
@@ -4089,13 +4093,13 @@
 
         async function searchClient() {
             const phone = document.getElementById('search-client-phone').value.replace(/\D/g, '');
-            if (!phone || phone.length < 5) return alert('Ingresa un número de teléfono válido.');
+            if (!phone || phone.length < 5) return alert('Ingresa un nÃºmero de telÃ©fono vÃ¡lido.');
 
             try {
                 const snap = await db.ref(`clientSales/${phone}`).once('value');
                 const sales = snap.val();
                 if (!sales) {
-                    alert('No se encontraron compras en el historial para ese número de teléfono.');
+                    alert('No se encontraron compras en el historial para ese nÃºmero de telÃ©fono.');
                     document.getElementById('client-edit-area').style.display = 'none';
                     return;
                 }
@@ -4166,11 +4170,11 @@
             const saleKey = document.getElementById('edit-client-select-sale').value;
             if (!saleKey || !currentEditingClientPhone) return alert('No hay ninguna venta seleccionada.');
 
-            if (!confirm('¿Estás SEGURO de eliminar esta venta permanentemente de TODAS las listas (cliente y vendedor)? Esta acción no se puede deshacer.')) return;
+            if (!confirm('Â¿EstÃ¡s SEGURO de eliminar esta venta permanentemente de TODAS las listas (cliente y vendedor)? Esta acciÃ³n no se puede deshacer.')) return;
 
             try {
                 const sale = window.currentClientSales[saleKey];
-                const sellerName = sale.sellerName || 'Página Web Oficial';
+                const sellerName = sale.sellerName || 'PÃ¡gina Web Oficial';
                 const updates = {};
 
                 // 1. Eliminar de clientSales
@@ -4197,7 +4201,7 @@
                 }
 
                 await db.ref().update(updates);
-                alert('Venta eliminada con éxito.');
+                alert('Venta eliminada con Ã©xito.');
                 searchClient(); // Recargar el historial del cliente
             } catch (err) {
                 console.error(err);
@@ -4207,218 +4211,99 @@
 
         async function saveClientEdits() {
             if (!currentEditingClientPhone) return;
-            const newName = document.getElementById('edit-client-name').value.trim();
-            const newCity = document.getElementById('edit-client-city').value.trim();
-
-            if (!newName) return alert('El nombre no puede estar vacío.');
-
-            if (!confirm(`¿Actualizar todos los registros de compras para ${currentEditingClientPhone} con este nuevo nombre y ciudad?`)) return;
-
+            const newName = (document.getElementById('edit-client-name').value || '').trim();
+            const newCity = (document.getElementById('edit-client-city').value || '').trim();
+            const updateAllHistory = document.getElementById('edit-client-update-all') ? document.getElementById('edit-client-update-all').checked : true;
+            if (!newName) return; 
+            if (!confirm('¿Actualizar registros?')) return;
             try {
-                // Fetch All Data needed
                 const [snap, sSnap] = await Promise.all([
-                    db.ref(`clientSales/${currentEditingClientPhone}`).once('value'),
-                    db.ref(`sellerSales`).once('value')
+                    db.ref('clientSales/' + currentEditingClientPhone).once('value'),
+                    db.ref('sellerSales').once('value')
                 ]);
-
                 const sales = snap.val();
                 const allSellers = sSnap.val();
-                const updates = {};
-                
+                const globalUpdates = {};
                 if (sales) {
                     Object.keys(sales).forEach(saleKey => {
-                        updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientName`] = newName;
-                        updates[`clientSales/${currentEditingClientPhone}/${saleKey}/clientCity`] = newCity;
-                    });
-                    
-                    if (window.currentEditingSaleKey) {
-                        const startVal = document.getElementById('edit-client-start-date').value;
-                        if (startVal) {
-                            const [sYear, sMo, sDa] = startVal.split('-');
-                            updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/date`] = new Date(sYear, sMo - 1, sDa, 12, 0, 0).getTime();
+                        const isSpecificSale = (saleKey === window.currentEditingSaleKey);
+                        if (updateAllHistory || isSpecificSale) {
+                            globalUpdates['clientSales/' + currentEditingClientPhone + '/' + saleKey + '/clientName'] = newName;
+                            globalUpdates['clientSales/' + currentEditingClientPhone + '/' + saleKey + '/clientCity'] = newCity;
                         }
+                    });
+                    if (window.currentEditingSaleKey && sales[window.currentEditingSaleKey]) {
                         const endVal = document.getElementById('edit-client-end-date').value;
                         const endTime = document.getElementById('edit-client-end-time').value || '23:59';
-                        if (endVal) {
-                            updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/expirationDate`] = new Date(endVal + 'T' + endTime).getTime();
-                        }
-                        
-                        // Recolectar emails del historial
-                        const histEmailsList = document.getElementById('history-emails-list');
-                        if (histEmailsList && histEmailsList.children.length > 0) {
-                            const curSale = window.currentClientSales[window.currentEditingSaleKey];
-                            if (curSale) {
-                                // Soporte para ventas antiguas sin items
-                                let rawItems = [];
-                                if (curSale.items && Array.isArray(curSale.items) && curSale.items.length > 0) {
-                                    rawItems = curSale.items;
-                                } else if (curSale.items && typeof curSale.items === 'object' && Object.keys(curSale.items).length > 0) {
-                                    rawItems = Object.values(curSale.items);
-                                } else {
-                                    rawItems = [{
-                                        id: 'legacy',
-                                        name: 'Compra Antigua',
-                                        category: '',
-                                        specificEmails: []
-                                    }];
-                                }
-                                
-                                let modifiedItems = JSON.parse(JSON.stringify(rawItems));
-
-                                modifiedItems.forEach((item, itemIdx) => {
-                                    const itemEmailGroups = histEmailsList.querySelectorAll(`.history-email-group[data-item-index="${itemIdx}"]`);
-                                    if (itemEmailGroups.length > 0) {
-                                        item.specificEmails = [];
-                                        itemEmailGroups.forEach(group => {
-                                            item.specificEmails.push({
-                                                platform: group.querySelector('.history-platform-input').value.trim(),
-                                                email: group.querySelector('.history-email-input').value.trim()
-                                            });
-                                        });
-                                    }
-                                });
-                                updates[`clientSales/${currentEditingClientPhone}/${window.currentEditingSaleKey}/items`] = modifiedItems;
-                                
-                                // También actualizar en sellerSales
-                                if (allSellers) {
-                                    for (let sName in allSellers) {
-                                        let sMap = allSellers[sName];
-                                        for (let sid in sMap) {
-                                            const ss = sMap[sid];
-                                            if (ss.clientPhone === currentEditingClientPhone && (sid === window.currentEditingSaleKey || ss.date === window.currentEditingOriginalDate)) {
-                                                updates[`sellerSales/${sName}/${sid}/items`] = modifiedItems;
-                                                updates[`sellerSales/${sName}/${sid}/clientName`] = newName;
-                                                updates[`sellerSales/${sName}/${sid}/clientCity`] = newCity;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        if (endVal) globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
+                        const newEmail = document.getElementById('edit-client-email') ? document.getElementById('edit-client-email').value.trim() : null;
+                        if (newEmail !== null) globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/email'] = newEmail;
                     }
                 }
-
-                // Update common fields in sellerSales for all sales of this phone (not just the selected one)
-                if (allSellers) {
-                    for (let sName in allSellers) {
-                        for (let sid in allSellers[sName]) {
-                            if (allSellers[sName][sid].clientPhone === currentEditingClientPhone) {
-                                updates[`sellerSales/${sName}/${sid}/clientName`] = newName;
-                                updates[`sellerSales/${sName}/${sid}/clientCity`] = newCity;
-                            }
-                        }
-                    }
+                if (updateAllHistory) {
+                    globalUpdates['clientProfiles/' + currentEditingClientPhone + '/name'] = newName;
                 }
                 if (allSellers) {
-                    for (let sellerName in allSellers) {
-                        for (let sId in allSellers[sellerName]) {
-                            const sellerSale = allSellers[sellerName][sId];
-                            if (sellerSale.clientPhone === currentEditingClientPhone) {
-                                // Siempre actualizar nombre y ciudad por si acaso
-                                updates[`sellerSales/${sellerName}/${sId}/clientName`] = newName;
-                                updates[`sellerSales/${sellerName}/${sId}/clientCity`] = newCity;
-                                
-                                // Si coincide la fecha original o el ID, es la misma venta: actualizar fechas
-                                if (sId === window.currentEditingSaleKey || sellerSale.date === window.currentEditingOriginalDate) {
-                                    const startVal = document.getElementById('edit-client-start-date').value;
-                                    if (startVal) {
-                                        const [sYear, sMo, sDa] = startVal.split('-');
-                                        updates[`sellerSales/${sellerName}/${sId}/date`] = new Date(sYear, sMo - 1, sDa, 12, 0, 0).getTime();
-                                    }
-                                    const endVal = document.getElementById('edit-client-end-date').value;
-                                    const endTime = document.getElementById('edit-client-end-time').value || '23:59';
-                                    if (endVal) {
-                                        updates[`sellerSales/${sellerName}/${sId}/expirationDate`] = new Date(endVal + 'T' + endTime).getTime();
-                                    }
+                    for (let sn in allSellers) {
+                        for (let sid in allSellers[sn]) {
+                            if (allSellers[sn][sid].clientPhone === currentEditingClientPhone) {
+                                const isSpecificSale = (sid === window.currentEditingSaleKey || allSellers[sn][sid].date === window.currentEditingOriginalDate);
+                                if (updateAllHistory || isSpecificSale) {
+                                    globalUpdates['sellerSales/' + sn + '/' + sid + '/clientName'] = newName;
+                                    globalUpdates['sellerSales/' + sn + '/' + sid + '/clientCity'] = newCity;
+                                }
+                                if (isSpecificSale) {
+                                     const endVal = document.getElementById('edit-client-end-date').value;
+                                     const endTime = document.getElementById('edit-client-end-time').value || '23:59';
+                                     if (endVal) globalUpdates['sellerSales/' + sn + '/' + sid + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
                                 }
                             }
                         }
                     }
                 }
+                if (Object.keys(globalUpdates).length > 0) await db.ref('/').update(globalUpdates);
 
-                if (Object.keys(updates).length > 0) {
-                    await db.ref('/').update(updates);
-                }
-
-                // Update PIN
-                const newPin = document.getElementById('edit-client-pin').value.trim();
-                const newEmail = document.getElementById('edit-client-email') ? document.getElementById('edit-client-email').value.trim() : null;
-                const newPhoneInput = document.getElementById('edit-client-phone-new').value.replace(/\D/g, '');
-                
-                // --- PHONE MIGRATION LOGIC ---
+                const newPhoneInput = (document.getElementById('edit-client-phone-new').value || '').replace(/\D/g, '');
                 if (newPhoneInput && newPhoneInput !== currentEditingClientPhone && newPhoneInput.length >= 5) {
-                    if (confirm(`¿CONFIRMAS cambiar el número ${currentEditingClientPhone} por el NUEVO ${newPhoneInput}? Se moverá todo el historial.`)) {
-                        console.log(`[MIGRATION] Starting migration: ${currentEditingClientPhone} -> ${newPhoneInput}`);
-                        const finalUpdates = {};
-                        
-                        // 1. Move Sales
+                    if (confirm('¿MIGRAR historial?')) {
+                        const migData = {};
                         if (sales) {
-                            // Update name/city in the object itself BEFORE assigning to the parent path in finalUpdates
                             Object.keys(sales).forEach(sk => {
-                                if (sales[sk]) {
-                                    sales[sk].clientName = newName;
-                                    sales[sk].clientCity = newCity;
-                                    sales[sk].clientPhone = newPhoneInput;
-                                }
+                                sales[sk].clientName = newName;
+                                sales[sk].clientCity = newCity;
+                                sales[sk].clientPhone = newPhoneInput;
                             });
-                            finalUpdates[`clientSales/${newPhoneInput}`] = sales;
-                            finalUpdates[`clientSales/${currentEditingClientPhone}`] = null;
+                            migData['clientSales/' + newPhoneInput] = sales;
+                            migData['clientSales/' + currentEditingClientPhone] = null;
                         }
-                        
-                        // 2. Move Profile
-                        const profileSnap = await db.ref(`clientProfiles/${currentEditingClientPhone}`).once('value');
-                        let profileData = profileSnap.val() || {};
-                        if (newPin) profileData.pin = newPin;
-
-                        if (profileSnap.exists() || newPin) {
-                            finalUpdates[`clientProfiles/${newPhoneInput}`] = profileData;
-                            finalUpdates[`clientProfiles/${currentEditingClientPhone}`] = null;
-                        }
-                        
-                        // 3. Update Seller Sales references (These are distinct paths, so no ancestor conflict here)
+                        const pSnap = await db.ref('clientProfiles/' + currentEditingClientPhone).once('value');
+                        migData['clientProfiles/' + newPhoneInput] = pSnap.val() || { name: newName };
+                        migData['clientProfiles/' + currentEditingClientPhone] = null;
                         if (allSellers) {
-                            for (let sn in allSellers) {
-                                for (let sid in allSellers[sn]) {
-                                    if (allSellers[sn][sid].clientPhone === currentEditingClientPhone) {
-                                        finalUpdates[`sellerSales/${sn}/${sid}/clientPhone`] = newPhoneInput;
-                                        finalUpdates[`sellerSales/${sn}/${sid}/clientName`] = newName;
-                                        finalUpdates[`sellerSales/${sn}/${sid}/clientCity`] = newCity;
-                                    }
-                                }
-                            }
+                             for (let sn in allSellers) {
+                                 for (let sid in allSellers[sn]) {
+                                     if (allSellers[sn][sid].clientPhone === currentEditingClientPhone) {
+                                         migData['sellerSales/' + sn + '/' + sid + '/clientPhone'] = newPhoneInput;
+                                         migData['sellerSales/' + sn + '/' + sid + '/clientName'] = newName;
+                                         migData['sellerSales/' + sn + '/' + sid + '/clientCity'] = newCity;
+                                     }
+                                 }
+                             }
                         }
-                        
-                        console.log("[MIGRATION] Applying updates...", Object.keys(finalUpdates).length, "paths modified.");
-                        await db.ref('/').update(finalUpdates);
-                        console.log("[MIGRATION] Success.");
-                        alert('Número de celular actualizado y datos migrados con éxito.');
-                        currentEditingClientPhone = newPhoneInput;
-                        searchClient();
+                        await db.ref('/').update(migData);
+                        alert('Migración Exitosa.');
+                        window.location.reload();
                         return;
                     }
                 }
-                // --- END PHONE MIGRATION ---
-
-                if (newPin) {
-                    await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).set(newPin);
-                } else {
-                    await db.ref(`clientProfiles/${currentEditingClientPhone}/pin`).remove();
-                }
-                
-                // Update email on all sales
-                if (newEmail !== null && sales) {
-                    const emailUpdates = {};
-                    Object.keys(sales).forEach(saleKey => {
-                        emailUpdates[`clientSales/${currentEditingClientPhone}/${saleKey}/email`] = newEmail || null;
-                    });
-                    if (Object.keys(emailUpdates).length > 0) await db.ref('/').update(emailUpdates);
-                }
-
-                alert('Datos de cliente actualizados correctamente en su historial y en registros de vendedores.');
+                const newPin = document.getElementById('edit-client-pin').value.trim();
+                if (newPin) await db.ref('clientProfiles/' + currentEditingClientPhone + '/pin').set(newPin);
+                else await db.ref('clientProfiles/' + currentEditingClientPhone + '/pin').remove();
+                alert('Datos actualizados correctamente.');
                 window.location.reload();
             } catch (err) {
-                console.error("Critical error in saveClientEdits:", err);
-                alert('Error al guardar los cambios: ' + err.message);
+                console.error(err);
+                alert('Error: ' + err.message);
             }
         }
 
@@ -4428,7 +4313,7 @@
 
             const idx = storeConfig.blockedClients.indexOf(currentEditingClientPhone);
             if (idx === -1) {
-                if (confirm('¿Seguro que deseas bloquear este cliente? No podrá renovar ni solicitar más pantallas por su cuenta.')) {
+                if (confirm('Â¿Seguro que deseas bloquear este cliente? No podrÃ¡ renovar ni solicitar mÃ¡s pantallas por su cuenta.')) {
                     storeConfig.blockedClients.push(currentEditingClientPhone);
                 }
             } else {
@@ -4574,14 +4459,14 @@
 
             container.innerHTML = `
                 <h3 style="margin-top:0; color:white; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
-                    <i class="fa-solid fa-robot" style="color:var(--accent-light);"></i> Asistente de Envíos
+                    <i class="fa-solid fa-robot" style="color:var(--accent-light);"></i> Asistente de EnvÃ­os
                 </h3>
-                <p style="font-size:0.85rem; color:#ccc; margin-bottom:1rem;">Tienes <strong>${globalReminderQueue.length}</strong> recordatorios (vencen hoy o mañana).</p>
+                <p style="font-size:0.85rem; color:#ccc; margin-bottom:1rem;">Tienes <strong>${globalReminderQueue.length}</strong> recordatorios (vencen hoy o maÃ±ana).</p>
                 <div style="display:flex; flex-direction:column; gap:0.5rem; max-height: 180px; overflow-y:auto; margin-bottom:1rem; padding-right:5px;">
                     ${globalReminderQueue.map(r => `
                         <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:6px; font-size:0.8rem; border-left: 3px solid ${r.daysLeft === 0 ? '#ff4d4d' : '#f39c12'}">
-                            <strong>${r.name}</strong> ${r.type === 'seller' ? '<span style="color:#a0a0a0; font-size:0.75rem;">(Vía Vendedor)</span>' : ''}<br>
-                            <span style="color:${r.daysLeft === 0 ? '#ff4d4d' : '#f39c12'}"><i class="fa-solid fa-clock"></i> Vence ${r.daysLeft === 0 ? 'HOY' : 'MAÑANA'}</span>
+                            <strong>${r.name}</strong> ${r.type === 'seller' ? '<span style="color:#a0a0a0; font-size:0.75rem;">(VÃ­a Vendedor)</span>' : ''}<br>
+                            <span style="color:${r.daysLeft === 0 ? '#ff4d4d' : '#f39c12'}"><i class="fa-solid fa-clock"></i> Vence ${r.daysLeft === 0 ? 'HOY' : 'MAÃ‘ANA'}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -4604,12 +4489,12 @@
             const r = globalReminderQueue.shift();
             const itemsStr = r.sale.items ? r.sale.items.map(i => {
                 let formatName = i.name;
-                if (i.category && i.category.startsWith('combos')) formatName = `🎬 *${i.name}* (Combo Prediseñado)`;
+                if (i.category && i.category.startsWith('combos')) formatName = `ðŸŽ¬ *${i.name}* (Combo PrediseÃ±ado)`;
                 return formatName;
             }).join(', ') : 'Pantallas';
 
             if (r.daysLeft === 1) { // Tomorrow
-                let templateText = storeConfig.reminderTomorrowTemplate || "Hola {cliente} 😊 Buen dia\nTe avisamos que TU {pantallas} finaliza \n👉 *MAÑANA* 👈\n⚠️ Para evitar la suspensión, por favor realiza el pago con tiempo ⚠️";
+                let templateText = storeConfig.reminderTomorrowTemplate || "Hola {cliente} ðŸ˜Š Buen dia\nTe avisamos que TU {pantallas} finaliza \nðŸ‘‰ *MAÃ‘ANA* ðŸ‘ˆ\nâš ï¸ Para evitar la suspensiÃ³n, por favor realiza el pago con tiempo âš ï¸";
                 let msg = templateText.replace(/{cliente}/g, r.name).replace(/{pantallas}/g, itemsStr);
 
                 if (r.type === 'seller') {
@@ -4624,7 +4509,7 @@
                         } catch(e) {}
                     }
 
-                    let templateSeller = storeConfig.sellerReminderTomorrowTemplate || "Hola *{vendedor}* 👋\n\nTe damos Aviso Previo que la cuenta de tu cliente *{cliente}* (📱 {celular})\n\nCon: {pantallas}\n👉 *FINALIZA MAÑANA* 👈\n\nPor favor contáctalo para gestionar su renovación y evitar cortes.\n\nCelular: {celular} y Pin: {pin}\n💰 *Total:* ${total}";
+                    let templateSeller = storeConfig.sellerReminderTomorrowTemplate || "Hola *{vendedor}* ðŸ‘‹\n\nTe damos Aviso Previo que la cuenta de tu cliente *{cliente}* (ðŸ“± {celular})\n\nCon: {pantallas}\nðŸ‘‰ *FINALIZA MAÃ‘ANA* ðŸ‘ˆ\n\nPor favor contÃ¡ctalo para gestionar su renovaciÃ³n y evitar cortes.\n\nCelular: {celular} y Pin: {pin}\nðŸ’° *Total:* ${total}";
                     
                     let msgSeller = templateSeller
                         .replace(/{vendedor}/g, r.seller)
@@ -4637,7 +4522,7 @@
 
                     window.open(`https://wa.me/?text=${encodeURIComponent(msgSeller)}`, '_blank');
                 } else {
-                    if (r.sale.total > 0) msg += `\n\n💰 *Total a Renovar:* $${r.sale.total.toLocaleString()}`;
+                    if (r.sale.total > 0) msg += `\n\nðŸ’° *Total a Renovar:* $${r.sale.total.toLocaleString()}`;
                     if (storeConfig.paymentInfo) msg += `\n\n*Medios de Pago:*\n${storeConfig.paymentInfo}`;
 
                     let clientPin = "No asignado";
@@ -4668,7 +4553,7 @@
                 showAutoReminderUI();
             } else {
                 dismissAutoReminders();
-                alert('¡Excelente! Has terminado de enviar los recordatorios de hoy.');
+                alert('Â¡Excelente! Has terminado de enviar los recordatorios de hoy.');
             }
         }
 
@@ -4679,7 +4564,7 @@
         }
         function guessPlatforms(productName, screenCount) {
             if (!productName) return [];
-            let clean = productName.replace(/^(combo\s+\d+|trío|dúo|triple|cuádruple|combo)\s*[:\-]\s*/i, '');
+            let clean = productName.replace(/^(combo\s+\d+|trÃ­o|dÃºo|triple|cuÃ¡druple|combo)\s*[:\-]\s*/i, '');
             let parts = clean.split(/\s*[\+\-\|]\s*/).map(s => s.trim()).filter(s => s);
             let result = [];
             for (let i = 0; i < screenCount; i++) {
@@ -4692,13 +4577,13 @@
             const c = (cat || '').toLowerCase().trim();
             const n = (name || '').toLowerCase().trim();
             
-            // Categoría exacta o nombre
+            // CategorÃ­a exacta o nombre
             if (c.includes('combo2') || c.includes('combos2') || (c.includes('combo') && c.includes('2')) || n.includes('duo') || n.includes('combo 2')) return 2;
             if (c.includes('combo3') || c.includes('combos3') || (c.includes('combo') && c.includes('3')) || n.includes('trio') || n.includes('triple') || n.includes('combo 3')) return 3;
             if (c.includes('combo4') || c.includes('combos4') || (c.includes('combo') && c.includes('4')) || n.includes('combo 4')) return 4;
             if (c.includes('combo5') || c.includes('combos5') || (c.includes('combo') && c.includes('5')) || n.includes('combo 5')) return 5;
             
-            // Detección genérica para promociones
+            // DetecciÃ³n genÃ©rica para promociones
             if (c.includes('promo')) {
                 if (n.includes('5')) return 5;
                 if (n.includes('4')) return 4;
@@ -4782,14 +4667,14 @@
             let items = [];
             if (!sale.items || (Array.isArray(sale.items) && sale.items.length === 0) || (typeof sale.items === 'object' && Object.keys(sale.items).length === 0)) {
                 // Modo de compatibilidad para ventas antiguas
-                if (sale.clientName) { // Si es una venta válida antigua
+                if (sale.clientName) { // Si es una venta vÃ¡lida antigua
                     items = [{
                         id: 'legacy',
                         name: sale.items ? 'Pantalla' : 'Compra Antigua', 
                         category: '',
                         specificEmails: []
                     }];
-                    // Intentar deducir del nombre o algún lado, pero generalmente las viejas no tenían items
+                    // Intentar deducir del nombre o algÃºn lado, pero generalmente las viejas no tenÃ­an items
                 } else {
                     container.style.display = 'none';
                     return;
@@ -4864,7 +4749,7 @@
             }
 
             if (storeConfig && storeConfig.sellers) {
-                let sellersHtml = '<option value="Página Web Oficial">Página Web Oficial (Admin)</option>';
+                let sellersHtml = '<option value="PÃ¡gina Web Oficial">PÃ¡gina Web Oficial (Admin)</option>';
                 let sellersRaw = storeConfig.sellers || [];
                 let sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw || {});
                 sellers.forEach(s => sellersHtml += `<option value="${s.name}">${s.name}</option>`);
@@ -4885,14 +4770,14 @@
             const name = document.getElementById('edit-client-name').value.trim() || 'Cliente';
             
             const sellerSelect = document.getElementById('edit-client-add-seller');
-            const sellerNameRaw = sellerSelect ? sellerSelect.value : 'Página Web Oficial';
+            const sellerNameRaw = sellerSelect ? sellerSelect.value : 'PÃ¡gina Web Oficial';
             const sellerNameVal = sellerNameRaw.trim();
             
-            // Un vendedor es cualquier cosa que no sea la Oficial y que esté en la lista de vendedores
+            // Un vendedor es cualquier cosa que no sea la Oficial y que estÃ© en la lista de vendedores
             let sellersRaw = storeConfig.sellers || [];
             const sellersList = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
             const isSellerFound = sellersList.some(s => s.name.trim().toLowerCase() === sellerNameVal.toLowerCase());
-            const isSellerSale = isSellerFound && sellerNameVal.toLowerCase() !== 'página web oficial';
+            const isSellerSale = isSellerFound && sellerNameVal.toLowerCase() !== 'pÃ¡gina web oficial';
             
             console.log("[DEBUG] Seller Detection:", { raw: sellerNameRaw, val: sellerNameVal, isFound: isSellerFound, isSellerSale, sellersListNames: sellersList.map(s => s.name) });
 
@@ -4926,12 +4811,12 @@
                     console.log(`[DEBUG] Price for ${p.name}:`, { isSellerSale, hasSellerPrice, sellerPrice: p.sellerPrice, adminPrice: p.price, chosen: finalPrice });
                     if (individualCount >= 2 && (p.category || '').toLowerCase().includes('individual')) {
                         let disc = 1000;
-                        if (saleData.sellerName !== 'Página Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
-                        else if (saleData.sellerName === 'Página Web Oficial' && storeConfig.discountAmount > 0) disc = storeConfig.discountAmount;
+                        if (saleData.sellerName !== 'PÃ¡gina Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
+                        else if (saleData.sellerName === 'PÃ¡gina Web Oficial' && storeConfig.discountAmount > 0) disc = storeConfig.discountAmount;
                         finalPrice -= disc;
                     }
 
-                    // Recolectar emails específicos para este item
+                    // Recolectar emails especÃ­ficos para este item
                     const itemEmails = [];
                     document.querySelectorAll(`#edit-add-emails-list .manual-email-group[data-prod-id="${p.id}"]`).forEach(group => {
                         itemEmails.push({
@@ -4950,7 +4835,7 @@
                     });
                     saleData.total += finalPrice;
 
-                    // Cálculo de Incentivos (Bonos) SOLO PARA VENDEDORES
+                    // CÃ¡lculo de Incentivos (Bonos) SOLO PARA VENDEDORES
                     if (isSellerSale && (storeConfig.incentiveEnabled == true || storeConfig.incentiveEnabled == 'true')) {
                         let itemBono = 0;
                         let itemBonoNombre = '';
@@ -5007,11 +4892,11 @@
                     let combo2Val = storeConfig.incentiveCombo2;
                     let enabledFlag = storeConfig.incentiveEnabled ? 'ACTIVADO' : 'APAGADO';
                     let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
-                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n⚠️ Atención: Esta venta NO acumuló bono (verifica categorías o marcas en los productos).`) : '';
-                    alert(`¡Acción completada!` + bonusMsg);
+                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\nðŸ’° Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\nâš ï¸ AtenciÃ³n: Esta venta NO acumulÃ³ bono (verifica categorÃ­as o marcas en los productos).`) : '';
+                    alert(`Â¡AcciÃ³n completada!` + bonusMsg);
                     window.location.reload();
                 } catch(e) {
-                    alert('Error añadiendo pantallas: ' + e.message);
+                    alert('Error aÃ±adiendo pantallas: ' + e.message);
                 }
             }
         };
@@ -5027,7 +4912,7 @@
             const selectedOptions = Array.from(selectElem.selectedOptions).map(o => o.value).filter(v => v !== "");
 
             if (!name) return alert('Debes ingresar el nombre del cliente.');
-            if (!phoneStr || phoneStr.length < 5) return alert('Debes ingresar un número válido.');
+            if (!phoneStr || phoneStr.length < 5) return alert('Debes ingresar un nÃºmero vÃ¡lido.');
 
             try {
                 // Register Client Profile first
@@ -5036,13 +4921,13 @@
                 // Variables de incentivos (Uso directo sobre saleData luego)
 
                 const sellerSelect = document.getElementById('manual-client-seller');
-                const sellerNameRaw = sellerSelect ? sellerSelect.value : 'Página Web Oficial';
+                const sellerNameRaw = sellerSelect ? sellerSelect.value : 'PÃ¡gina Web Oficial';
                 const sellerNameVal = sellerNameRaw.trim();
                 
                 let sellersRaw = storeConfig.sellers || [];
                 const sellersList = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
                 const isSellerFound = sellersList.some(s => s.name.trim().toLowerCase() === sellerNameVal.toLowerCase());
-                const isSellerSale = isSellerFound && sellerNameVal.toLowerCase() !== 'página web oficial';
+                const isSellerSale = isSellerFound && sellerNameVal.toLowerCase() !== 'pÃ¡gina web oficial';
                 
                 console.log("[DEBUG] Manual Create Seller Detection:", { raw: sellerNameRaw, val: sellerNameVal, isFound: isSellerFound, isSellerSale, sellersListNames: sellersList.map(s => s.name) });
 
@@ -5078,14 +4963,14 @@
                             console.log(`[DEBUG] Manual Price for ${p.name}:`, { isSellerSale, hasSellerPrice, sellerPrice: p.sellerPrice, adminPrice: p.price, chosen: finalPrice });
                             if (individualCount >= 2 && (p.category || '').toLowerCase().includes('individual')) {
                                 let disc = 1000;
-                                if (saleData.sellerName !== 'Página Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
-                                else if (saleData.sellerName === 'Página Web Oficial' && storeConfig.discountAmount > 0) disc = storeConfig.discountAmount;
+                                if (saleData.sellerName !== 'PÃ¡gina Web Oficial' && storeConfig.sellerDiscountAmount > 0) disc = storeConfig.sellerDiscountAmount;
+                                else if (saleData.sellerName === 'PÃ¡gina Web Oficial' && storeConfig.discountAmount > 0) disc = storeConfig.discountAmount;
                                 
                                 finalPrice -= disc;
                                 console.log(`[DEBUG DISCOUNT] Applied ${disc} discount to ${p.name}. Final: ${finalPrice}`);
                             }
 
-                            // Recolectar emails específicos para este item
+                            // Recolectar emails especÃ­ficos para este item
                             const itemEmails = [];
                             document.querySelectorAll(`#manual-emails-list .manual-email-group[data-prod-id="${p.id}"]`).forEach(group => {
                                 itemEmails.push({
@@ -5104,7 +4989,7 @@
                             });
                             saleData.total += finalPrice;
 
-                            // Cálculo de Incentivos (Bonos) SOLO PARA VENDEDORES
+                            // CÃ¡lculo de Incentivos (Bonos) SOLO PARA VENDEDORES
                             if (isSellerSale && (storeConfig.incentiveEnabled == true || storeConfig.incentiveEnabled == 'true')) {
                                 let itemBono = 0;
                                 let itemBonoNombre = '';
@@ -5154,7 +5039,7 @@
                     });
                 }
 
-                // Guardar como venta inicial si se seleccionó producto, o registro vacío si no
+                // Guardar como venta inicial si se seleccionÃ³ producto, o registro vacÃ­o si no
                 if (saleData.items.length > 0) {
                     await db.ref(`clientSales/${phoneStr}`).push(saleData);
                     await db.ref(`sellerSales/${saleData.sellerName}`).push(saleData);
@@ -5163,10 +5048,10 @@
                     let combo2Val = storeConfig.incentiveCombo2;
                     let enabledFlag = storeConfig.incentiveEnabled ? 'SI' : 'NO';
                     let statusText = saleData.isPaid ? 'PAGADO' : 'PENDIENTE';
-                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\n💰 Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\n⚠️ Atención: Esta venta NO acumuló bono (verifica categorías o marcas en los productos).`) : '';
-                    alert(`¡Cliente '${name}' registrado!` + bonusMsg);
+                    let bonusMsg = isSellerSale ? (saleData.incentiveEarned > 0 ? `\nðŸ’° Bono sumado: $${saleData.incentiveEarned} (${saleData.incentiveDetails.join(', ')})` : `\nâš ï¸ AtenciÃ³n: Esta venta NO acumulÃ³ bono (verifica categorÃ­as o marcas en los productos).`) : '';
+                    alert(`Â¡Cliente '${name}' registrado!` + bonusMsg);
                 } else {
-                    alert(`¡Cliente '${name}' registrado en la DB exitosamente sin compras activas!`);
+                    alert(`Â¡Cliente '${name}' registrado en la DB exitosamente sin compras activas!`);
                 }
 
                 if (pinStr) {

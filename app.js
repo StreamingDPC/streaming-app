@@ -1941,7 +1941,7 @@ window.editClientFromDash = function (saleId, cName, cPhone, cCity) {
     const newCity = prompt('Editar Ciudad del Cliente:', cCity);
     if(newCity === null) return;
     
-    // Update in Firebase sellerSales y clientSales
+    // Update in Firebase sellerSales (Specific Sale)
     let updates = {};
     updates[`sellerSales/${currentSellerName}/${saleId}/clientName`] = newName;
     updates[`sellerSales/${currentSellerName}/${saleId}/clientPhone`] = newPhone;
@@ -1950,28 +1950,34 @@ window.editClientFromDash = function (saleId, cName, cPhone, cCity) {
     let cleanPhoneOld = cPhone ? cPhone.replace(/\D/g, '') : '';
     let cleanPhoneNew = newPhone ? newPhone.replace(/\D/g, '') : '';
 
-    db.ref('/').update(updates).then(() => {
-        alert('Cliente editado correctamente.');
-        renderSellerDashboard();
-        
-        // Sincronizar en clientSales si era posible (opcional)
+    db.ref('/').update(updates).then(async () => {
+        // Sync specific record in clientSales if phone matches
         if (cleanPhoneOld && cleanPhoneOld === cleanPhoneNew) {
-            db.ref(`clientSales/${cleanPhoneOld}`).once('value').then(snap => {
+            try {
+                const snap = await db.ref(`clientSales/${cleanPhoneOld}`).once('value');
                 const cSales = snap.val();
                 if (cSales) {
                     let cUpd = {};
+                    // Find the EXACT matching sale by date to avoid messing up others sharing the same phone
                     Object.keys(cSales).forEach(k => {
+                        // Compare dates (assuming it was retrieved recently)
                         if (cSales[k].clientName === cName) {
                             cUpd[`clientSales/${cleanPhoneOld}/${k}/clientName`] = newName;
-                            cUpd[`clientProfiles/${cleanPhoneOld}/name`] = newName;
+                            cUpd[`clientSales/${cleanPhoneOld}/${k}/clientCity`] = newCity;
+                            // We don't update clientProfiles/name here because that's shared!
                         }
                     });
-                    db.ref('/').update(cUpd).then(() => window.location.reload());
-                } else {
-                    window.location.reload();
+                    if (Object.keys(cUpd).length > 0) await db.ref('/').update(cUpd);
                 }
-            });
+                alert('Cliente editado correctamente.');
+                window.location.reload();
+            } catch(e) { 
+                console.error(e);
+                alert('Editado en dashboard, pero hubo un error sincronizando historial.');
+                window.location.reload();
+            }
         } else {
+            alert('Cliente editado correctamente.');
             window.location.reload();
         }
     });
