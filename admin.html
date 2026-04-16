@@ -851,7 +851,7 @@
                     </div>
                 </div>
 
-                <!-- SUB TAB: GENERAL --><!-- SUB TAB: GENERAL -->
+                <!-- SUB TAB: GENERAL -->
                 <div id="sub-conf-general" class="sub-conf-content" style="display:block;">
                     <div class="form-grid" style="margin-bottom: 2rem; border: 2px solid #f39c12; border-radius: 12px; padding: 1rem; background: rgba(243, 156, 18, 0.05);">
                         <div class="form-col" style="grid-column: 1 / -1;">
@@ -1658,6 +1658,12 @@
                 provider: email.includes('gmail') ? 'gmail' : 'other',
                 createdAt: Date.now()
             }).then(() => {
+                document.getElementById('new-email-addr').value = '';
+                document.getElementById('new-email-pass').value = '';
+                alert('Cuenta vinculada correctamente.');
+            });
+        }
+
         window.uploadEmailsCSV = function() {
             const fileInput = document.getElementById('csv-emails-file');
             if (!fileInput.files || fileInput.files.length === 0) return alert('Selecciona un archivo CSV.');
@@ -1704,11 +1710,11 @@
             };
             reader.readAsText(file);
         }
-                }
-            };
-            reader.readAsText(file);
-        }
 
+        window.editEmailAccount = async function(key) {
+            const snap = await db.ref('emailAccounts/' + key).once('value');
+            const current = snap.val();
+            if(!current) return;
             const newEmail = prompt("Editar Correo:", current.email);
             if (newEmail === null) return;
             
