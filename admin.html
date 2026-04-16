@@ -241,7 +241,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.17 (Fix Encoding)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.18 (Fix Visibility)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.reload()"><i class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
                 <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
@@ -1850,11 +1850,13 @@
             console.error("Firebase listener error:", error);
         });
         function init() {
-            renderAdminList();
-            renderEstrenosList();
-            renderBannersList();
-            renderSellersList();
-            renderBlockedClients();
+            try {
+                console.log("Initializing Admin UI...");
+                renderAdminList();
+                renderEstrenosList();
+                renderBannersList();
+                renderSellersList();
+                renderBlockedClients();
 
             // Llenar config
             document.getElementById('conf-whatsapp').value = storeConfig.whatsappNumber || '';
@@ -1938,15 +1940,15 @@
             if (document.getElementById('conf-incentiveMes')) document.getElementById('conf-incentiveMes').value = storeConfig.incentiveMes || 0;
 
             if (document.getElementById('conf-tabOrder')) {
-                document.getElementById('conf-tabOrder').value = storeConfig.tabOrder ? storeConfig.tabOrder.join(',') : 'individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all';
+                document.getElementById('conf-tabOrder').value = (storeConfig && storeConfig.tabOrder) ? storeConfig.tabOrder.join(',') : 'individual,ventas_extras,combos2,combos3,combos4,combos5,promociones_finde,promociones,all';
             }
-            if (document.getElementById('conf-nequiEnabled')) document.getElementById('conf-nequiEnabled').value = storeConfig.nequiEnabled !== false ? 'true' : 'false';
-            if (document.getElementById('conf-nequiLabel')) document.getElementById('conf-nequiLabel').value = storeConfig.nequiLabel || '';
-            if (document.getElementById('conf-nequiImg')) document.getElementById('conf-nequiImg').value = storeConfig.nequiImg || '';
+            if (document.getElementById('conf-nequiEnabled')) document.getElementById('conf-nequiEnabled').value = (storeConfig && storeConfig.nequiEnabled !== false) ? 'true' : 'false';
+            if (document.getElementById('conf-nequiLabel')) document.getElementById('conf-nequiLabel').value = (storeConfig && storeConfig.nequiLabel) || '';
+            if (document.getElementById('conf-nequiImg')) document.getElementById('conf-nequiImg').value = (storeConfig && storeConfig.nequiImg) || '';
 
-            if (document.getElementById('conf-nuEnabled')) document.getElementById('conf-nuEnabled').value = storeConfig.nuEnabled !== false ? 'true' : 'false';
-            if (document.getElementById('conf-nuLabel')) document.getElementById('conf-nuLabel').value = storeConfig.nuLabel || '';
-            if (document.getElementById('conf-nuImg')) document.getElementById('conf-nuImg').value = storeConfig.nuImg || '';
+            if (document.getElementById('conf-nuEnabled')) document.getElementById('conf-nuEnabled').value = (storeConfig && storeConfig.nuEnabled !== false) ? 'true' : 'false';
+            if (document.getElementById('conf-nuLabel')) document.getElementById('conf-nuLabel').value = (storeConfig && storeConfig.nuLabel) || '';
+            if (document.getElementById('conf-nuImg')) document.getElementById('conf-nuImg').value = (storeConfig && storeConfig.nuImg) || '';
             
             // CRM Messaging config
             if (document.getElementById('conf-msgTemplate1')) document.getElementById('conf-msgTemplate1').value = storeConfig.msgTemplate1 || '';
@@ -1965,6 +1967,9 @@
 
             // Check auto reminders schedule
             setTimeout(checkDailyAutoReminders, 2000); // 2 sec delay to ensure all setups finish
+            } catch (err) {
+                console.error("Critical error during init:", err);
+            }
         }
 
         function switchTab(tabId, btn) {
