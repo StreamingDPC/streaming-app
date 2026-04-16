@@ -1828,6 +1828,8 @@
                 dynamicProducts = Array.isArray(data.products) ? data.products : Object.values(data.products || {});
                 storeConfig = data.storeConfig || storeConfig;
                 window.allClientProfiles = data.clientProfiles || {};
+                window.allClientSalesMap = data.clientSales || {};
+                window.globalSellerSalesDataStore = data.sellerSales || {};
                 
                 console.log("Store Config loaded:", storeConfig);
                 console.log("Sellers in config:", storeConfig.sellers ? storeConfig.sellers.length : 0);
@@ -1842,6 +1844,8 @@
                     renderSellersList();
                     renderBlockedClients();
                     renderManualClientProducts();
+                    renderAllClientsList();
+                    renderSellerSalesStats();
                 }
             } else {
                 console.warn("Snapshot is EMPTY (null)!");
@@ -1966,8 +1970,8 @@
             renderMsgPhotoGallery();
             renderCRMPlatformsConfigList();
 
-            fetchClientSalesHistory();
-            fetchSellerSalesStats();
+            renderAllClientsList();
+            renderSellerSalesStats();
 
             // Check auto reminders schedule
             setTimeout(checkDailyAutoReminders, 2000); // 2 sec delay to ensure all setups finish
@@ -3017,19 +3021,7 @@
 
         let globalSellerSalesDataStore = {};
         function fetchSellerSalesStats() {
-            const statsDiv = document.getElementById('admin-list-sellers-stats');
-            if (statsDiv) statsDiv.innerHTML = '<p style="color:#ccc;">Cargando estadísticas...</p>';
-
-            console.log("Fetching Seller Sales Stats and Profiles...");
-            db.ref('/').once('value').then(snap => {
-                const data = snap.val() || {};
-                globalSellerSalesDataStore = data.sellerSales || {};
-                allClientProfiles = data.clientProfiles || {};
-                console.log("Data received for sellers and profiles.");
-                renderSellerSalesStats();
-            }).catch(err => {
-                console.error("Error fetching seller sales:", err);
-            });
+            renderSellerSalesStats();
         }
 
         function renderSellerSalesStats() {
@@ -3693,16 +3685,7 @@
 
         let allClientProfiles = {};
         function fetchClientSalesHistory() {
-            console.log("Fetching Client Sales History...");
-            db.ref('/').once('value').then(snap => {
-                const data = snap.val() || {};
-                console.log("Client Sales data received:", data.clientSales ? Object.keys(data.clientSales).length : 0, "phones found.");
-                allClientSalesMap = data.clientSales || {};
-                allClientProfiles = data.clientProfiles || {};
-                renderAllClientsList();
-            }).catch(err => {
-                console.error("Error fetching client history:", err);
-            });
+            renderAllClientsList();
         }
 
         function exportClientsCSV() {
