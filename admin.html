@@ -4348,29 +4348,34 @@
                 // --- PHONE MIGRATION LOGIC ---
                 if (newPhoneInput && newPhoneInput !== currentEditingClientPhone && newPhoneInput.length >= 5) {
                     if (confirm(`¿CONFIRMAS cambiar el número ${currentEditingClientPhone} por el NUEVO ${newPhoneInput}? Se moverá todo el historial.`)) {
+                        console.log(`[MIGRATION] Starting migration: ${currentEditingClientPhone} -> ${newPhoneInput}`);
                         const finalUpdates = {};
                         
                         // 1. Move Sales
                         if (sales) {
-                            finalUpdates[`clientSales/${newPhoneInput}`] = sales;
-                            // Update name/city in the new set too
+                            // Update name/city in the object itself BEFORE assigning to the parent path in finalUpdates
                             Object.keys(sales).forEach(sk => {
-                                finalUpdates[`clientSales/${newPhoneInput}/${sk}/clientName`] = newName;
-                                finalUpdates[`clientSales/${newPhoneInput}/${sk}/clientCity`] = newCity;
-                                finalUpdates[`clientSales/${newPhoneInput}/${sk}/clientPhone`] = newPhoneInput;
+                                if (sales[sk]) {
+                                    sales[sk].clientName = newName;
+                                    sales[sk].clientCity = newCity;
+                                    sales[sk].clientPhone = newPhoneInput;
+                                }
                             });
+                            finalUpdates[`clientSales/${newPhoneInput}`] = sales;
                             finalUpdates[`clientSales/${currentEditingClientPhone}`] = null;
                         }
                         
                         // 2. Move Profile
                         const profileSnap = await db.ref(`clientProfiles/${currentEditingClientPhone}`).once('value');
-                        if (profileSnap.exists()) {
-                            finalUpdates[`clientProfiles/${newPhoneInput}`] = profileSnap.val();
+                        let profileData = profileSnap.val() || {};
+                        if (newPin) profileData.pin = newPin;
+
+                        if (profileSnap.exists() || newPin) {
+                            finalUpdates[`clientProfiles/${newPhoneInput}`] = profileData;
                             finalUpdates[`clientProfiles/${currentEditingClientPhone}`] = null;
                         }
-                        if (newPin) finalUpdates[`clientProfiles/${newPhoneInput}/pin`] = newPin;
                         
-                        // 3. Update Seller Sales references
+                        // 3. Update Seller Sales references (These are distinct paths, so no ancestor conflict here)
                         if (allSellers) {
                             for (let sn in allSellers) {
                                 for (let sid in allSellers[sn]) {
@@ -4383,7 +4388,9 @@
                             }
                         }
                         
+                        console.log("[MIGRATION] Applying updates...", Object.keys(finalUpdates).length, "paths modified.");
                         await db.ref('/').update(finalUpdates);
+                        console.log("[MIGRATION] Success.");
                         alert('Número de celular actualizado y datos migrados con éxito.');
                         currentEditingClientPhone = newPhoneInput;
                         searchClient();
@@ -4399,9 +4406,9 @@
                 }
                 
                 // Update email on all sales
-                if (newEmail !== null && snap.val()) {
+                if (newEmail !== null && sales) {
                     const emailUpdates = {};
-                    Object.keys(snap.val()).forEach(saleKey => {
+                    Object.keys(sales).forEach(saleKey => {
                         emailUpdates[`clientSales/${currentEditingClientPhone}/${saleKey}/email`] = newEmail || null;
                     });
                     if (Object.keys(emailUpdates).length > 0) await db.ref('/').update(emailUpdates);
@@ -4410,8 +4417,8 @@
                 alert('Datos de cliente actualizados correctamente en su historial y en registros de vendedores.');
                 window.location.reload();
             } catch (err) {
-                alert('Error conectando a la base de datos');
-                console.error(err);
+                console.error("Critical error in saveClientEdits:", err);
+                alert('Error al guardar los cambios: ' + err.message);
             }
         }
 
