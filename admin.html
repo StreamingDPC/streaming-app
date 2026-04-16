@@ -652,6 +652,10 @@
                             <label>PIN de Acceso (4 dígitos):</label>
                             <input type="text" id="edit-client-pin" placeholder="No asignado aún">
                         </div>
+                        <div class="form-col" style="margin-bottom: 1rem;">
+                            <label><i class="fa-solid fa-envelope"></i> Email / Correo del Cliente:</label>
+                            <input type="email" id="edit-client-email" placeholder="ejemplo@correo.com">
+                        </div>
 
 
                         <div id="history-emails-container" class="form-col" style="grid-column: 1 / -1; display:none; border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-top: 0.5rem;">
@@ -4268,11 +4272,34 @@
 
         async function saveClientEdits() {
             if (!currentEditingClientPhone) return;
+
+            // === LEER TODO EL DOM ANTES DEL CONFIRM Y LOS AWAITS ===
             const newName = (document.getElementById('edit-client-name').value || '').trim();
             const newCity = (document.getElementById('edit-client-city').value || '').trim();
             const updateAllHistory = document.getElementById('edit-client-update-all') ? document.getElementById('edit-client-update-all').checked : true;
-            if (!newName) return; 
-            if (!confirm('�Actualizar registros?')) return;
+            const endVal = document.getElementById('edit-client-end-date').value;
+            const endTime = document.getElementById('edit-client-end-time').value || '23:59';
+            const newPin = document.getElementById('edit-client-pin').value.trim();
+            const newPhoneInput = (document.getElementById('edit-client-phone-new').value || '').replace(/\D/g, '');
+            const newEmail = document.getElementById('edit-client-email') ? document.getElementById('edit-client-email').value.trim() : null;
+
+            // Capturar emails por pantalla del DOM antes del confirm
+            const capturedHistoryEmails = {};
+            document.querySelectorAll('#history-emails-list .history-email-group').forEach(group => {
+                const itemIdx = parseInt(group.dataset.itemIndex) || 0;
+                if (!capturedHistoryEmails[itemIdx]) capturedHistoryEmails[itemIdx] = [];
+                capturedHistoryEmails[itemIdx].push({
+                    platform: (group.querySelector('.history-platform-input') ? group.querySelector('.history-platform-input').value.trim() : ''),
+                    email: (group.querySelector('.history-email-input') ? group.querySelector('.history-email-input').value.trim() : '')
+                });
+            });
+            const hasHistoryEmails = Object.keys(capturedHistoryEmails).length > 0;
+            console.log('[SAVE] Emails capturados del DOM:', JSON.stringify(capturedHistoryEmails));
+            console.log('[SAVE] Email general:', newEmail);
+
+            if (!newName) return;
+            if (!confirm('¿Actualizar registros?')) return;
+
             try {
                 const [snap, sSnap] = await Promise.all([
                     db.ref('clientSales/' + currentEditingClientPhone).once('value'),
@@ -4290,11 +4317,23 @@
                         }
                     });
                     if (window.currentEditingSaleKey && sales[window.currentEditingSaleKey]) {
-                        const endVal = document.getElementById('edit-client-end-date').value;
-                        const endTime = document.getElementById('edit-client-end-time').value || '23:59';
                         if (endVal) globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
-                        const newEmail = document.getElementById('edit-client-email') ? document.getElementById('edit-client-email').value.trim() : null;
                         if (newEmail !== null) globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/email'] = newEmail;
+
+                        // Guardar emails especificos usando valores capturados del DOM
+                        if (hasHistoryEmails) {
+                            const currentSale = sales[window.currentEditingSaleKey];
+                            let itemsRaw = currentSale.items || [];
+                            let itemsArr = Array.isArray(itemsRaw) ? itemsRaw : Object.values(itemsRaw || {});
+                            const updatedItems = itemsArr.map((item, idx) => {
+                                if (capturedHistoryEmails[idx]) {
+                                    return Object.assign({}, item, { specificEmails: capturedHistoryEmails[idx] });
+                                }
+                                return item;
+                            });
+                            globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/items'] = updatedItems;
+                            console.log('[SAVE] updatedItems:', JSON.stringify(updatedItems));
+                        }
                     }
                 }
                 if (updateAllHistory) {
@@ -4310,19 +4349,17 @@
                                     globalUpdates['sellerSales/' + sn + '/' + sid + '/clientCity'] = newCity;
                                 }
                                 if (isSpecificSale) {
-                                     const endVal = document.getElementById('edit-client-end-date').value;
-                                     const endTime = document.getElementById('edit-client-end-time').value || '23:59';
                                      if (endVal) globalUpdates['sellerSales/' + sn + '/' + sid + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
                                 }
                             }
                         }
                     }
                 }
+                console.log('[SAVE] globalUpdates keys:', Object.keys(globalUpdates));
                 if (Object.keys(globalUpdates).length > 0) await db.ref('/').update(globalUpdates);
 
-                const newPhoneInput = (document.getElementById('edit-client-phone-new').value || '').replace(/\D/g, '');
                 if (newPhoneInput && newPhoneInput !== currentEditingClientPhone && newPhoneInput.length >= 5) {
-                    if (confirm('�MIGRAR historial?')) {
+                    if (confirm('¿MIGRAR historial?')) {
                         const migData = {};
                         if (sales) {
                             Object.keys(sales).forEach(sk => {
@@ -4348,22 +4385,20 @@
                              }
                         }
                         await db.ref('/').update(migData);
-                        alert('Migraci�n Exitosa.');
+                        alert('Migración Exitosa.');
                         window.location.reload();
                         return;
                     }
                 }
-                const newPin = document.getElementById('edit-client-pin').value.trim();
                 if (newPin) await db.ref('clientProfiles/' + currentEditingClientPhone + '/pin').set(newPin);
                 else await db.ref('clientProfiles/' + currentEditingClientPhone + '/pin').remove();
                 alert('Datos actualizados correctamente.');
-                window.location.reload();
+                searchClient();
             } catch (err) {
                 console.error(err);
                 alert('Error: ' + err.message);
             }
         }
-
         function toggleBlockClient() {
             if (!currentEditingClientPhone) return;
             if (!storeConfig.blockedClients) storeConfig.blockedClients = [];
