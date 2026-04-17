@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -4347,6 +4347,8 @@
                                 if (updateAllHistory || isSpecificSale) {
                                     globalUpdates['sellerSales/' + sn + '/' + sid + '/clientName'] = newName;
                                     globalUpdates['sellerSales/' + sn + '/' + sid + '/clientCity'] = newCity;
+                                    // FIX: También actualizar el email en sellerSales para que el vendedor lo vea reflejado
+                                    if (newEmail !== null) globalUpdates['sellerSales/' + sn + '/' + sid + '/email'] = newEmail;
                                 }
                                 if (isSpecificSale) {
                                      if (endVal) globalUpdates['sellerSales/' + sn + '/' + sid + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();

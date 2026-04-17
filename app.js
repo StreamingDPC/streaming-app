@@ -904,6 +904,11 @@ function setupEventListeners() {
     if (closeSellerDashBtn) {
         closeSellerDashBtn.addEventListener('click', () => {
             sellerDashboardModal.style.display = 'none';
+            // Desregistrar listener en tiempo real al cerrar el panel
+            if (_sellerDashboardRef && _sellerDashboardListener) {
+                _sellerDashboardRef.off('value', _sellerDashboardListener);
+                _sellerDashboardListener = null;
+            }
         });
     }
 
@@ -916,6 +921,11 @@ function setupEventListeners() {
     if (logoutSellerBtn) {
         logoutSellerBtn.addEventListener('click', () => {
             if (confirm(`¿Deseas cerrar la sesión del vendedor "${currentSellerName}" y volver a los precios de cliente regular?`)) {
+                // Desregistrar listener al salir
+                if (_sellerDashboardRef && _sellerDashboardListener) {
+                    _sellerDashboardRef.off('value', _sellerDashboardListener);
+                    _sellerDashboardListener = null;
+                }
                 localStorage.removeItem('isSellerMode');
                 localStorage.removeItem('sellerName');
                 window.location.reload();
@@ -1141,7 +1151,14 @@ function setupEventListeners() {
         if (e.target === cartModal) cartModal.style.display = 'none';
         if (e.target === codeModal) codeModal.style.display = 'none';
         if (e.target === sellerModal) sellerModal.style.display = 'none';
-        if (sellerDashboardModal && e.target === sellerDashboardModal) sellerDashboardModal.style.display = 'none';
+        if (sellerDashboardModal && e.target === sellerDashboardModal) {
+            sellerDashboardModal.style.display = 'none';
+            // Desregistrar listener en tiempo real al cerrar el panel
+            if (_sellerDashboardRef && _sellerDashboardListener) {
+                _sellerDashboardRef.off('value', _sellerDashboardListener);
+                _sellerDashboardListener = null;
+            }
+        }
         if (reminderEditorModal && e.target === reminderEditorModal) reminderEditorModal.style.display = 'none';
         if (sellerStoreModal && e.target === sellerStoreModal) sellerStoreModal.style.display = 'none';
         if (clientLoginModal && e.target === clientLoginModal) clientLoginModal.style.display = 'none';
@@ -1609,11 +1626,23 @@ function setupEventListeners() {
     });
 }
 
+// Almacena el listener activo para poder desregistrarlo cuando sea necesario
+let _sellerDashboardListener = null;
+let _sellerDashboardRef = null;
+
 function renderSellerDashboard() {
     if (!sellerSalesList) return;
     sellerSalesList.innerHTML = '<p style="text-align:center; color:#ccc;">Cargando tus ventas...</p>';
 
-    db.ref(`sellerSales/${currentSellerName}`).once('value').then(snap => {
+    // Desregistrar listener previo si existe (evitar duplicados)
+    if (_sellerDashboardRef && _sellerDashboardListener) {
+        _sellerDashboardRef.off('value', _sellerDashboardListener);
+    }
+
+    _sellerDashboardRef = db.ref(`sellerSales/${currentSellerName}`);
+
+    // Usar .on('value') para escuchar cambios en tiempo real
+    _sellerDashboardListener = _sellerDashboardRef.on('value', snap => {
         const sales = snap.val();
         sellerSalesList.innerHTML = '';
         let salesArray = [];
