@@ -4302,6 +4302,8 @@
 
             // Capturar emails por pantalla del DOM antes del confirm
             const capturedHistoryEmails = {};
+            const capturedHistoryAliases = {};
+            
             document.querySelectorAll('#history-emails-list .history-email-group').forEach(group => {
                 const itemIdx = parseInt(group.dataset.itemIndex) || 0;
                 if (!capturedHistoryEmails[itemIdx]) capturedHistoryEmails[itemIdx] = [];
@@ -4309,6 +4311,11 @@
                     platform: (group.querySelector('.history-platform-input') ? group.querySelector('.history-platform-input').value.trim() : ''),
                     email: (group.querySelector('.history-email-input') ? group.querySelector('.history-email-input').value.trim() : '')
                 });
+            });
+            
+            document.querySelectorAll('#history-emails-list .history-alias-input').forEach(input => {
+                const itemIdx = parseInt(input.dataset.itemIndex) || 0;
+                capturedHistoryAliases[itemIdx] = input.value.trim();
             });
             const hasHistoryEmails = Object.keys(capturedHistoryEmails).length > 0;
             console.log('[SAVE] Emails capturados del DOM:', JSON.stringify(capturedHistoryEmails));
@@ -4343,10 +4350,14 @@
                             let itemsRaw = currentSale.items || [];
                             let itemsArr = Array.isArray(itemsRaw) ? itemsRaw : Object.values(itemsRaw || {});
                             const updatedItems = itemsArr.map((item, idx) => {
+                                let newItem = Object.assign({}, item);
                                 if (capturedHistoryEmails[idx]) {
-                                    return Object.assign({}, item, { specificEmails: capturedHistoryEmails[idx] });
+                                    newItem.specificEmails = capturedHistoryEmails[idx];
                                 }
-                                return item;
+                                if (capturedHistoryAliases[idx] !== undefined) {
+                                    newItem.customName = capturedHistoryAliases[idx] || null;
+                                }
+                                return newItem;
                             });
                             globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/items'] = updatedItems;
                             console.log('[SAVE] updatedItems:', JSON.stringify(updatedItems));
@@ -4846,23 +4857,41 @@
             items.forEach((item, itemIdx) => {
                 const screenCount = getScreenCount(item.category, item.name);
                 const guesses = guessPlatforms(item.name, screenCount);
-
+                
+                const productWrapper = document.createElement('div');
+                productWrapper.style = 'background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; margin-bottom: 15px;';
+                
+                let screensHTML = '';
                 for (let i = 0; i < screenCount; i++) {
                     const specific = (item.specificEmails && item.specificEmails[i]) ? item.specificEmails[i] : { platform: guesses[i] || item.name, email: '' };
-                    const group = document.createElement('div');
-                    group.className = 'history-email-group';
-                    group.dataset.itemIndex = itemIdx;
-                    group.style = 'display:grid; grid-template-columns: 1fr 2fr; gap:10px; align-items:center; background:rgba(255,150,0,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);';
-                    group.innerHTML = `
-                        <div>
-                            <input type="text" class="history-platform-input" placeholder="Plataforma" value="${specific.platform || guesses[i] || item.name}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
-                        </div>
-                        <div>
-                            <input type="email" class="history-email-input" placeholder="Email / Usuario" value="${specific.email || ''}" style="padding:5px; font-size:0.8rem; border-radius:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
+                    screensHTML += `
+                        <div class="history-email-group" data-item-index="${itemIdx}" style="display:grid; grid-template-columns: 1fr 2fr; gap:10px; align-items:center; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); margin-top: 10px;">
+                            <div>
+                                <label style="font-size:0.75rem; color:#aaa; margin-bottom:3px; display:block;">Plataforma</label>
+                                <input type="text" class="history-platform-input" placeholder="Plataforma" value="${specific.platform || guesses[i] || item.name}" style="padding:6px; font-size:0.85rem; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#aaa; margin-bottom:3px; display:block;">Email / Usuario</label>
+                                <input type="email" class="history-email-input" placeholder="Email / Usuario" value="${specific.email || ''}" style="padding:6px; font-size:0.85rem; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; width:100%;">
+                            </div>
                         </div>
                     `;
-                    list.appendChild(group);
                 }
+
+                productWrapper.innerHTML = `
+                    <div style="margin-bottom: 12px;">
+                        <label style="color: #4cd137; font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 6px;"><i class="fa-solid fa-box-open"></i> Producto: ${item.name}</label>
+                        <div style="background: rgba(243, 156, 18, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(243, 156, 18, 0.2);">
+                            <label style="color: #f39c12; font-weight: bold; font-size: 0.8rem; display: block; margin-bottom: 5px;">NOMBRE / ALIAS (EJ: PARA JUAN PÉREZ):</label>
+                            <input type="text" class="history-alias-input" data-item-index="${itemIdx}" placeholder="Escribe aquí el alias..." value="${item.customName || ''}" style="padding:10px; font-size:1rem; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid #f39c12; color:white; width:100%;">
+                        </div>
+                    </div>
+                    <div class="screens-container">
+                        <label style="color: #a0a0a0; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Configuración de Pantallas:</label>
+                        ${screensHTML}
+                    </div>
+                `;
+                list.appendChild(productWrapper);
             });
         };
 
