@@ -818,6 +818,30 @@
                     <h4 style="margin-top:0;"><i class="fa-solid fa-clock-rotate-left"></i> Histórico Mensual (Últimos 6 meses)</h4>
                     <canvas id="stats-history-chart" style="max-height: 250px;"></canvas>
                 </div>
+
+                <!-- AUDITORIA DE TRANSACCIONES -->
+                <div class="admin-form" style="margin-top:20px; padding:1.5rem; background: rgba(255,77,77,0.03); border: 1px solid rgba(255,77,77,0.15);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+                        <h4 style="margin:0; color:#f39c12;"><i class="fa-solid fa-magnifying-glass-chart"></i> Auditoría de Transacciones (Anti-Duplicados)</h4>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <input type="text" id="audit-search" placeholder="🔍 Buscar cliente..." oninput="renderAuditoria()" style="padding:6px 10px; border-radius:8px; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); color:white; font-size:0.85rem;">
+                            <select id="audit-source-filter" onchange="renderAuditoria()" style="padding:6px 10px; border-radius:8px; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); color:white; font-size:0.85rem;">
+                                <option value="all">Todas las fuentes</option>
+                                <option value="clientSales">Solo clientSales</option>
+                                <option value="sellerSales">Solo sellerSales</option>
+                                <option value="duplicates">Solo Duplicados</option>
+                            </select>
+                            <button onclick="renderAuditoria()" class="save-btn" style="margin:0; width:auto; padding:6px 14px; font-size:0.85rem; background:#f39c12;"><i class="fa-solid fa-rotate"></i> Refrescar</button>
+                        </div>
+                    </div>
+                    <p style="font-size:0.8rem; color:#f39c12; margin-bottom:1rem; background:rgba(243,156,18,0.08); padding:8px 12px; border-radius:8px; border-left:3px solid #f39c12;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <strong>Nota:</strong> Cada venta se guarda en <code>clientSales</code> (indexado por celular) <strong>y</strong> en <code>sellerSales</code> (indexado por vendedor). Las estadísticas solo cuentan <code>clientSales</code> para evitar doble conteo. Esta tabla te muestra AMBAS fuentes para que identifiques registros extra. Los marcados en <span style="color:#ff4d4d;">rojo</span> son posibles duplicados (misma fecha + mismo teléfono).
+                    </p>
+                    <div id="audit-summary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:1rem;"></div>
+                    <div id="audit-list" style="max-height:500px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+                        <p style="color:#777; text-align:center;">Haz clic en “Refrescar” o abre esta sección para cargar los datos.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -3393,6 +3417,154 @@
                     plugins: { legend: { display: false } }
                 }
             });
+        };
+
+        // =====================================================
+        // AUDITORÍA DE TRANSACCIONES (Anti-duplicados)
+        // =====================================================
+        window.renderAuditoria = function() {
+            const filterMonth = parseInt(document.getElementById('stats-month-filter').value);
+            const filterYear  = parseInt(document.getElementById('stats-year-filter').value);
+            const searchQ     = (document.getElementById('audit-search')?.value || '').toLowerCase();
+            const sourceFilter = document.getElementById('audit-source-filter')?.value || 'all';
+
+            const listEl    = document.getElementById('audit-list');
+            const summaryEl = document.getElementById('audit-summary');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#aaa; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</p>';
+
+            // Recolectar todos los registros
+            const allRecords = [];
+
+            // Desde clientSales
+            Object.keys(window.allClientSalesMap || {}).forEach(phone => {
+                const sales = window.allClientSalesMap[phone] || {};
+                Object.keys(sales).forEach(saleId => {
+                    const s = sales[saleId];
+                    const sDate = new Date(s.date);
+                    if (sDate.getMonth() === filterMonth && sDate.getFullYear() === filterYear) {
+                        allRecords.push({ source: 'clientSales', sourceId: phone, saleId, data: s, dateMs: s.date });
+                    }
+                });
+            });
+
+            // Desde sellerSales
+            Object.keys(window.globalSellerSalesDataStore || {}).forEach(seller => {
+                const sales = window.globalSellerSalesDataStore[seller] || {};
+                Object.keys(sales).forEach(saleId => {
+                    const s = sales[saleId];
+                    const sDate = new Date(s.date);
+                    if (sDate.getMonth() === filterMonth && sDate.getFullYear() === filterYear) {
+                        allRecords.push({ source: 'sellerSales', sourceId: seller, saleId, data: s, dateMs: s.date });
+                    }
+                });
+            });
+
+            // Detectar duplicados: misma fecha (ms) + mismo teléfono
+            const dupSignatures = {};
+            allRecords.forEach(r => {
+                const sig = `${r.dateMs}_${(r.data.clientPhone || '').replace(/\D/g,'')}`;
+                if (!dupSignatures[sig]) dupSignatures[sig] = [];
+                dupSignatures[sig].push(r);
+            });
+
+            // Marcar duplicados
+            allRecords.forEach(r => {
+                const sig = `${r.dateMs}_${(r.data.clientPhone || '').replace(/\D/g,'')}`;
+                r.isDuplicate = dupSignatures[sig].length > 1;
+                r.dupGroup    = dupSignatures[sig];
+            });
+
+            // Filtrar
+            let filtered = allRecords;
+            if (sourceFilter === 'clientSales')  filtered = filtered.filter(r => r.source === 'clientSales');
+            if (sourceFilter === 'sellerSales')   filtered = filtered.filter(r => r.source === 'sellerSales');
+            if (sourceFilter === 'duplicates')    filtered = filtered.filter(r => r.isDuplicate);
+            if (searchQ) filtered = filtered.filter(r =>
+                ((r.data.clientName || '') + ' ' + (r.data.clientPhone || '') + ' ' + r.sourceId).toLowerCase().includes(searchQ)
+            );
+
+            // Ordenar por fecha desc
+            filtered.sort((a,b) => b.dateMs - a.dateMs);
+
+            // Resumen 
+            const totalClient  = allRecords.filter(r => r.source === 'clientSales').length;
+            const totalSeller  = allRecords.filter(r => r.source === 'sellerSales').length;
+            const totalDups    = allRecords.filter(r => r.isDuplicate).length;
+            const sumClient    = allRecords.filter(r => r.source === 'clientSales').reduce((a,r) => a + (r.data.total||0), 0);
+            const sumSeller    = allRecords.filter(r => r.source === 'sellerSales').reduce((a,r) => a + (r.data.total||0), 0);
+            summaryEl.innerHTML = `
+                <div style="background:rgba(76,209,55,0.1); border:1px solid rgba(76,209,55,0.3); padding:12px; border-radius:10px; text-align:center;">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">clientSales (Lo que cuenta)</p>
+                    <h3 style="margin:4px 0 0; color:#4cd137;">${totalClient} reg. — $${sumClient.toLocaleString()}</h3>
+                </div>
+                <div style="background:rgba(52,152,219,0.1); border:1px solid rgba(52,152,219,0.3); padding:12px; border-radius:10px; text-align:center;">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">sellerSales (Referencia)</p>
+                    <h3 style="margin:4px 0 0; color:#3498db;">${totalSeller} reg. — $${sumSeller.toLocaleString()}</h3>
+                </div>
+                <div style="background:rgba(255,77,77,0.1); border:1px solid rgba(255,77,77,0.3); padding:12px; border-radius:10px; text-align:center;">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">Posibles Duplicados</p>
+                    <h3 style="margin:4px 0 0; color:#ff4d4d;">${totalDups} registros</h3>
+                </div>
+                <div style="background:rgba(243,156,18,0.1); border:1px solid rgba(243,156,18,0.3); padding:12px; border-radius:10px; text-align:center;">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">Diferencia (Excedente)</p>
+                    <h3 style="margin:4px 0 0; color:#f39c12;">$${(sumSeller - sumClient).toLocaleString()}</h3>
+                </div>
+            `;
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<p style="color:#777; text-align:center; padding:2rem;">No se encontraron registros con ese filtro.</p>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            filtered.forEach(r => {
+                const s = r.data;
+                const isDup = r.isDuplicate;
+                const d = new Date(r.dateMs);
+                const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+                const itemsStr = (s.items||[]).map(i=>i.name||'?').join(', ') || 'Sin detalles';
+                const sourceColor  = r.source === 'clientSales' ? '#4cd137' : '#3498db';
+                const sourceLabel  = r.source === 'clientSales' ? '👤 clientSales' : '💼 sellerSales';
+                const borderColor  = isDup ? 'rgba(255,77,77,0.5)' : 'rgba(255,255,255,0.05)';
+                const bgColor      = isDup ? 'rgba(255,77,77,0.06)' : 'rgba(255,255,255,0.02)';
+
+                const row = document.createElement('div');
+                row.style.cssText = `background:${bgColor}; border:1px solid ${borderColor}; border-radius:10px; padding:10px 14px; font-size:0.82rem; display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center;`;
+                row.innerHTML = `
+                    <div>
+                        ${isDup ? '<span style="color:#ff4d4d; font-size:0.75rem; font-weight:bold; margin-right:6px;"><i class="fa-solid fa-triangle-exclamation"></i> POSIBLE DUPLICADO</span>' : ''}
+                        <span style="background:${sourceColor}; color:black; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold;">${sourceLabel}</span>
+                        <span style="color:#aaa; font-size:0.75rem; margin-left:8px;">${r.sourceId}</span><br>
+                        <strong style="color:white;">${s.clientName || 'Sin nombre'}</strong>
+                        <span style="color:#aaa;"> | 📱 ${s.clientPhone || 'Sin teléfono'}</span>
+                        <span style="color:#aaa;"> | 📅 ${dateStr}</span><br>
+                        <span style="color:var(--text-primary); font-size:0.78rem;">📦 ${itemsStr}</span>
+                        <span style="margin-left:10px; color:#4cd137; font-weight:bold;">$${(s.total||0).toLocaleString()}</span>
+                        ${s.isPaid === false ? '<span style="color:#ff4d4d; font-size:0.75rem; margin-left:8px;">[NO PAGADO]</span>' : ''}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                        <button onclick="auditDeleteRecord('${r.source}','${r.sourceId}','${r.saleId}')" 
+                            style="padding:5px 10px; border-radius:6px; border:none; background:#ff4d4d; color:white; cursor:pointer; font-size:0.75rem; font-weight:bold;">
+                            <i class="fa-solid fa-trash"></i> Eliminar
+                        </button>
+                        <span style="font-size:0.7rem; color:#555; word-break:break-all; max-width:120px; text-align:right;">${r.saleId}</span>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+        };
+
+        window.auditDeleteRecord = async function(source, sourceId, saleId) {
+            if (!confirm(`¿Seguro que deseas eliminar este registro de ${source}/${sourceId}?`)) return;
+            try {
+                await db.ref(`${source}/${sourceId}/${saleId}`).remove();
+                alert('✅ Registro eliminado correctamente.');
+                renderAuditoria();
+                renderStats();
+            } catch(e) {
+                alert('Error al eliminar: ' + e.message);
+            }
         };
 
         window.downloadStatsCSV = function() {
