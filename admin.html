@@ -3487,21 +3487,33 @@
             const sumClient    = allRecords.filter(r => r.source === 'clientSales').reduce((a,r) => a + (r.data.total||0), 0);
             const sumSeller    = allRecords.filter(r => r.source === 'sellerSales').reduce((a,r) => a + (r.data.total||0), 0);
             summaryEl.innerHTML = `
-                <div style="background:rgba(76,209,55,0.1); border:1px solid rgba(76,209,55,0.3); padding:12px; border-radius:10px; text-align:center;">
-                    <p style="margin:0; font-size:0.75rem; color:#aaa;">clientSales (Lo que cuenta)</p>
+                <div onclick="document.getElementById('audit-source-filter').value='clientSales'; renderAuditoria();"
+                    style="background:rgba(76,209,55,0.1); border:1px solid rgba(76,209,55,0.3); padding:12px; border-radius:10px; text-align:center; cursor:pointer; transition:all 0.2s;" 
+                    onmouseover="this.style.background='rgba(76,209,55,0.2)'" onmouseout="this.style.background='rgba(76,209,55,0.1)'">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">👤 clientSales (Lo que cuenta)</p>
                     <h3 style="margin:4px 0 0; color:#4cd137;">${totalClient} reg. — $${sumClient.toLocaleString()}</h3>
+                    <p style="margin:4px 0 0; font-size:0.7rem; color:#4cd137; opacity:0.7;">🔍 Clic para filtrar</p>
                 </div>
-                <div style="background:rgba(52,152,219,0.1); border:1px solid rgba(52,152,219,0.3); padding:12px; border-radius:10px; text-align:center;">
-                    <p style="margin:0; font-size:0.75rem; color:#aaa;">sellerSales (Referencia)</p>
+                <div onclick="document.getElementById('audit-source-filter').value='sellerSales'; renderAuditoria();"
+                    style="background:rgba(52,152,219,0.1); border:1px solid rgba(52,152,219,0.3); padding:12px; border-radius:10px; text-align:center; cursor:pointer; transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">💼 sellerSales (Referencia)</p>
                     <h3 style="margin:4px 0 0; color:#3498db;">${totalSeller} reg. — $${sumSeller.toLocaleString()}</h3>
+                    <p style="margin:4px 0 0; font-size:0.7rem; color:#3498db; opacity:0.7;">🔍 Clic para filtrar</p>
                 </div>
-                <div style="background:rgba(255,77,77,0.1); border:1px solid rgba(255,77,77,0.3); padding:12px; border-radius:10px; text-align:center;">
-                    <p style="margin:0; font-size:0.75rem; color:#aaa;">Posibles Duplicados</p>
+                <div onclick="document.getElementById('audit-source-filter').value='duplicates'; renderAuditoria();"
+                    style="background:rgba(255,77,77,${totalDups > 0 ? '0.15' : '0.05'}); border:${totalDups > 0 ? '2px' : '1px'} solid rgba(255,77,77,${totalDups > 0 ? '0.6' : '0.3'}); padding:12px; border-radius:10px; text-align:center; cursor:pointer; transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(255,77,77,0.25)'" onmouseout="this.style.background='rgba(255,77,77,${totalDups > 0 ? '0.15' : '0.05'})'">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">⚠️ Posibles Duplicados</p>
                     <h3 style="margin:4px 0 0; color:#ff4d4d;">${totalDups} registros</h3>
+                    <p style="margin:4px 0 0; font-size:0.7rem; color:#ff4d4d; opacity:0.8;">${totalDups > 0 ? '🔍 Clic para ver cuáles son' : '✅ Sin duplicados'}</p>
                 </div>
-                <div style="background:rgba(243,156,18,0.1); border:1px solid rgba(243,156,18,0.3); padding:12px; border-radius:10px; text-align:center;">
-                    <p style="margin:0; font-size:0.75rem; color:#aaa;">Diferencia (Excedente)</p>
-                    <h3 style="margin:4px 0 0; color:#f39c12;">$${(sumSeller - sumClient).toLocaleString()}</h3>
+                <div onclick="document.getElementById('audit-source-filter').value='all'; renderAuditoria();"
+                    style="background:rgba(243,156,18,0.1); border:1px solid rgba(243,156,18,0.3); padding:12px; border-radius:10px; text-align:center; cursor:pointer; transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(243,156,18,0.2)'" onmouseout="this.style.background='rgba(243,156,18,0.1)'">
+                    <p style="margin:0; font-size:0.75rem; color:#aaa;">📊 Total Registros</p>
+                    <h3 style="margin:4px 0 0; color:#f39c12;">${allRecords.length} en total</h3>
+                    <p style="margin:4px 0 0; font-size:0.7rem; color:#f39c12; opacity:0.7;">🔍 Ver todos</p>
                 </div>
             `;
 
