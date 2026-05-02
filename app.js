@@ -1802,13 +1802,15 @@ function renderSellerSaleCard(sale, isExpired, container) {
     const itemsStr = sale.items ? sale.items.map(i => i.name).join(', ') : 'Pantallas';
 
     let buttonsHtml = '';
+    const canRenew = !isExpired && daysLeft <= 3; // Solo mostrar Renovar los últimos 3 días
     if (!isExpired) {
         buttonsHtml = `
             <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+                ${canRenew ? `
                 <button onclick="renewFromDash('${safeDecode(sale.clientName)}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                     <i class="fa-solid fa-redo"></i> Renovar
-                </button>
+                </button>` : ''}
                 <button onclick="sendReminderFromDash('${sale.id}', '${safeClientName}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
                     <i class="fa-brands fa-whatsapp"></i> Recordar
@@ -1828,8 +1830,8 @@ function renderSellerSaleCard(sale, isExpired, container) {
     div.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
             <strong style="color:white; font-size:1.1rem;">${safeDecode(sale.clientName)}</strong>
-            <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
-                ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
+            <span style="background:${statusColor}; color:${isExpired ? 'white' : (daysLeft <= 3 ? 'black' : 'white')}; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
+                ${isExpired ? '🔴 Vencida' : (daysLeft <= 3 ? `⚠️ Vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'} — Renovar` : `Vence en ${daysLeft} días`)}
             </span>
         </div>
         <div style="display:flex; justify-content:space-between; color:#a0a0a0; font-size:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.2); padding: 5px; border-radius:6px;">
@@ -2118,8 +2120,8 @@ function renderSaleItem(sale, isExpired, container) {
     div.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
             <strong style="color:white; font-size:1.1rem;">${safeDecode(sale.clientName)}</strong>
-            <span style="background:${statusColor}; color:white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
-                ${!isExpired ? `Vence en ${daysLeft} días` : 'Vencida'}
+            <span style="background:${statusColor}; color:${isExpired ? 'white' : (daysLeft <= 3 ? 'black' : 'white')}; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
+                ${isExpired ? '🔴 Vencida' : (daysLeft <= 3 ? `⚠️ Vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'} — Renovar` : `Vence en ${daysLeft} días`)}
             </span>
         </div>
         ${sellerAttribution}
@@ -2150,10 +2152,11 @@ function renderSaleItem(sale, isExpired, container) {
                     return '';
                 }).join('')}
             </div>
+            ${daysLeft <= 3 ? `
             <button onclick="renewFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
                 style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
-                <i class="fa-solid fa-redo"></i> Renovar mis pantallas
-            </button>
+                <i class="fa-solid fa-redo"></i> ⚠️ Renovar mis pantallas
+            </button>` : ''}
         </div>
         ` : ''}
     `;
