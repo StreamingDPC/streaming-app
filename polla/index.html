@@ -157,7 +157,10 @@
         function checkUser(phone) {
             db.ref(`polla/usuarios/${phone}`).on('value', snap => {
                 if(!snap.exists()) {
-                    logout();
+                    // Si el usuario no existe en la Polla pero viene de la App global,
+                    // lo llevamos al login para que se registre la primera vez
+                    document.getElementById('user-phone').value = phone;
+                    showView('login');
                     return;
                 }
                 currentUser = snap.val();
