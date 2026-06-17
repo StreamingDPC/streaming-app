@@ -196,18 +196,25 @@
 
         function renderStatus(phone, misVotos) {
             const container = document.getElementById('status-container');
-            const cupos = currentUser.cupos || 0;
-            const cantVotos = Object.keys(misVotos).length;
+            const habilitados = currentUser.partidos_habilitados || {};
+            const cantHabilitados = Object.values(habilitados).filter(v => v === true).length;
+            const cantVotos = Object.keys(misVotos).filter(id => habilitados[id] === true).length;
+            const cuposPagados = currentUser.cupos || 0;
 
             container.innerHTML = `
-                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px;">
+                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 8px;">
                     Costo por polla: <strong style="color: #4cd137;">$${(pollaConfig.precio || 0).toLocaleString()}</strong>
+                    ${cuposPagados > 0 ? `<span style="margin-left:12px; color:#555; font-size:0.78rem;">(${cuposPagados} pagadas)</span>` : ''}
                 </div>
-                <div class="alert ${cantVotos < cupos ? 'alert-warning' : 'alert-info'}" style="border-radius: 12px; border:none; background: rgba(255,255,255,0.05); padding: 12px;">
-                    <span style="font-size: 1.1rem; display: block; margin-bottom: 4px;">
-                        <i class="fas fa-ticket-alt" style="color:#4cd137"></i> <strong>${cantVotos}</strong> usados de <strong>${cupos}</strong> pagados
+                <div class="alert ${cantVotos < cantHabilitados ? 'alert-warning' : 'alert-info'}" 
+                     style="border-radius:12px; border:none; background:rgba(255,255,255,0.05); padding:12px;">
+                    <span style="font-size:1.05rem; display:block; margin-bottom:4px;">
+                        <i class="fas fa-futbol" style="color:#4cd137;"></i>
+                        Partidas habilitadas: <strong>${cantVotos} marcadas</strong> de <strong>${cantHabilitados} disponibles</strong>
                     </span>
-                    ${cantVotos < cupos ? '<small style="color:#4cd137; font-weight:bold;">¡Tienes cupos disponibles! Llena un marcador abajo.</small>' : '<small style="color:#888;">Ya usaste todos tus cupos.</small>'}
+                    ${cantVotos < cantHabilitados 
+                        ? '<small style="color:#4cd137; font-weight:bold;">&#9989; Tienes partidas pendientes por marcar abajo.</small>'
+                        : '<small style="color:#888;">Ya marcaste todas tus partidas habilitadas.</small>'}
                 </div>
             `;
         }

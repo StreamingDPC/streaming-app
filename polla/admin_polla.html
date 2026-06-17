@@ -236,12 +236,19 @@
                                 <div class="usuario-header">
                                     <div>
                                         <div class="usuario-nombre">${u.nombre}</div>
-                                        <div class="usuario-tel">${phone} — <strong style="color:#4cd137;">${cantHab} hab.</strong> / <strong style="color:#3498db;">${cantVotos} marcados</strong></div>
+                                        <div class="usuario-tel">${phone} &mdash; <strong style="color:#4cd137;">${cantHab} habilitados</strong> / <strong style="color:#3498db;">${cantVotos} marcados</strong></div>
+                                        <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                                            <label style="font-size:0.72rem; color:#888;">Pollas pagadas:</label>
+                                            <input type="number" value="${u.cupos || 0}" min="0"
+                                                   style="width:55px; padding:4px 8px; font-size:0.82rem; border-radius:6px; background:#111; border:1px solid #333; color:white;"
+                                                   title="Referencia: cuantas pollas pago este participante"
+                                                   onchange="updateCupo('${phone}', this.value)">
+                                        </div>
                                     </div>
-                                    <div style="display:flex; gap:6px;">
-                                        <button class="btn btn-green" onclick="habilitarTodosDia('${phone}','${dia}')">✅ Todo el día</button>
-                                        <button class="btn btn-red"   onclick="deshabilitarTodosDia('${phone}','${dia}')">🔴 Ninguno</button>
-                                        <button class="btn btn-red"   onclick="deleteUser('${phone}')" title="Eliminar usuario">🗑</button>
+                                    <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                                        <button class="btn btn-green" onclick="habilitarTodosDia('${phone}','${dia}')">&#9989; Todo el dia</button>
+                                        <button class="btn btn-red"   onclick="deshabilitarTodosDia('${phone}','${dia}')">&#128308; Ninguno</button>
+                                        <button class="btn btn-red"   onclick="deleteUser('${phone}')" title="Eliminar usuario">&#128465;</button>
                                     </div>
                                 </div>
                                 <div class="partidos-grid">${botonesHtml}</div>
