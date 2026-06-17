@@ -744,6 +744,19 @@
                 }, true);
             }
         });
+
+        // Escuchar mensaje desde el iframe de la polla para cerrarla
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.action === 'closePolla') {
+                const individualTab = document.querySelector('.tab-btn[data-tab="individual"]');
+                if (individualTab) {
+                    individualTab.click();
+                } else {
+                    const firstTab = document.querySelector('.tab-btn');
+                    if(firstTab) firstTab.click();
+                }
+            }
+        });
     </script>
 </body>
 </html>

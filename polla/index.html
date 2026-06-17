@@ -66,7 +66,7 @@
         <div id="user-section" style="display:none;">
             <div class="user-info">
                 <span>Hola, <strong id="display-name">...</strong></span>
-                <span class="logout" onclick="logout()">Cerrar Sesión</span>
+                <span class="logout" onclick="logout()">Cerrar Polla</span>
             </div>
 
             <div id="status-container"></div>
@@ -325,8 +325,8 @@
 
 
         function logout() {
-            localStorage.removeItem('polla_phone');
-            location.reload();
+            // Enviar mensaje al index principal para volver a la tienda en vez de cerrar sesion global
+            window.parent.postMessage({action: 'closePolla'}, '*');
         }
     </script>
 </body>
