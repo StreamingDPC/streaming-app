@@ -95,6 +95,11 @@
 
         // Al iniciar
         window.onload = async () => {
+            // Live Sync Module
+            db.ref('config/app_version').on('value', snap => {
+                if (snap.val() && snap.val() !== '3.8.7') location.reload();
+            });
+
             // Cargar Configuración
             db.ref('polla/config').on('value', snap => {
                 if(snap.exists()) pollaConfig = snap.val();

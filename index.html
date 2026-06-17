@@ -10,10 +10,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Anti-Cache Meta Tags -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+        <!-- Live Sync Engine -->
+    <script>
+        const LOCAL_VERSION = '3.8.7';
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof db !== 'undefined') {
+                db.ref('config/app_version').on('value', snap => {
+                    const remote = snap.val();
+                    if (remote && remote !== LOCAL_VERSION) {
+                        const s = window.location.href.includes('?') ? '&' : '?';
+                        window.location.href = window.location.href.split('#')[0] + s + 'sync=' + remote;
+                    }
+                });
+            }
+        });
+    </script>
 </head>
 
 <body>
