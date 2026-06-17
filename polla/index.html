@@ -100,11 +100,19 @@
                 if(snap.exists()) pollaConfig = snap.val();
             });
 
-            const savedPhone = localStorage.getItem('polla_phone');
-            if(savedPhone) {
-                checkUser(savedPhone);
+            // Buscar celular en URL (desde el parent index.html)
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlPhone = urlParams.get('phone');
+
+            if(urlPhone) {
+                checkUser(urlPhone);
             } else {
-                showView('login');
+                const savedPhone = localStorage.getItem('polla_phone');
+                if(savedPhone) {
+                    checkUser(savedPhone);
+                } else {
+                    showView('login');
+                }
             }
         };
 

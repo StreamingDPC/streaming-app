@@ -33,6 +33,10 @@
                 <span style="font-size: 0.7rem; color: #4cd137; opacity: 0.5;">v3.8.4</span>
             </div>
             <div class="header-actions" style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                <button id="open-polla-btn" class="get-code-btn"
+                    style="background: rgba(76, 209, 55, 0.15); border-color: rgba(76, 209, 55, 0.3); color: #4cd137;">
+                    <i class="fa-solid fa-trophy"></i> <span class="hide-mobile">Polla</span>
+                </button>
                 <button id="refresh-page-btn" class="get-code-btn" style="background: rgba(46, 134, 193, 0.2); border-color: rgba(46, 134, 193, 0.4); color: #3498db;">
                     <i class="fa-solid fa-arrows-rotate"></i> <span class="hide-mobile">Actualizar</span>
                 </button>
@@ -43,10 +47,6 @@
                 <button id="open-vendedores-btn" class="get-code-btn"
                     style="background: rgba(138,43,226,0.15); border-color: rgba(138,43,226,0.3); color: #c48dfc;">
                     <i class="fa-solid fa-user-tie"></i> <span class="hide-mobile">Vendedores</span>
-                </button>
-                <button id="open-polla-btn" class="get-code-btn"
-                    style="background: rgba(76, 209, 55, 0.15); border-color: rgba(76, 209, 55, 0.3); color: #4cd137;">
-                    <i class="fa-solid fa-trophy"></i> <span class="hide-mobile">Polla</span>
                 </button>
                 <button id="open-code-btn" class="get-code-btn">
                     <i class="fa-solid fa-key"></i> <span class="hide-mobile">Obtener Código</span>
@@ -670,9 +670,31 @@
             const btn = document.getElementById('open-polla-btn');
             if (btn) {
                 btn.addEventListener('click', () => {
+                   if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
+                       alert('Debe ingresar primero a "Mis Compras" con su Celular y su PIN para participar en la Polla.');
+                       document.getElementById('open-client-btn').click(); 
+                       return;
+                   }
                    const tab = document.querySelector('.tab-btn[data-tab="polla"]');
-                   if (tab) tab.click();
+                   if (tab) {
+                       const iframe = document.querySelector('#polla-grid iframe');
+                       if (iframe) iframe.src = 'polla/index.html?v=1.1&phone=' + clientPhoneLoggedIn;
+                       tab.click();
+                   }
                 });
+            }
+            
+            // También bloquear el clic directo en el tab lateral
+            const pollaTab = document.querySelector('.tab-btn[data-tab="polla"]');
+            if(pollaTab) {
+                pollaTab.addEventListener('click', (e) => {
+                    if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
+                       e.preventDefault();
+                       e.stopPropagation();
+                       alert('Debe ingresar primero a "Mis Compras" con su Celular y su PIN para participar en la Polla.');
+                       document.getElementById('open-client-btn').click(); 
+                    }
+                }, true);
             }
         });
     </script>
