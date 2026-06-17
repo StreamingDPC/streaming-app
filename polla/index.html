@@ -160,19 +160,22 @@
         }
 
         function checkUser(phone) {
+            // Escuchar cambios en el usuario en tiempo real (para cupos)
             db.ref(`polla/usuarios/${phone}`).on('value', snap => {
                 if(!snap.exists()) {
-                    // Si el usuario no existe en la Polla pero viene de la App global,
-                    // lo llevamos al login para que se registre la primera vez
                     document.getElementById('user-phone').value = phone;
                     showView('login');
                     return;
                 }
                 currentUser = snap.val();
+                console.log("Cupos actuales:", currentUser.cupos);
+                
                 document.getElementById('display-name').innerText = currentUser.nombre;
                 renderStatus();
-                renderPartidos();
-                showView('user');
+                // Escuchar cambios en sus pronósticos también
+                db.ref(`polla/pronosticos/${phone}`).on('value', vSnap => {
+                    renderPartidos(vSnap.val() || {});
+                });
             });
         }
 
@@ -180,47 +183,30 @@
             const container = document.getElementById('status-container');
             const cupos = currentUser.cupos || 0;
             
-            // Cargar votos guardados para el contador
             db.ref(`polla/pronosticos/${currentUser.telefono}`).once('value').then(vSnap => {
                 const misVotos = vSnap.val() || {};
                 const cantVotos = Object.keys(misVotos).length;
 
-                if(cupos > 0) {
-                    container.innerHTML = `
-                        <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 10px;">
-                            Valor por marcador: <strong style="color: #4cd137;">$${pollaConfig.precio.toLocaleString()}</strong>
-                        </div>
-                        <div class="alert alert-info">
-                            <i class="fas fa-ticket-alt"></i> Participaciones: <strong>${cantVotos} utilizadas de ${cupos} pagadas</strong>.
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 10px;">
-                            Valor por marcador: <strong style="color: #4cd137;">$${pollaConfig.precio.toLocaleString()}</strong>
-                        </div>
-                        <div class="alert alert-warning"><i class="fas fa-lock"></i> No tienes cupos pagados. Contacta al administrador.</div>
-                    `;
-                }
+                container.innerHTML = `
+                    <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 10px;">
+                        Valor por marcador: <strong style="color: #4cd137;">$${pollaConfig.precio.toLocaleString()}</strong>
+                    </div>
+                    <div class="alert ${cantVotos < cupos ? 'alert-warning' : 'alert-info'}">
+                        <i class="fas fa-ticket-alt"></i> Participaciones: <strong>${cantVotos} de ${cupos} usadas</strong>.
+                        ${cantVotos < cupos ? '<br><small>¡Tienes cupos disponibles! Elige un partido abajo.</small>' : ''}
+                    </div>
+                `;
             });
         }
 
-        async function renderPartidos() {
+        async function renderPartidos(misVotos) {
             const container = document.getElementById('partidos-container');
-            
             const snap = await db.ref('polla/partidos').once('value');
-            const partidos = [];
-            snap.forEach(child => {
-                partidos.push({ id: child.key, ...child.val() });
-            });
-
-            // Cargar votos guardados
-            const vSnap = await db.ref(`polla/pronosticos/${currentUser.telefono}`).once('value');
-            const misVotos = vSnap.val() || {};
             const cuposHabilitados = currentUser.cupos || 0;
 
             let html = '';
-            partidos.forEach(p => {
+            snap.forEach(child => {
+                const p = { id: child.key, ...child.val() };
                 const yaVotado = misVotos[p.id] !== undefined;
                 const vA = yaVotado ? misVotos[p.id].goles_a : '';
                 const vB = yaVotado ? misVotos[p.id].goles_b : '';
@@ -228,14 +214,14 @@
                 html += `
                     <div class="partido-card" id="card-${p.id}">
                         <div class="partido-header">${new Date(p.fecha).toLocaleString()}</div>
-                        ${yaVotado ? '<div style="font-size:0.7rem; color:#4cd137; text-align:center; margin-bottom:10px;"><i class="fas fa-check-circle"></i> Marcador Guardado (Bloqueado)</div>' : ''}
+                        ${yaVotado ? '<div style="font-size:0.7rem; color:#4cd137; text-align:center; margin-bottom:10px;"><i class="fas fa-check-circle"></i> Marcador Guardado</div>' : ''}
                         <div class="score-grid">
                             <div class="team">${p.equipo_a}</div>
                             <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}" 
-                                   ${yaVotado || cuposHabilitados === 0 ? 'disabled' : ''} oninput="validateCupos()">
+                                   ${yaVotado ? 'disabled' : ''} oninput="validateCupos()">
                             <span>-</span>
                             <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}" 
-                                   ${yaVotado || cuposHabilitados === 0 ? 'disabled' : ''} oninput="validateCupos()">
+                                   ${yaVotado ? 'disabled' : ''} oninput="validateCupos()">
                             <div class="team">${p.equipo_b}</div>
                         </div>
                     </div>
@@ -243,48 +229,49 @@
             });
 
             container.innerHTML = html || '<p style="text-align:center;">No hay partidos programados.</p>';
-            validateCupos();
+            validateCupos(misVotos);
         }
 
-        async function validateCupos() {
+        async function validateCupos(votosGuardados) {
             const cuposHabilitados = currentUser.cupos || 0;
-            const vSnap = await db.ref(`polla/pronosticos/${currentUser.telefono}`).once('value');
-            const misVotos = vSnap.val() || {};
+            const misVotos = votosGuardados || {};
             const cantGuardados = Object.keys(misVotos).length;
 
             const inputsA = document.querySelectorAll('.goles-a');
             const inputsB = document.querySelectorAll('.goles-b');
             const btnSave = document.getElementById('btn-save-vote');
             
-            let nuevos = 0;
+            let nuevosEnUI = 0;
+            inputsA.forEach((inp, i) => {
+                if(!misVotos[inp.dataset.id] && inp.value !== '' && inputsB[i].value !== '') nuevosEnUI++;
+            });
+
             inputsA.forEach((inp, i) => {
                 const id = inp.dataset.id;
                 const card = document.getElementById(`card-${id}`);
                 const isFilledInUI = inp.value !== '' && inputsB[i].value !== '';
                 
                 if(misVotos[id]) {
-                    // Ya estaba guardado
                     card.style.borderColor = '#4cd137';
-                    card.style.background = 'rgba(76, 209, 55, 0.05)';
+                    card.style.background = 'rgba(76, 209, 55, 0.08)';
                 } else if(isFilledInUI) {
-                    nuevos++;
-                    card.style.borderColor = '#3498db'; // Azul para nuevos antes de guardar
-                    card.style.background = 'rgba(52, 152, 219, 0.05)';
-                } else if((cantGuardados + nuevos) >= cuposHabilitados) {
+                    card.style.borderColor = '#3498db';
+                    card.style.background = 'rgba(52, 152, 219, 0.08)';
+                } else if((cantGuardados + nuevosEnUI) >= cuposHabilitados) {
                     card.style.borderColor = '#ff4d4d';
-                    card.style.background = 'rgba(255, 77, 77, 0.05)';
+                    card.style.background = 'rgba(255, 77, 77, 0.08)';
                     inp.disabled = true;
                     inputsB[i].disabled = true;
                 } else {
                     card.style.borderColor = 'rgba(255,255,255,0.1)';
-                    card.style.background = 'rgba(255,255,255,0.03)';
-                    inp.disabled = (cuposHabilitados === 0);
-                    inputsB[i].disabled = (cuposHabilitados === 0);
+                    card.style.background = 'transparent';
+                    inp.disabled = false;
+                    inputsB[i].disabled = false;
                 }
             });
 
-            btnSave.style.display = (nuevos > 0) ? 'block' : 'none';
-            btnSave.innerText = `Guardar ${nuevos} Marcador(es)`;
+            btnSave.style.display = (nuevosEnUI > 0) ? 'block' : 'none';
+            btnSave.innerText = `Guardar ${nuevosEnUI} Marcador(es)`;
         }
 
         async function savePronostico() {
