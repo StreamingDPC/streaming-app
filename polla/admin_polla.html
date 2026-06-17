@@ -171,11 +171,13 @@
                 snap.forEach(child => {
                     const u = child.val();
                     const userVotos = u.voto_realizado && todosPronosticos[u.telefono] ? todosPronosticos[u.telefono] : null;
-                    const pagos = u.pagos || {};
+                    const cupos = u.cupos || 0;
                     
                     let votosHtml = '';
+                    let cantVotos = 0;
                     if(userVotos) {
                         for(let partId in userVotos) {
+                            cantVotos++;
                             const part = todosPartidos[partId] || { equipo_a: '?', equipo_b: '?' };
                             votosHtml += `<div style="font-size:0.75rem; color:#4cd137; margin-top:5px; white-space:nowrap;">
                                 <strong>${part.equipo_a.substring(0,3)}</strong> ${userVotos[partId].goles_a} - ${userVotos[partId].goles_b} <strong>${part.equipo_b.substring(0,3)}</strong>
@@ -183,27 +185,18 @@
                         }
                     }
 
-                    // Generar botones de pago por partido
-                    let botonesPago = '';
-                    for(let partId in todosPartidos) {
-                        const part = todosPartidos[partId];
-                        const estaPago = pagos[partId] === true;
-                        botonesPago += `
-                            <button class="btn-sm ${estaPago ? 'btn-success' : 'btn-danger'}" 
-                                    style="margin-bottom:4px; display:block; width:100%; text-align:left; font-size:0.65rem;"
-                                    onclick="togglePago('${u.telefono}', '${partId}', ${!estaPago})">
-                                ${estaPago ? '✅' : '❌'} ${part.equipo_a.substring(0,3)} vs ${part.equipo_b.substring(0,3)}
-                            </button>`;
-                    }
-
                     tbody.innerHTML += `
                         <tr>
                             <td>${u.nombre}</td>
                             <td>${u.telefono}</td>
-                            <td>${botonesPago}</td>
+                            <td>
+                                <input type="number" value="${cupos}" min="0" style="width:50px; padding:5px; margin-bottom:5px;" 
+                                       onchange="updateCupo('${u.telefono}', this.value)">
+                                <div style="font-size:0.7rem; color:#aaa;">Cupos habilitados</div>
+                            </td>
                             <td>
                                 <span class="badge ${u.voto_realizado ? 'badge-success' : 'badge-pending'}">
-                                    ${u.voto_realizado ? 'VOTÓ' : 'Pte'}
+                                    ${u.voto_realizado ? 'VOTÓ ('+cantVotos+')' : 'Pte'}
                                 </span>
                                 ${votosHtml}
                             </td>
@@ -216,8 +209,8 @@
             });
         }
 
-        function togglePago(phone, matchId, val) {
-            db.ref(`polla/usuarios/${phone}/pagos/${matchId}`).set(val);
+        function updateCupo(phone, val) {
+            db.ref(`polla/usuarios/${phone}/cupos`).set(parseInt(val));
         }
 
         function deleteUser(phone) {

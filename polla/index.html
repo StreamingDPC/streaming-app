@@ -170,10 +170,14 @@
 
         function renderStatus() {
             const container = document.getElementById('status-container');
+            const cupos = currentUser.cupos || 0;
+            
             if(currentUser.voto_realizado) {
                 container.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Participación completada. ¡Mucha suerte!</div>`;
+            } else if(cupos > 0) {
+                container.innerHTML = `<div class="alert alert-success"><i class="fas fa-ticket-alt"></i> Tienes <strong>${cupos}</strong> cupos disponibles para apostar.</div>`;
             } else {
-                container.innerHTML = `<div class="alert alert-info"><i class="fas fa-money-bill-wave"></i> Cada partido tiene un costo de <strong>$${pollaConfig.precio.toLocaleString()}</strong>. Contacta al admin tras pagar para habilitar tu marcador.</div>`;
+                container.innerHTML = `<div class="alert alert-warning"><i class="fas fa-lock"></i> No tienes cupos pagados. Contacta al administrador para habilitar tus pollas.</div>`;
             }
         }
 
@@ -195,28 +199,25 @@
                 misVotos = vSnap.val() || {};
             }
 
-            const pagos = currentUser.pagos || {};
+            const cuposHabilitados = currentUser.cupos || 0;
 
             let html = '';
-            let canSaveAny = false;
-
             partidos.forEach(p => {
-                const isPaid = pagos[p.id] === true;
-                const canVote = isPaid && !currentUser.voto_realizado;
-                if(canVote) canSaveAny = true;
-
-                const vA = misVotos[p.id] ? misVotos[p.id].goles_a : 0;
-                const vB = misVotos[p.id] ? misVotos[p.id].goles_b : 0;
+                const vA = misVotos[p.id] ? misVotos[p.id].goles_a : '';
+                const vB = misVotos[p.id] ? misVotos[p.id].goles_b : '';
+                const isVoted = vA !== '' && vB !== '';
+                const disabled = currentUser.voto_realizado || cuposHabilitados === 0;
 
                 html += `
                     <div class="partido-card">
                         <div class="partido-header">${new Date(p.fecha).toLocaleString()}</div>
-                        ${!isPaid && !currentUser.voto_realizado ? `<div style="font-size:0.7rem; color:#f39c12; text-align:center; margin-bottom:10px;"><i class="fas fa-lock"></i> Pago pendiente para este partido</div>` : ''}
                         <div class="score-grid">
                             <div class="team">${p.equipo_a}</div>
-                            <input type="number" class="score-input goles-a" data-id="${p.id}" value="${isPaid ? vA : 0}" ${canVote ? '' : 'disabled'}>
+                            <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}" 
+                                   ${disabled ? 'disabled' : ''} oninput="validateCupos()">
                             <span>-</span>
-                            <input type="number" class="score-input goles-b" data-id="${p.id}" value="${isPaid ? vB : 0}" ${canVote ? '' : 'disabled'}>
+                            <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}" 
+                                   ${disabled ? 'disabled' : ''} oninput="validateCupos()">
                             <div class="team">${p.equipo_b}</div>
                         </div>
                     </div>
@@ -224,7 +225,35 @@
             });
 
             container.innerHTML = html || '<p style="text-align:center;">No hay partidos programados.</p>';
-            btnSave.style.display = (canSaveAny && !currentUser.voto_realizado) ? 'block' : 'none';
+            validateCupos();
+        }
+
+        function validateCupos() {
+            const cuposHabilitados = currentUser.cupos || 0;
+            if(currentUser.voto_realizado) return;
+
+            const inputsA = document.querySelectorAll('.goles-a');
+            const inputsB = document.querySelectorAll('.goles-b');
+            const btnSave = document.getElementById('btn-save-vote');
+            
+            let usados = 0;
+            inputsA.forEach((inp, i) => {
+                if(inp.value !== '' && inputsB[i].value !== '') usados++;
+            });
+
+            // Si llegamos al limite, deshabilitar los vacios
+            inputsA.forEach((inp, i) => {
+                const isFilled = inp.value !== '' && inputsB[i].value !== '';
+                if(!isFilled && usados >= cuposHabilitados) {
+                    inp.disabled = true;
+                    inputsB[i].disabled = true;
+                } else {
+                    inp.disabled = (cuposHabilitados === 0);
+                    inputsB[i].disabled = (cuposHabilitados === 0);
+                }
+            });
+
+            btnSave.style.display = (usados > 0 && usados <= cuposHabilitados) ? 'block' : 'none';
         }
 
         async function savePronostico() {
