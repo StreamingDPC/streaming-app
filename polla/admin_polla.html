@@ -160,25 +160,38 @@
                 const tbody = document.querySelector('#usuarios-table tbody');
                 tbody.innerHTML = '';
                 
+                // Cargar partidos primero para tener nombres
+                const partSnap = await db.ref('polla/partidos').once('value');
+                const todosPartidos = partSnap.val() || {};
+
                 // Cargar todos los pronósticos para referencia rápida
                 const pSnap = await db.ref('polla/pronosticos').once('value');
                 const todosPronosticos = pSnap.val() || {};
 
                 snap.forEach(child => {
                     const u = child.val();
-                    const tieneVotos = u.voto_realizado && todosPronosticos[u.telefono];
+                    const userVotos = u.voto_realizado && todosPronosticos[u.telefono] ? todosPronosticos[u.telefono] : null;
                     
+                    let votosHtml = '';
+                    if(userVotos) {
+                        for(let partId in userVotos) {
+                            const part = todosPartidos[partId] || { equipo_a: '?', equipo_b: '?' };
+                            votosHtml += `<div style="font-size:0.75rem; color:#4cd137; margin-top:5px; white-space:nowrap;">
+                                <strong>${part.equipo_a.substring(0,3)}</strong> ${userVotos[partId].goles_a} - ${userVotos[partId].goles_b} <strong>${part.equipo_b.substring(0,3)}</strong>
+                            </div>`;
+                        }
+                    }
+
                     tbody.innerHTML += `
                         <tr>
                             <td>${u.nombre}</td>
                             <td>${u.telefono}</td>
                             <td><span class="badge ${u.pago_confirmado ? 'badge-success' : 'badge-pending'}">${u.pago_confirmado ? 'SÍ' : 'PENDIENTE'}</span></td>
                             <td>
-                                <span class="badge ${u.voto_realizado ? 'badge-success' : 'badge-pending'}" 
-                                      style="${tieneVotos ? 'cursor:pointer; text-decoration:underline;' : ''}"
-                                      onclick="${tieneVotos ? `showUserScores('${u.telefono}', '${u.nombre}')` : ''}">
+                                <span class="badge ${u.voto_realizado ? 'badge-success' : 'badge-pending'}">
                                     ${u.voto_realizado ? 'VOTÓ' : 'Pte'}
                                 </span>
+                                ${votosHtml}
                             </td>
                             <td>
                                 ${!u.pago_confirmado ? `<button class="btn-sm btn-success" onclick="togglePago('${u.telefono}', true)">Confirmar Pago</button>` : `<button class="btn-sm btn-danger" onclick="togglePago('${u.telefono}', false)">Anular Pago</button>`}
@@ -188,20 +201,6 @@
                     `;
                 });
             });
-        }
-
-        async function showUserScores(phone, name) {
-            const pSnap = await db.ref('polla/partidos').once('value');
-            const vSnap = await db.ref(`polla/pronosticos/${phone}`).once('value');
-            const partidos = pSnap.val() || {};
-            const votos = vSnap.val() || {};
-
-            let res = `Marcadores de ${name}:\n\n`;
-            for(let id in votos) {
-                const part = partidos[id] || { equipo_a: '?', equipo_b: '?' };
-                res += `${part.equipo_a} [${votos[id].goles_a}] - [${votos[id].goles_b}] ${part.equipo_b}\n`;
-            }
-            alert(res);
         }
 
         function togglePago(phone, val) {
