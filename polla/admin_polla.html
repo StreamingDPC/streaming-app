@@ -89,7 +89,7 @@
         <table id="partidos-table">
             <thead>
                 <tr>
-                    <th>Local</th><th>Visitante</th><th>Fecha / Hora</th><th>Acción</th>
+                    <th>Local</th><th>Visitante</th><th style="color:#f39c12; min-width:120px;">⚽ Marcador Real</th><th>Fecha / Hora</th><th>Acción</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -155,12 +155,21 @@
                 snap.forEach(child => {
                     const p = child.val();
                     todosPartidosCache[child.key] = p;
+                    const resA = p.resultado_a !== undefined ? p.resultado_a : '';
+                    const resB = p.resultado_b !== undefined ? p.resultado_b : '';
                     tbody.innerHTML += `
                         <tr>
-                            <td>${p.equipo_a}</td>
-                            <td>${p.equipo_b}</td>
-                            <td>${new Date(p.fecha).toLocaleString()}</td>
-                            <td><button class="btn btn-red" onclick="deletePartido('${child.key}')">🗑 Eliminar</button></td>
+                            <td style="font-weight:bold;">${p.equipo_a}</td>
+                            <td style="font-weight:bold;">${p.equipo_b}</td>
+                            <td>
+                                <div style="display:flex; justify-content:center; align-items:center; gap:5px;">
+                                    <input type="number" min="0" value="${resA}" placeholder="-" style="width:40px; text-align:center; background:#111; border:1px solid #333; color:white; border-radius:4px; font-weight:bold;" onchange="updateResultadoPartido('${child.key}', 'resultado_a', this.value)">
+                                    <span style="color:#888;">&ndash;</span>
+                                    <input type="number" min="0" value="${resB}" placeholder="-" style="width:40px; text-align:center; background:#111; border:1px solid #333; color:white; border-radius:4px; font-weight:bold;" onchange="updateResultadoPartido('${child.key}', 'resultado_b', this.value)">
+                                </div>
+                            </td>
+                            <td style="font-size:0.8rem; color:#888;">${new Date(p.fecha).toLocaleString()}</td>
+                            <td><button class="btn btn-red" onclick="deletePartido('${child.key}')" title="Eliminar partido">🗑</button></td>
                         </tr>`;
                 });
             });
@@ -177,7 +186,13 @@
             });
         }
         function deletePartido(id) {
-            if(confirm('¿Eliminar partido?')) db.ref(`polla/partidos/${id}`).remove();
+            if(confirm('¿Eliminar partido? Todos los participantes perderán sus votos asociados a este partido.')) {
+                 db.ref(`polla/partidos/${id}`).remove();
+            }
+        }
+        function updateResultadoPartido(id, campo, valor) {
+            const num = parseInt(valor);
+            db.ref(`polla/partidos/${id}/${campo}`).set(isNaN(num) ? null : num);
         }
 
         // ─── USUARIOS ────────────────────────────────────────────────────────
