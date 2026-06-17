@@ -236,34 +236,26 @@
 
             fechas.forEach(dia => {
                 const partidosDelDia = porFecha[dia];
-                // Solo mostrar si al menos uno está habilitado para este usuario
-                const tieneHabilitados = partidosDelDia.some(p => habilitados[p.id] === true);
-                if(!tieneHabilitados) return;
+                // Filtrar SOLO los habilitados para este usuario
+                const habilitadosDelDia = partidosDelDia.filter(p => habilitados[p.id] === true);
+                if(habilitadosDelDia.length === 0) return; // Si no hay ninguno habilitado, omitir el día completo
 
                 html += `<div style="margin-bottom:20px;">
                     <div style="font-size:0.75rem; font-weight:800; color:#4cd137; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid rgba(76,209,55,0.2);">
                         📅 ${dia}
                     </div>`;
 
-                partidosDelDia.forEach(p => {
-                    const estaHabilitado = habilitados[p.id] === true;
+                // Solo iterar los habilitados
+                habilitadosDelDia.forEach(p => {
                     const yaVotado = misVotos[p.id] !== undefined;
                     const vA = yaVotado ? misVotos[p.id].goles_a : '';
                     const vB = yaVotado ? misVotos[p.id].goles_b : '';
-                    const bloqueado = yaVotado || !estaHabilitado;
 
-                    let borderColor = 'rgba(255,255,255,0.1)';
-                    let bgColor = 'transparent';
-                    let etiqueta = '';
-                    if(yaVotado) {
-                        borderColor = '#4cd137';
-                        bgColor = 'rgba(76,209,55,0.06)';
-                        etiqueta = '<div style="font-size:0.72rem; color:#4cd137; text-align:center; margin-bottom:8px; font-weight:800;"><i class="fas fa-check-circle"></i> GUARDADO</div>';
-                    } else if(!estaHabilitado) {
-                        borderColor = 'rgba(255,255,255,0.05)';
-                        bgColor = 'rgba(0,0,0,0.2)';
-                        etiqueta = '<div style="font-size:0.72rem; color:#555; text-align:center; margin-bottom:8px;"><i class="fas fa-lock"></i> No habilitado</div>';
-                    }
+                    const borderColor = yaVotado ? '#4cd137' : 'rgba(255,255,255,0.12)';
+                    const bgColor     = yaVotado ? 'rgba(76,209,55,0.06)' : 'transparent';
+                    const etiqueta    = yaVotado
+                        ? '<div style="font-size:0.72rem; color:#4cd137; text-align:center; margin-bottom:8px; font-weight:800;"><i class="fas fa-check-circle"></i> GUARDADO</div>'
+                        : '';
 
                     html += `
                         <div class="partido-card" id="card-${p.id}" style="border:1px solid ${borderColor}; background:${bgColor}; transition: all 0.3s ease;">
@@ -272,10 +264,10 @@
                             <div class="score-grid">
                                 <div class="team">${p.equipo_a}</div>
                                 <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}"
-                                       ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
+                                       ${yaVotado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
                                 <span>-</span>
                                 <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}"
-                                       ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
+                                       ${yaVotado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
                                 <div class="team">${p.equipo_b}</div>
                             </div>
                         </div>`;

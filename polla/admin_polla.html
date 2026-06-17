@@ -279,7 +279,15 @@
         }
 
         function deleteUser(phone) {
-            if(confirm('¿Eliminar participante?')) db.ref(`polla/usuarios/${phone}`).remove();
+            if(confirm(`¿Eliminar participante ${phone}?\n\nEsto borrará también todo su historial de pronósticos.`)) {
+                // Borrar usuario Y su historial completo
+                const updates = {};
+                updates[`polla/usuarios/${phone}`]     = null;
+                updates[`polla/pronosticos/${phone}`]  = null;
+                db.ref().update(updates).then(() => {
+                    console.log('Usuario y historial eliminados:', phone);
+                });
+            }
         }
     </script>
 </body>
