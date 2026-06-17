@@ -100,6 +100,12 @@
     <div class="card">
         <h2>👥 Participantes — Control de Partidos Habilitados</h2>
         <p style="color:#888; font-size:0.8rem; margin-top:0;">Habilita o deshabilita cada partido individualmente para cada participante. El usuario solo podrá marcar los partidos con ✅ verde.</p>
+        
+        <div style="margin-bottom: 20px; position:relative;">
+            <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#666;"></i>
+            <input type="text" id="search-usuarios" oninput="filterUsuarios(this.value)" placeholder="Buscar por nombre o número de celular..." style="width:100%; padding:10px 10px 10px 35px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid #333; color:white; font-size:0.95rem;">
+        </div>
+
         <div id="usuarios-container"><div class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div></div>
     </div>
 
@@ -209,10 +215,13 @@
                     const habilitados = u.partidos_habilitados || {};
                     const cantVotos = Object.keys(userVotos).length;
                     const cantHab = Object.values(habilitados).filter(v => v === true).length;
+                    
+                    const searchData = `${u.nombre} ${phone}`.toLowerCase();
 
                     const usuarioCard = document.createElement('div');
                     usuarioCard.className = 'usuario-card';
                     usuarioCard.style.marginBottom = '25px';
+                    usuarioCard.setAttribute('data-search', searchData);
 
                     let diasHtml = '';
                     fechas.forEach(dia => {
@@ -292,6 +301,23 @@
                 if(d === dia) updates[`polla/usuarios/${phone}/partidos_habilitados/${id}`] = false;
             }
             db.ref().update(updates);
+        }
+
+        function updateCupo(phone, cant) {
+            db.ref(`polla/usuarios/${phone}/cupos`).set(parseInt(cant));
+        }
+
+        function filterUsuarios(query) {
+            query = query.toLowerCase().trim();
+            const cards = document.querySelectorAll('.usuario-card');
+            cards.forEach(card => {
+                const searchData = card.getAttribute('data-search') || '';
+                if(searchData.includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
 
         function deleteUser(phone) {
