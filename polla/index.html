@@ -235,6 +235,7 @@
             const cuposHabilitados = currentUser.cupos || 0;
             if(currentUser.voto_realizado) return;
 
+            const cards = document.querySelectorAll('.partido-card');
             const inputsA = document.querySelectorAll('.goles-a');
             const inputsB = document.querySelectorAll('.goles-b');
             const btnSave = document.getElementById('btn-save-vote');
@@ -244,15 +245,26 @@
                 if(inp.value !== '' && inputsB[i].value !== '') usados++;
             });
 
-            // Si llegamos al limite, deshabilitar los vacios
-            inputsA.forEach((inp, i) => {
-                const isFilled = inp.value !== '' && inputsB[i].value !== '';
-                if(!isFilled && usados >= cuposHabilitados) {
-                    inp.disabled = true;
-                    inputsB[i].disabled = true;
+            cards.forEach((card, i) => {
+                const inpA = inputsA[i];
+                const inpB = inputsB[i];
+                const isFilled = inpA.value !== '' && inpB.value !== '';
+
+                if(isFilled) {
+                    card.style.borderColor = '#4cd137'; // Verde si lo usó
+                    card.style.background = 'rgba(76, 209, 55, 0.05)';
+                    inpA.disabled = false;
+                    inpB.disabled = false;
+                } else if(usados >= cuposHabilitados) {
+                    card.style.borderColor = '#ff4d4d'; // Rojo si ya no tiene cupos
+                    card.style.background = 'rgba(255, 77, 77, 0.05)';
+                    inpA.disabled = true;
+                    inpB.disabled = true;
                 } else {
-                    inp.disabled = (cuposHabilitados === 0);
-                    inputsB[i].disabled = (cuposHabilitados === 0);
+                    card.style.borderColor = 'rgba(255,255,255,0.1)'; // Normal
+                    card.style.background = 'rgba(255,255,255,0.03)';
+                    inpA.disabled = (cuposHabilitados === 0);
+                    inpB.disabled = (cuposHabilitados === 0);
                 }
             });
 
