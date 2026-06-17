@@ -194,28 +194,28 @@
                     porFecha[dia].push({ id, ...p });
                 }
 
+                // Ordenar fechas cronológicamente si es posible (ya están agrupadas por string, pero podemos hacerlo simple)
                 const fechas = Object.keys(porFecha);
                 if(fechas.length === 0) {
                     container.innerHTML = '<p style="color:#666; text-align:center;">No hay partidos registrados aún.</p>';
                     return;
                 }
 
-                // Por cada fecha, mostrar bloque
-                fechas.forEach(dia => {
-                    const grupo = document.createElement('div');
-                    grupo.className = 'fecha-grupo';
-                    grupo.innerHTML = `<div class="fecha-titulo">📅 ${dia}</div>`;
+                // Iterar UNA VEZ por cada usuario (Participante -> Fechas -> Partidos)
+                snap.forEach(child => {
+                    const u = child.val();
+                    const phone = child.key;
+                    const userVotos = todosPronosticos[phone] || {};
+                    const habilitados = u.partidos_habilitados || {};
+                    const cantVotos = Object.keys(userVotos).length;
+                    const cantHab = Object.values(habilitados).filter(v => v === true).length;
 
-                    // Por cada usuario
-                    snap.forEach(child => {
-                        const u = child.val();
-                        const phone = child.key;
-                        const userVotos = todosPronosticos[phone] || {};
-                        const habilitados = u.partidos_habilitados || {};
-                        const cantVotos = Object.keys(userVotos).length;
-                        const cantHab = Object.values(habilitados).filter(v => v === true).length;
+                    const usuarioCard = document.createElement('div');
+                    usuarioCard.className = 'usuario-card';
+                    usuarioCard.style.marginBottom = '25px';
 
-                        // Botones de partidos del día
+                    let diasHtml = '';
+                    fechas.forEach(dia => {
                         let botonesHtml = '';
                         porFecha[dia].forEach(p => {
                             const estaHabilitado = habilitados[p.id] === true;
@@ -231,31 +231,40 @@
                                 </button>`;
                         });
 
-                        grupo.innerHTML += `
-                            <div class="usuario-card">
-                                <div class="usuario-header">
-                                    <div>
-                                        <div class="usuario-nombre">${u.nombre}</div>
-                                        <div class="usuario-tel">${phone} &mdash; <strong style="color:#4cd137;">${cantHab} habilitados</strong> / <strong style="color:#3498db;">${cantVotos} marcados</strong></div>
-                                        <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
-                                            <label style="font-size:0.72rem; color:#888;">Pollas pagadas:</label>
-                                            <input type="number" value="${u.cupos || 0}" min="0"
-                                                   style="width:55px; padding:4px 8px; font-size:0.82rem; border-radius:6px; background:#111; border:1px solid #333; color:white;"
-                                                   title="Referencia: cuantas pollas pago este participante"
-                                                   onchange="updateCupo('${phone}', this.value)">
-                                        </div>
-                                    </div>
-                                    <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
-                                        <button class="btn btn-green" onclick="habilitarTodosDia('${phone}','${dia}')">&#9989; Todo el dia</button>
-                                        <button class="btn btn-red"   onclick="deshabilitarTodosDia('${phone}','${dia}')">&#128308; Ninguno</button>
-                                        <button class="btn btn-red"   onclick="deleteUser('${phone}')" title="Eliminar usuario">&#128465;</button>
+                        diasHtml += `
+                            <div style="margin-top:15px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:10px;">
+                                    <div style="font-size:0.75rem; color:#4cd137; text-transform:uppercase; font-weight:800;">📅 ${dia}</div>
+                                    <div style="display:flex; gap:6px;">
+                                        <button class="btn btn-green" style="padding:4px 8px; font-size:0.7rem;" onclick="habilitarTodosDia('${phone}','${dia}')">✅ Todo</button>
+                                        <button class="btn btn-red" style="padding:4px 8px; font-size:0.7rem;" onclick="deshabilitarTodosDia('${phone}','${dia}')">🔴 Nada</button>
                                     </div>
                                 </div>
                                 <div class="partidos-grid">${botonesHtml}</div>
-                            </div>`;
+                            </div>
+                        `;
                     });
 
-                    container.appendChild(grupo);
+                    usuarioCard.innerHTML = `
+                        <div class="usuario-header">
+                            <div>
+                                <div class="usuario-nombre">${u.nombre}</div>
+                                <div class="usuario-tel">${phone} &mdash; <strong style="color:#4cd137;">${cantHab} habilitados</strong> / <strong style="color:#3498db;">${cantVotos} marcados</strong></div>
+                                <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                                    <label style="font-size:0.72rem; color:#888;">Pollas pagadas:</label>
+                                    <input type="number" value="${u.cupos || 0}" min="0"
+                                           style="width:55px; padding:4px 8px; font-size:0.82rem; border-radius:6px; background:#111; border:1px solid #333; color:white;"
+                                           title="Referencia: cuantas pollas pago este participante"
+                                           onchange="updateCupo('${phone}', this.value)">
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-red" onclick="deleteUser('${phone}')" title="Eliminar usuario">🗑 Eliminar Participante</button>
+                            </div>
+                        </div>
+                        ${diasHtml}
+                    `;
+                    container.appendChild(usuarioCard);
                 });
             });
         }
