@@ -171,6 +171,7 @@
                 snap.forEach(child => {
                     const u = child.val();
                     const userVotos = u.voto_realizado && todosPronosticos[u.telefono] ? todosPronosticos[u.telefono] : null;
+                    const pagos = u.pagos || {};
                     
                     let votosHtml = '';
                     if(userVotos) {
@@ -182,11 +183,24 @@
                         }
                     }
 
+                    // Generar botones de pago por partido
+                    let botonesPago = '';
+                    for(let partId in todosPartidos) {
+                        const part = todosPartidos[partId];
+                        const estaPago = pagos[partId] === true;
+                        botonesPago += `
+                            <button class="btn-sm ${estaPago ? 'btn-success' : 'btn-danger'}" 
+                                    style="margin-bottom:4px; display:block; width:100%; text-align:left; font-size:0.65rem;"
+                                    onclick="togglePago('${u.telefono}', '${partId}', ${!estaPago})">
+                                ${estaPago ? '✅' : '❌'} ${part.equipo_a.substring(0,3)} vs ${part.equipo_b.substring(0,3)}
+                            </button>`;
+                    }
+
                     tbody.innerHTML += `
                         <tr>
                             <td>${u.nombre}</td>
                             <td>${u.telefono}</td>
-                            <td><span class="badge ${u.pago_confirmado ? 'badge-success' : 'badge-pending'}">${u.pago_confirmado ? 'SÍ' : 'PENDIENTE'}</span></td>
+                            <td>${botonesPago}</td>
                             <td>
                                 <span class="badge ${u.voto_realizado ? 'badge-success' : 'badge-pending'}">
                                     ${u.voto_realizado ? 'VOTÓ' : 'Pte'}
@@ -194,8 +208,7 @@
                                 ${votosHtml}
                             </td>
                             <td>
-                                ${!u.pago_confirmado ? `<button class="btn-sm btn-success" onclick="togglePago('${u.telefono}', true)">Confirmar Pago</button>` : `<button class="btn-sm btn-danger" onclick="togglePago('${u.telefono}', false)">Anular Pago</button>`}
-                                <button class="btn-sm btn-danger" onclick="deleteUser('${u.telefono}')">X</button>
+                                <button class="btn-sm btn-danger" onclick="deleteUser('${u.telefono}')">Eliminar</button>
                             </td>
                         </tr>
                     `;
@@ -203,8 +216,8 @@
             });
         }
 
-        function togglePago(phone, val) {
-            db.ref(`polla/usuarios/${phone}/pago_confirmado`).set(val);
+        function togglePago(phone, matchId, val) {
+            db.ref(`polla/usuarios/${phone}/pagos/${matchId}`).set(val);
         }
 
         function deleteUser(phone) {

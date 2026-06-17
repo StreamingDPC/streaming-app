@@ -171,16 +171,9 @@
         function renderStatus() {
             const container = document.getElementById('status-container');
             if(currentUser.voto_realizado) {
-                container.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Pronóstico guardado con éxito. No se permiten cambios.</div>`;
-            } else if(!currentUser.pago_confirmado) {
-                container.innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i><strong> Participación Pendiente</strong><br>
-                        Paga <strong>$${pollaConfig.precio.toLocaleString()}</strong> por Nequi al <strong>${pollaConfig.nequi}</strong> y envía el comprobante al admin.
-                    </div>
-                `;
+                container.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Participación completada. ¡Mucha suerte!</div>`;
             } else {
-                container.innerHTML = `<div class="alert alert-info">¡Pago confirmado! Ya puedes ingresar tus resultados.</div>`;
+                container.innerHTML = `<div class="alert alert-info"><i class="fas fa-money-bill-wave"></i> Cada partido tiene un costo de <strong>$${pollaConfig.precio.toLocaleString()}</strong>. Contacta al admin tras pagar para habilitar tu marcador.</div>`;
             }
         }
 
@@ -202,20 +195,28 @@
                 misVotos = vSnap.val() || {};
             }
 
+            const pagos = currentUser.pagos || {};
+
             let html = '';
+            let canSaveAny = false;
+
             partidos.forEach(p => {
-                const canVote = currentUser.pago_confirmado && !currentUser.voto_realizado;
+                const isPaid = pagos[p.id] === true;
+                const canVote = isPaid && !currentUser.voto_realizado;
+                if(canVote) canSaveAny = true;
+
                 const vA = misVotos[p.id] ? misVotos[p.id].goles_a : 0;
                 const vB = misVotos[p.id] ? misVotos[p.id].goles_b : 0;
 
                 html += `
                     <div class="partido-card">
                         <div class="partido-header">${new Date(p.fecha).toLocaleString()}</div>
+                        ${!isPaid && !currentUser.voto_realizado ? `<div style="font-size:0.7rem; color:#f39c12; text-align:center; margin-bottom:10px;"><i class="fas fa-lock"></i> Pago pendiente para este partido</div>` : ''}
                         <div class="score-grid">
                             <div class="team">${p.equipo_a}</div>
-                            <input type="number" class="score-input goles-a" data-id="${p.id}" value="${canVote ? 0 : vA}" ${canVote ? '' : 'disabled'}>
+                            <input type="number" class="score-input goles-a" data-id="${p.id}" value="${isPaid ? vA : 0}" ${canVote ? '' : 'disabled'}>
                             <span>-</span>
-                            <input type="number" class="score-input goles-b" data-id="${p.id}" value="${canVote ? 0 : vB}" ${canVote ? '' : 'disabled'}>
+                            <input type="number" class="score-input goles-b" data-id="${p.id}" value="${isPaid ? vB : 0}" ${canVote ? '' : 'disabled'}>
                             <div class="team">${p.equipo_b}</div>
                         </div>
                     </div>
@@ -223,7 +224,7 @@
             });
 
             container.innerHTML = html || '<p style="text-align:center;">No hay partidos programados.</p>';
-            btnSave.style.display = (currentUser.pago_confirmado && !currentUser.voto_realizado && partidos.length > 0) ? 'block' : 'none';
+            btnSave.style.display = (canSaveAny && !currentUser.voto_realizado) ? 'block' : 'none';
         }
 
         async function savePronostico() {
