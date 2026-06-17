@@ -692,6 +692,24 @@
         </div>
     </div>
 
+    <!-- Role Selector Modal -->
+    <div id="role-selector-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; backdrop-filter:blur(10px); justify-content:center; align-items:center;">
+        <div style="background:var(--bg-card); border:1px solid var(--glass-border); padding:2rem; border-radius:24px; max-width:400px; width:90%; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.5); animation: modalIn 0.3s ease-out;">
+            <div style="font-size:3.5rem; margin-bottom:1rem;">👥</div>
+            <h3 style="color:white; margin-bottom:1.5rem; font-size:1.4rem; font-weight:800;">Selecciona tu Acceso</h3>
+            <p style="color:rgba(255,255,255,0.7); margin-bottom:2rem; font-size:0.95rem;">¿Cómo deseas iniciar sesión?</p>
+            
+            <button onclick="closeRoleSelection(); document.getElementById('open-client-btn').click();" class="get-code-btn" style="width:100%; padding:15px; background:rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3); color:#2ecc71; margin-bottom:1rem; border-radius:12px; font-weight:bold;">
+                <i class="fa-solid fa-address-card"></i> Entrar como Cliente
+            </button>
+            <button onclick="closeRoleSelection(); document.getElementById('open-vendedores-btn').click();" class="get-code-btn" style="width:100%; padding:15px; background:rgba(138,43,226,0.15); border: 1px solid rgba(138,43,226,0.3); color:#c48dfc; margin-bottom:1rem; border-radius:12px; font-weight:bold;">
+                <i class="fa-solid fa-user-tie"></i> Entrar como Vendedor
+            </button>
+            
+            <button onclick="closeRoleSelection()" style="background:transparent; border:none; color:rgba(255,255,255,0.5); cursor:pointer; margin-top:0.5rem;">Cancelar</button>
+        </div>
+    </div>
+
     <style>
         @keyframes modalIn {
             from { transform: scale(0.8); opacity: 0; }
@@ -700,12 +718,24 @@
     </style>
 
     <script>
-        function showCustomAlert(msg) {
+        let customAlertCallback = null;
+        function showCustomAlert(msg, callback = null) {
             document.getElementById('custom-alert-message').innerText = msg;
             document.getElementById('custom-alert').style.display = 'flex';
+            customAlertCallback = callback;
         }
         function closeCustomAlert() {
             document.getElementById('custom-alert').style.display = 'none';
+            if (customAlertCallback) {
+                customAlertCallback();
+                customAlertCallback = null;
+            }
+        }
+        function showRoleSelectionModal() {
+            document.getElementById('role-selector-modal').style.display = 'flex';
+        }
+        function closeRoleSelection() {
+            document.getElementById('role-selector-modal').style.display = 'none';
         }
     </script>
     <script>
@@ -714,8 +744,9 @@
             if (btn) {
                 btn.addEventListener('click', () => {
                    if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
-                       showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
-                       document.getElementById('open-client-btn').click(); 
+                       showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión con su número de celular y PIN de seguridad.', () => {
+                           showRoleSelectionModal();
+                       });
                        return;
                    }
                    const tab = document.querySelector('.tab-btn[data-tab="polla"]');
@@ -735,8 +766,9 @@
                     if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
                        e.preventDefault();
                        e.stopPropagation();
-                       showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
-                       document.getElementById('open-client-btn').click(); 
+                       showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión con su número de celular y PIN de seguridad.', () => {
+                           showRoleSelectionModal();
+                       });
                     } else {
                         const iframe = document.querySelector('#polla-grid iframe');
                         if (iframe) iframe.src = 'polla/index.html?phone=' + clientPhoneLoggedIn + '&t=' + Date.now();
