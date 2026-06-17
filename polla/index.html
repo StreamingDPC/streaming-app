@@ -215,39 +215,76 @@
         async function renderPartidos(misVotos) {
             const container = document.getElementById('partidos-container');
             const snap = await db.ref('polla/partidos').once('value');
-            const cuposHabilitados = currentUser.cupos || 0;
-            const cantGuardados = Object.keys(misVotos).length;
+            const habilitados = currentUser.partidos_habilitados || {};
 
-            let html = '';
+            // Agrupar por fecha (día)
+            const porFecha = {};
             snap.forEach(child => {
                 const p = { id: child.key, ...child.val() };
-                const yaVotado = misVotos[p.id] !== undefined;
-                const vA = yaVotado ? misVotos[p.id].goles_a : '';
-                const vB = yaVotado ? misVotos[p.id].goles_b : '';
-                
-                // Lógica de habilitación
-                let bloqueado = yaVotado; 
-                if(!yaVotado && cantGuardados >= cuposHabilitados) bloqueado = true;
-
-                html += `
-                    <div class="partido-card" id="card-${p.id}" style="border: 1px solid ${yaVotado ? '#4cd137' : (bloqueado ? '#ff4d4d' : 'rgba(255,255,255,0.1)')}; background: ${yaVotado ? 'rgba(76, 209, 55, 0.05)' : (bloqueado ? 'rgba(255,77,77,0.05)' : 'transparent')}">
-                        <div class="partido-header">${new Date(p.fecha).toLocaleString()}</div>
-                        ${yaVotado ? '<div style="font-size:0.75rem; color:#4cd137; text-align:center; margin-bottom:8px; font-weight:bold;"><i class="fas fa-check-circle"></i> GUARDADO</div>' : ''}
-                        ${!yaVotado && bloqueado ? '<div style="font-size:0.75rem; color:#ff4d4d; text-align:center; margin-bottom:8px; font-weight:bold;"><i class="fas fa-lock"></i> SIN CUPOS</div>' : ''}
-                        <div class="score-grid">
-                            <div class="team">${p.equipo_a}</div>
-                            <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}" 
-                                   ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()">
-                            <span>-</span>
-                            <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}" 
-                                   ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()">
-                            <div class="team">${p.equipo_b}</div>
-                        </div>
-                    </div>
-                `;
+                const dia = new Date(p.fecha).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+                if(!porFecha[dia]) porFecha[dia] = [];
+                porFecha[dia].push(p);
             });
 
-            container.innerHTML = html || '<p style="text-align:center;">No hay partidos programados.</p>';
+            let html = '';
+            const fechas = Object.keys(porFecha);
+
+            if(fechas.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#666;">No hay partidos programados.</p>';
+                return;
+            }
+
+            fechas.forEach(dia => {
+                const partidosDelDia = porFecha[dia];
+                // Solo mostrar si al menos uno está habilitado para este usuario
+                const tieneHabilitados = partidosDelDia.some(p => habilitados[p.id] === true);
+                if(!tieneHabilitados) return;
+
+                html += `<div style="margin-bottom:20px;">
+                    <div style="font-size:0.75rem; font-weight:800; color:#4cd137; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid rgba(76,209,55,0.2);">
+                        📅 ${dia}
+                    </div>`;
+
+                partidosDelDia.forEach(p => {
+                    const estaHabilitado = habilitados[p.id] === true;
+                    const yaVotado = misVotos[p.id] !== undefined;
+                    const vA = yaVotado ? misVotos[p.id].goles_a : '';
+                    const vB = yaVotado ? misVotos[p.id].goles_b : '';
+                    const bloqueado = yaVotado || !estaHabilitado;
+
+                    let borderColor = 'rgba(255,255,255,0.1)';
+                    let bgColor = 'transparent';
+                    let etiqueta = '';
+                    if(yaVotado) {
+                        borderColor = '#4cd137';
+                        bgColor = 'rgba(76,209,55,0.06)';
+                        etiqueta = '<div style="font-size:0.72rem; color:#4cd137; text-align:center; margin-bottom:8px; font-weight:800;"><i class="fas fa-check-circle"></i> GUARDADO</div>';
+                    } else if(!estaHabilitado) {
+                        borderColor = 'rgba(255,255,255,0.05)';
+                        bgColor = 'rgba(0,0,0,0.2)';
+                        etiqueta = '<div style="font-size:0.72rem; color:#555; text-align:center; margin-bottom:8px;"><i class="fas fa-lock"></i> No habilitado</div>';
+                    }
+
+                    html += `
+                        <div class="partido-card" id="card-${p.id}" style="border:1px solid ${borderColor}; background:${bgColor}; transition: all 0.3s ease;">
+                            <div class="partido-header">${new Date(p.fecha).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}</div>
+                            ${etiqueta}
+                            <div class="score-grid">
+                                <div class="team">${p.equipo_a}</div>
+                                <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}"
+                                       ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
+                                <span>-</span>
+                                <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}"
+                                       ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
+                                <div class="team">${p.equipo_b}</div>
+                            </div>
+                        </div>`;
+                });
+
+                html += '</div>';
+            });
+
+            container.innerHTML = html || '<p style="text-align:center; color:#666; padding:20px;">El administrador aún no ha habilitado partidos para ti.</p>';
             updateSaveButton();
         }
 
@@ -255,44 +292,38 @@
             const inputsA = document.querySelectorAll('.goles-a');
             const inputsB = document.querySelectorAll('.goles-b');
             const btnSave = document.getElementById('btn-save-vote');
-            
             let nuevos = 0;
             inputsA.forEach((inp, i) => {
                 if(!inp.disabled && inp.value !== '' && inputsB[i].value !== '') nuevos++;
             });
-
             btnSave.style.display = nuevos > 0 ? 'block' : 'none';
-            btnSave.innerText = `GUARDAR ${nuevos} PRONÓSTICO(S)`;
+            btnSave.innerText = `⚽ GUARDAR ${nuevos} PRONÓSTICO(S)`;
         }
 
         async function savePronostico() {
-            if(!confirm('¿Estás seguro de enviar tus nuevos pronósticos?')) return;
-
+            if(!confirm('¿Confirmas enviar tus pronósticos? Los que ya guardaste no cambiarán.')) return;
             const inputsA = document.querySelectorAll('.goles-a');
             const inputsB = document.querySelectorAll('.goles-b');
             const updates = {};
-            
             inputsA.forEach((inp, i) => {
-                const id = inp.dataset.id;
-                // Solo guardar los que NO están deshabilitados (los nuevos)
                 if(!inp.disabled && inp.value !== '') {
-                    updates[id] = {
+                    updates[inp.dataset.id] = {
                         goles_a: parseInt(inp.value) || 0,
                         goles_b: parseInt(inputsB[i].value) || 0
                     };
                 }
             });
-
-            if(Object.keys(updates).length > 0) {
-                try {
-                    await db.ref(`polla/pronosticos/${currentUser.telefono}`).update(updates);
-                    alert('¡Nuevos pronósticos guardados exitosamente!');
-                    // El listener de 'pronosticos' hará que se recargue la UI sola
-                } catch(e) {
-                    alert('Error al guardar: ' + e.message);
-                }
+            if(Object.keys(updates).length === 0) return;
+            try {
+                await db.ref(`polla/pronosticos/${currentUser.telefono}`).update(updates);
+                alert('✅ ¡Pronósticos guardados exitosamente!');
+            } catch(e) {
+                alert('Error al guardar: ' + e.message);
             }
         }
+
+
+
 
         function logout() {
             localStorage.removeItem('polla_phone');

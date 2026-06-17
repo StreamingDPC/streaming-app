@@ -8,78 +8,99 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        body { font-family: 'Outfit', sans-serif; background: #050507; color: white; padding: 20px; box-sizing: border-box; }
-        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; margin-bottom: 30px; }
-        h2 { color: #4cd137; margin-top: 0; font-size: 1.2rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        th { color: #aaa; font-size: 0.8rem; text-transform: uppercase; }
-        .btn-sm { padding: 6px 12px; border-radius: 6px; border: none; font-size: 0.75rem; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn-success { background: #4cd137; color: black; font-weight: bold; }
-        .btn-danger { background: #ff4d4d; color: white; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
-        .badge-pending { background: #f39c12; color: black; }
-        .badge-success { background: #4cd137; color: black; }
-        input { padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #111; color: white; margin-right: 10px; font-family: inherit; }
-        .form-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Outfit', sans-serif; background: #050507; color: white; padding: 20px; }
+        h1 { color: #4cd137; font-size: 1.5rem; margin-bottom: 25px; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; margin-bottom: 25px; }
+        h2 { color: #4cd137; margin: 0 0 15px 0; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        /* Tabla partidos */
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: left; }
+        th { color: #888; font-size: 0.75rem; text-transform: uppercase; }
+        /* Botones */
+        .btn { padding: 7px 14px; border-radius: 8px; border: none; font-family: inherit; font-weight: 700; cursor: pointer; font-size: 0.78rem; transition: all 0.2s; }
+        .btn-green  { background: #4cd137; color: #000; }
+        .btn-red    { background: #ff4d4d; color: #fff; }
+        .btn-gray   { background: rgba(255,255,255,0.1); color: #aaa; }
+        .btn-blue   { background: #3498db; color: #fff; }
+        /* Inputs */
+        input[type="text"], input[type="number"], input[type="datetime-local"] {
+            padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.4); color: white; font-family: inherit; font-size: 0.85rem;
+        }
+        .form-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+        /* Fecha grupo */
+        .fecha-grupo { background: rgba(76,209,55,0.05); border: 1px solid rgba(76,209,55,0.2); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .fecha-titulo { font-size: 0.8rem; color: #4cd137; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        /* Usuario card */
+        .usuario-card { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+        .usuario-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .usuario-nombre { font-weight: 700; font-size: 0.9rem; }
+        .usuario-tel { font-size: 0.75rem; color: #888; }
+        .partidos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .partido-toggle { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s; }
+        .partido-toggle.on  { background: rgba(76,209,55,0.2);  border: 1px solid #4cd137; color: #4cd137; }
+        .partido-toggle.off { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #666; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; }
+        .badge-ok   { background: #4cd137; color: #000; }
+        .badge-pte  { background: #f39c12; color: #000; }
+        /* Sección usuarios */
+        #usuarios-container .loading { color: #666; text-align: center; padding: 20px; }
+        .tag-votos { font-size: 0.72rem; color: #4cd137; padding: 4px 0; }
     </style>
 </head>
 <body>
-    <h1>⚙️ Admin Polla (Firebase)</h1>
+    <h1>⚙️ Admin — Polla Deportiva</h1>
 
-    <!-- Configuración -->
+    <!-- Configuración General -->
     <div class="card">
-        <h2>Ajustes Generales</h2>
+        <h2>⚙️ Ajustes Generales</h2>
         <div class="form-row">
             <div>
-                <label style="font-size:0.8rem; color:#888;">Precio ($)</label><br>
-                <input type="number" id="conf-precio" value="10000">
+                <label style="font-size:0.75rem;color:#888;">Precio por polla ($)</label><br>
+                <input type="number" id="conf-precio" value="10000" style="width:140px;">
             </div>
             <div>
-                <label style="font-size:0.8rem; color:#888;">Número Nequi</label><br>
-                <input type="text" id="conf-nequi" value="3000000000">
+                <label style="font-size:0.75rem;color:#888;">Número Nequi</label><br>
+                <input type="text" id="conf-nequi" value="3000000000" style="width:180px;">
             </div>
-            <button onclick="saveGeneralConfig()" class="btn-sm btn-success" style="margin-top:20px;">Guardar Cambios</button>
+            <button onclick="saveGeneralConfig()" class="btn btn-green">💾 Guardar Config</button>
         </div>
     </div>
 
     <!-- Gestión de Partidos -->
     <div class="card">
-        <h2>Partidos de la Polla</h2>
-        <div class="form-row" style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px;">
-            <input type="text" id="p-equipo-a" placeholder="Equipo A">
-            <input type="text" id="p-equipo-b" placeholder="Equipo B">
-            <input type="datetime-local" id="p-fecha">
-            <button onclick="addPartido()" class="btn-sm btn-success">Agregar Partido</button>
+        <h2>⚽ Partidos</h2>
+        <div class="form-row" style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-bottom:15px;">
+            <div>
+                <label style="font-size:0.75rem;color:#888;">Equipo Local</label><br>
+                <input type="text" id="p-equipo-a" placeholder="Ej: Colombia" style="width:160px;">
+            </div>
+            <div>
+                <label style="font-size:0.75rem;color:#888;">Equipo Visitante</label><br>
+                <input type="text" id="p-equipo-b" placeholder="Ej: Brasil" style="width:160px;">
+            </div>
+            <div>
+                <label style="font-size:0.75rem;color:#888;">Fecha y Hora</label><br>
+                <input type="datetime-local" id="p-fecha">
+            </div>
+            <button onclick="addPartido()" class="btn btn-green" style="margin-top:18px;">+ Agregar</button>
         </div>
         <table id="partidos-table">
             <thead>
                 <tr>
-                    <th>Local</th>
-                    <th>Visitante</th>
-                    <th>Fecha / Hora</th>
-                    <th>Acción</th>
+                    <th>Local</th><th>Visitante</th><th>Fecha / Hora</th><th>Acción</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
 
-    <!-- Gestión de Participantes -->
+    <!-- Control por Usuario -->
     <div class="card">
-        <h2>Participantes</h2>
-        <table id="usuarios-table">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Teléfono</th>
-                    <th>Pago</th>
-                    <th>Estado Voto</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <h2>👥 Participantes — Control de Partidos Habilitados</h2>
+        <p style="color:#888; font-size:0.8rem; margin-top:0;">Habilita o deshabilita cada partido individualmente para cada participante. El usuario solo podrá marcar los partidos con ✅ verde.</p>
+        <div id="usuarios-container"><div class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div></div>
     </div>
 
     <script>
@@ -92,125 +113,169 @@
             messagingSenderId: "831116907849",
             appId: "1:831116907849:web:ee8e744db342970fd0b698"
         };
-
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Cargar Todo
+        let todosPartidosCache = {};
+
         window.onload = () => {
             loadConfig();
             loadPartidos();
             loadUsuarios();
         };
 
+        // ─── CONFIG ─────────────────────────────────────────────────────────
         function loadConfig() {
             db.ref('polla/config').on('value', snap => {
                 if(snap.exists()) {
-                    const data = snap.val();
-                    document.getElementById('conf-precio').value = data.precio;
-                    document.getElementById('conf-nequi').value = data.nequi;
+                    const d = snap.val();
+                    document.getElementById('conf-precio').value = d.precio;
+                    document.getElementById('conf-nequi').value  = d.nequi;
                 }
             });
         }
-
         function saveGeneralConfig() {
             const precio = parseInt(document.getElementById('conf-precio').value);
             const nequi = document.getElementById('conf-nequi').value;
-            db.ref('polla/config').set({ precio, nequi })
-                .then(() => alert('Configuración guardada'));
+            db.ref('polla/config').set({ precio, nequi }).then(() => alert('✅ Config guardada'));
         }
 
+        // ─── PARTIDOS ────────────────────────────────────────────────────────
         function loadPartidos() {
             db.ref('polla/partidos').on('value', snap => {
+                todosPartidosCache = {};
                 const tbody = document.querySelector('#partidos-table tbody');
                 tbody.innerHTML = '';
                 snap.forEach(child => {
                     const p = child.val();
+                    todosPartidosCache[child.key] = p;
                     tbody.innerHTML += `
                         <tr>
                             <td>${p.equipo_a}</td>
                             <td>${p.equipo_b}</td>
                             <td>${new Date(p.fecha).toLocaleString()}</td>
-                            <td><button class="btn-sm btn-danger" onclick="deletePartido('${child.key}')">Eliminar</button></td>
-                        </tr>
-                    `;
+                            <td><button class="btn btn-red" onclick="deletePartido('${child.key}')">🗑 Eliminar</button></td>
+                        </tr>`;
                 });
             });
         }
-
         function addPartido() {
-            const equipo_a = document.getElementById('p-equipo-a').value;
-            const equipo_b = document.getElementById('p-equipo-b').value;
-            const fecha = document.getElementById('p-fecha').value;
+            const equipo_a = document.getElementById('p-equipo-a').value.trim();
+            const equipo_b = document.getElementById('p-equipo-b').value.trim();
+            const fecha    = document.getElementById('p-fecha').value;
             if(!equipo_a || !equipo_b || !fecha) return alert('Completa todos los campos');
-            
-            db.ref('polla/partidos').push({ equipo_a, equipo_b, fecha: new Date(fecha).getTime() })
-                .then(() => {
-                    document.getElementById('p-equipo-a').value = '';
-                    document.getElementById('p-equipo-b').value = '';
-                });
+            db.ref('polla/partidos').push({ equipo_a, equipo_b, fecha: new Date(fecha).getTime() }).then(() => {
+                document.getElementById('p-equipo-a').value = '';
+                document.getElementById('p-equipo-b').value = '';
+                document.getElementById('p-fecha').value = '';
+            });
         }
-
         function deletePartido(id) {
             if(confirm('¿Eliminar partido?')) db.ref(`polla/partidos/${id}`).remove();
         }
 
+        // ─── USUARIOS ────────────────────────────────────────────────────────
         function loadUsuarios() {
             db.ref('polla/usuarios').on('value', async snap => {
-                const tbody = document.querySelector('#usuarios-table tbody');
-                tbody.innerHTML = '';
-                
-                // Cargar partidos primero para tener nombres
-                const partSnap = await db.ref('polla/partidos').once('value');
-                const todosPartidos = partSnap.val() || {};
+                const container = document.getElementById('usuarios-container');
+                container.innerHTML = '';
 
-                // Cargar todos los pronósticos para referencia rápida
-                const pSnap = await db.ref('polla/pronosticos').once('value');
+                const partSnap  = await db.ref('polla/partidos').once('value');
+                const pSnap     = await db.ref('polla/pronosticos').once('value');
+                todosPartidosCache = partSnap.val() || {};
                 const todosPronosticos = pSnap.val() || {};
 
-                snap.forEach(child => {
-                    const u = child.val();
-                    const userVotos = u.voto_realizado && todosPronosticos[u.telefono] ? todosPronosticos[u.telefono] : null;
-                    const cupos = u.cupos || 0;
-                    
-                    let votosHtml = '';
-                    let cantVotos = 0;
-                    if(userVotos) {
-                        for(let partId in userVotos) {
-                            cantVotos++;
-                            const part = todosPartidos[partId] || { equipo_a: '?', equipo_b: '?' };
-                            votosHtml += `<div style="font-size:0.75rem; color:#4cd137; margin-top:5px; white-space:nowrap;">
-                                <strong>${part.equipo_a.substring(0,3)}</strong> ${userVotos[partId].goles_a} - ${userVotos[partId].goles_b} <strong>${part.equipo_b.substring(0,3)}</strong>
-                            </div>`;
-                        }
-                    }
+                // Agrupar partidos por fecha (día)
+                const porFecha = {};
+                for(let id in todosPartidosCache) {
+                    const p = todosPartidosCache[id];
+                    const dia = new Date(p.fecha).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+                    if(!porFecha[dia]) porFecha[dia] = [];
+                    porFecha[dia].push({ id, ...p });
+                }
 
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${u.nombre}</td>
-                            <td>${u.telefono}</td>
-                            <td>
-                                <input type="number" value="${cupos}" min="0" style="width:50px; padding:5px; margin-bottom:5px;" 
-                                       onchange="updateCupo('${u.telefono}', this.value)">
-                                <div style="font-size:0.7rem; color:#aaa;">Cupos habilitados</div>
-                            </td>
-                            <td>
-                                <span class="badge ${u.voto_realizado ? 'badge-success' : 'badge-pending'}">
-                                    ${u.voto_realizado ? 'VOTÓ ('+cantVotos+')' : 'Pte'}
-                                </span>
-                                ${votosHtml}
-                            </td>
-                            <td>
-                                <button class="btn-sm btn-danger" onclick="deleteUser('${u.telefono}')">Eliminar</button>
-                            </td>
-                        </tr>
-                    `;
+                const fechas = Object.keys(porFecha);
+                if(fechas.length === 0) {
+                    container.innerHTML = '<p style="color:#666; text-align:center;">No hay partidos registrados aún.</p>';
+                    return;
+                }
+
+                // Por cada fecha, mostrar bloque
+                fechas.forEach(dia => {
+                    const grupo = document.createElement('div');
+                    grupo.className = 'fecha-grupo';
+                    grupo.innerHTML = `<div class="fecha-titulo">📅 ${dia}</div>`;
+
+                    // Por cada usuario
+                    snap.forEach(child => {
+                        const u = child.val();
+                        const phone = child.key;
+                        const userVotos = todosPronosticos[phone] || {};
+                        const habilitados = u.partidos_habilitados || {};
+                        const cantVotos = Object.keys(userVotos).length;
+                        const cantHab = Object.values(habilitados).filter(v => v === true).length;
+
+                        // Botones de partidos del día
+                        let botonesHtml = '';
+                        porFecha[dia].forEach(p => {
+                            const estaHabilitado = habilitados[p.id] === true;
+                            const yaVoto = userVotos[p.id];
+                            let label = `${p.equipo_a.substring(0,4)} - ${p.equipo_b.substring(0,4)}`;
+                            let resultadoVoto = yaVoto ? ` <span style="color:#4cd137;">(${yaVoto.goles_a}-${yaVoto.goles_b})</span>` : '';
+                            botonesHtml += `
+                                <button 
+                                    class="partido-toggle ${estaHabilitado ? 'on' : 'off'}"
+                                    onclick="togglePartido('${phone}','${p.id}', ${!estaHabilitado})"
+                                    title="${p.equipo_a} vs ${p.equipo_b}">
+                                    ${estaHabilitado ? '✅' : '🔴'} ${label}${resultadoVoto}
+                                </button>`;
+                        });
+
+                        grupo.innerHTML += `
+                            <div class="usuario-card">
+                                <div class="usuario-header">
+                                    <div>
+                                        <div class="usuario-nombre">${u.nombre}</div>
+                                        <div class="usuario-tel">${phone} — <strong style="color:#4cd137;">${cantHab} hab.</strong> / <strong style="color:#3498db;">${cantVotos} marcados</strong></div>
+                                    </div>
+                                    <div style="display:flex; gap:6px;">
+                                        <button class="btn btn-green" onclick="habilitarTodosDia('${phone}','${dia}')">✅ Todo el día</button>
+                                        <button class="btn btn-red"   onclick="deshabilitarTodosDia('${phone}','${dia}')">🔴 Ninguno</button>
+                                        <button class="btn btn-red"   onclick="deleteUser('${phone}')" title="Eliminar usuario">🗑</button>
+                                    </div>
+                                </div>
+                                <div class="partidos-grid">${botonesHtml}</div>
+                            </div>`;
+                    });
+
+                    container.appendChild(grupo);
                 });
             });
         }
 
-        function updateCupo(phone, val) {
-            db.ref(`polla/usuarios/${phone}/cupos`).set(parseInt(val));
+        // ─── TOGGLE PARTIDO INDIVIDUAL ────────────────────────────────────────
+        function togglePartido(phone, partidoId, habilitar) {
+            db.ref(`polla/usuarios/${phone}/partidos_habilitados/${partidoId}`).set(habilitar);
+        }
+
+        // ─── HABILITAR / DESHABILITAR TODOS LOS DEL DÍA ───────────────────
+        function habilitarTodosDia(phone, dia) {
+            const updates = {};
+            for(let id in todosPartidosCache) {
+                const p = todosPartidosCache[id];
+                const d = new Date(p.fecha).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+                if(d === dia) updates[`polla/usuarios/${phone}/partidos_habilitados/${id}`] = true;
+            }
+            db.ref().update(updates);
+        }
+        function deshabilitarTodosDia(phone, dia) {
+            const updates = {};
+            for(let id in todosPartidosCache) {
+                const p = todosPartidosCache[id];
+                const d = new Date(p.fecha).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+                if(d === dia) updates[`polla/usuarios/${phone}/partidos_habilitados/${id}`] = false;
+            }
+            db.ref().update(updates);
         }
 
         function deleteUser(phone) {
