@@ -665,13 +665,40 @@
             </div>
         </div>
     </div>
+
+    <!-- Custom Styled Alert Modal -->
+    <div id="custom-alert" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10001; backdrop-filter:blur(10px); justify-content:center; align-items:center;">
+        <div style="background:var(--bg-card); border:1px solid var(--glass-border); padding:2rem; border-radius:24px; max-width:400px; width:90%; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.5); animation: modalIn 0.3s ease-out;">
+            <div style="font-size:3.5rem; margin-bottom:1rem;">🔐</div>
+            <h3 style="color:white; margin-bottom:1rem; font-size:1.4rem; font-weight:800;">Acceso Restringido</h3>
+            <p id="custom-alert-message" style="color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:2rem; font-size:1rem;"></p>
+            <button onclick="closeCustomAlert()" class="get-code-btn" style="width:100%; padding:15px; background:var(--accent-primary); color:black; font-weight:bold; border-radius:12px;">Entendido</button>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+    <script>
+        function showCustomAlert(msg) {
+            document.getElementById('custom-alert-message').innerText = msg;
+            document.getElementById('custom-alert').style.display = 'flex';
+        }
+        function closeCustomAlert() {
+            document.getElementById('custom-alert').style.display = 'none';
+        }
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('open-polla-btn');
             if (btn) {
                 btn.addEventListener('click', () => {
                    if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
-                       alert('🔐 Acceso Restringido: Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
+                       showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
                        document.getElementById('open-client-btn').click(); 
                        return;
                    }
@@ -691,7 +718,7 @@
                     if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
                        e.preventDefault();
                        e.stopPropagation();
-                       alert('🔐 Acceso Restringido: Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
+                       showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
                        document.getElementById('open-client-btn').click(); 
                     }
                 }, true);
