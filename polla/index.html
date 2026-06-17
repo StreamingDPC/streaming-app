@@ -252,33 +252,42 @@
                         📅 ${dia}
                     </div>`;
 
-                // Solo iterar los habilitados
-                habilitadosDelDia.forEach(p => {
-                    const yaVotado = misVotos[p.id] !== undefined;
-                    const vA = yaVotado ? misVotos[p.id].goles_a : '';
-                    const vB = yaVotado ? misVotos[p.id].goles_b : '';
-
-                    const borderColor = yaVotado ? '#4cd137' : 'rgba(255,255,255,0.12)';
-                    const bgColor     = yaVotado ? 'rgba(76,209,55,0.06)' : 'transparent';
-                    const etiqueta    = yaVotado
-                        ? '<div style="font-size:0.72rem; color:#4cd137; text-align:center; margin-bottom:8px; font-weight:800;"><i class="fas fa-check-circle"></i> GUARDADO</div>'
-                        : '';
-
-                    html += `
-                        <div class="partido-card" id="card-${p.id}" style="border:1px solid ${borderColor}; background:${bgColor}; transition: all 0.3s ease;">
-                            <div class="partido-header">${new Date(p.fecha).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}</div>
-                            ${etiqueta}
-                            <div class="score-grid">
-                                <div class="team">${p.equipo_a}</div>
-                                <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}"
-                                       ${yaVotado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
-                                <span>-</span>
-                                <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}"
-                                       ${yaVotado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
-                                <div class="team">${p.equipo_b}</div>
-                            </div>
-                        </div>`;
-                });
+                    // Solo iterar los habilitados
+                    habilitadosDelDia.forEach(p => {
+                        const yaVotado = misVotos[p.id] !== undefined;
+                        const vA = yaVotado ? misVotos[p.id].goles_a : '';
+                        const vB = yaVotado ? misVotos[p.id].goles_b : '';
+    
+                        const borderColor = yaVotado ? '#4cd137' : 'rgba(255,255,255,0.12)';
+                        const bgColor     = yaVotado ? 'rgba(76,209,55,0.06)' : 'transparent';
+                        const etiqueta    = yaVotado
+                            ? '<div style="font-size:0.72rem; color:#4cd137; text-align:center; margin-bottom:8px; font-weight:800;"><i class="fas fa-check-circle"></i> GUARDADO</div>'
+                            : '';
+    
+                        const hasRealScore = p.resultado_a !== undefined && p.resultado_b !== undefined;
+                        const realScoreHtml = hasRealScore 
+                            ? `<div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
+                                   <span style="font-size:0.75rem; color:#f39c12; font-weight:800; text-transform:uppercase; letter-spacing:1px;">⚽ Resultado Final:</span>
+                                   <span style="margin-left:8px; font-size:1.1rem; font-weight:heavy; color:white; background:rgba(0,0,0,0.4); padding:4px 12px; border-radius:6px; border:1px solid #333;">${p.resultado_a} - ${p.resultado_b}</span>
+                               </div>`
+                            : '';
+    
+                        html += `
+                            <div class="partido-card" id="card-${p.id}" style="border:1px solid ${borderColor}; background:${bgColor}; transition: all 0.3s ease;">
+                                <div class="partido-header">${new Date(p.fecha).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'})}</div>
+                                ${etiqueta}
+                                <div class="score-grid">
+                                    <div class="team">${p.equipo_a}</div>
+                                    <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}"
+                                           ${yaVotado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
+                                    <span>-</span>
+                                    <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}"
+                                           ${yaVotado ? 'disabled' : ''} oninput="updateSaveButton()" min="0">
+                                    <div class="team">${p.equipo_b}</div>
+                                </div>
+                                ${realScoreHtml}
+                            </div>`;
+                    });
 
                 html += '</div>';
             });
