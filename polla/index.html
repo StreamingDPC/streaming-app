@@ -116,16 +116,21 @@
                 if(savedPhone) {
                     checkUser(savedPhone);
                 } else {
-                    showView('login');
+                    showView('login'); // Esto quita el Cargando...
                 }
             }
         };
 
         function showView(view) {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('main-container').style.display = 'block';
-            document.getElementById('login-section').style.display = view === 'login' ? 'block' : 'none';
-            document.getElementById('user-section').style.display = view === 'user' ? 'block' : 'none';
+            const loading = document.getElementById('loading');
+            const main = document.getElementById('main-container');
+            const login = document.getElementById('login-section');
+            const user = document.getElementById('user-section');
+
+            if(loading) loading.style.display = 'none';
+            if(main) main.style.display = 'block';
+            if(login) login.style.display = view === 'login' ? 'block' : 'none';
+            if(user) user.style.display = view === 'user' ? 'block' : 'none';
         }
 
         async function identifyUser() {
@@ -160,49 +165,58 @@
         }
 
         function checkUser(phone) {
-            // Escuchar cambios en el usuario en tiempo real (para cupos)
-            db.ref(`polla/usuarios/${phone}`).on('value', snap => {
-                if(!snap.exists()) {
-                    document.getElementById('user-phone').value = phone;
+            console.log("Accediendo con:", phone);
+            try {
+                db.ref(`polla/usuarios/${phone}`).on('value', snap => {
+                    if(!snap.exists()) {
+                        document.getElementById('user-phone').value = phone;
+                        showView('login');
+                        return;
+                    }
+                    currentUser = snap.val();
+                    currentUser.telefono = phone;
+                    document.getElementById('display-name').innerText = currentUser.nombre || 'Participante';
+                    
+                    // Escuchar votos y renderizar todo de una vez
+                    db.ref(`polla/pronosticos/${phone}`).on('value', vSnap => {
+                        const misVotos = vSnap.val() || {};
+                        renderStatus(phone, misVotos);
+                        renderPartidos(misVotos);
+                        showView('user'); // Quitar el Cargando...
+                    });
+                }, err => {
+                    console.error(err);
                     showView('login');
-                    return;
-                }
-                currentUser = snap.val();
-                console.log("Cupos actuales:", currentUser.cupos);
-                
-                document.getElementById('display-name').innerText = currentUser.nombre;
-                renderStatus();
-                // Escuchar cambios en sus pronósticos también
-                db.ref(`polla/pronosticos/${phone}`).on('value', vSnap => {
-                    renderPartidos(vSnap.val() || {});
                 });
-            });
+            } catch (e) {
+                console.error(e);
+                showView('login');
+            }
         }
 
-        function renderStatus() {
+        function renderStatus(phone, misVotos) {
             const container = document.getElementById('status-container');
             const cupos = currentUser.cupos || 0;
-            
-            db.ref(`polla/pronosticos/${currentUser.telefono}`).once('value').then(vSnap => {
-                const misVotos = vSnap.val() || {};
-                const cantVotos = Object.keys(misVotos).length;
+            const cantVotos = Object.keys(misVotos).length;
 
-                container.innerHTML = `
-                    <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 10px;">
-                        Valor por marcador: <strong style="color: #4cd137;">$${pollaConfig.precio.toLocaleString()}</strong>
-                    </div>
-                    <div class="alert ${cantVotos < cupos ? 'alert-warning' : 'alert-info'}">
-                        <i class="fas fa-ticket-alt"></i> Participaciones: <strong>${cantVotos} de ${cupos} usadas</strong>.
-                        ${cantVotos < cupos ? '<br><small>¡Tienes cupos disponibles! Elige un partido abajo.</small>' : ''}
-                    </div>
-                `;
-            });
+            container.innerHTML = `
+                <div style="font-size: 0.9rem; color: #aaa; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px;">
+                    Costo por polla: <strong style="color: #4cd137;">$${(pollaConfig.precio || 0).toLocaleString()}</strong>
+                </div>
+                <div class="alert ${cantVotos < cupos ? 'alert-warning' : 'alert-info'}" style="border-radius: 12px; border:none; background: rgba(255,255,255,0.05); padding: 12px;">
+                    <span style="font-size: 1.1rem; display: block; margin-bottom: 4px;">
+                        <i class="fas fa-ticket-alt" style="color:#4cd137"></i> <strong>${cantVotos}</strong> usados de <strong>${cupos}</strong> pagados
+                    </span>
+                    ${cantVotos < cupos ? '<small style="color:#4cd137; font-weight:bold;">¡Tienes cupos disponibles! Llena un marcador abajo.</small>' : '<small style="color:#888;">Ya usaste todos tus cupos.</small>'}
+                </div>
+            `;
         }
 
         async function renderPartidos(misVotos) {
             const container = document.getElementById('partidos-container');
             const snap = await db.ref('polla/partidos').once('value');
             const cuposHabilitados = currentUser.cupos || 0;
+            const cantGuardados = Object.keys(misVotos).length;
 
             let html = '';
             snap.forEach(child => {
@@ -211,17 +225,22 @@
                 const vA = yaVotado ? misVotos[p.id].goles_a : '';
                 const vB = yaVotado ? misVotos[p.id].goles_b : '';
                 
+                // Lógica de habilitación
+                let bloqueado = yaVotado; 
+                if(!yaVotado && cantGuardados >= cuposHabilitados) bloqueado = true;
+
                 html += `
-                    <div class="partido-card" id="card-${p.id}">
+                    <div class="partido-card" id="card-${p.id}" style="border: 1px solid ${yaVotado ? '#4cd137' : (bloqueado ? '#ff4d4d' : 'rgba(255,255,255,0.1)')}; background: ${yaVotado ? 'rgba(76, 209, 55, 0.05)' : (bloqueado ? 'rgba(255,77,77,0.05)' : 'transparent')}">
                         <div class="partido-header">${new Date(p.fecha).toLocaleString()}</div>
-                        ${yaVotado ? '<div style="font-size:0.7rem; color:#4cd137; text-align:center; margin-bottom:10px;"><i class="fas fa-check-circle"></i> Marcador Guardado</div>' : ''}
+                        ${yaVotado ? '<div style="font-size:0.75rem; color:#4cd137; text-align:center; margin-bottom:8px; font-weight:bold;"><i class="fas fa-check-circle"></i> GUARDADO</div>' : ''}
+                        ${!yaVotado && bloqueado ? '<div style="font-size:0.75rem; color:#ff4d4d; text-align:center; margin-bottom:8px; font-weight:bold;"><i class="fas fa-lock"></i> SIN CUPOS</div>' : ''}
                         <div class="score-grid">
                             <div class="team">${p.equipo_a}</div>
                             <input type="number" class="score-input goles-a" data-id="${p.id}" value="${vA}" 
-                                   ${yaVotado ? 'disabled' : ''} oninput="validateCupos()">
+                                   ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()">
                             <span>-</span>
                             <input type="number" class="score-input goles-b" data-id="${p.id}" value="${vB}" 
-                                   ${yaVotado ? 'disabled' : ''} oninput="validateCupos()">
+                                   ${bloqueado ? 'disabled' : ''} oninput="updateSaveButton()">
                             <div class="team">${p.equipo_b}</div>
                         </div>
                     </div>
@@ -229,74 +248,49 @@
             });
 
             container.innerHTML = html || '<p style="text-align:center;">No hay partidos programados.</p>';
-            validateCupos(misVotos);
+            updateSaveButton();
         }
 
-        async function validateCupos(votosGuardados) {
-            const cuposHabilitados = currentUser.cupos || 0;
-            const misVotos = votosGuardados || {};
-            const cantGuardados = Object.keys(misVotos).length;
-
+        function updateSaveButton() {
             const inputsA = document.querySelectorAll('.goles-a');
             const inputsB = document.querySelectorAll('.goles-b');
             const btnSave = document.getElementById('btn-save-vote');
             
-            let nuevosEnUI = 0;
+            let nuevos = 0;
             inputsA.forEach((inp, i) => {
-                if(!misVotos[inp.dataset.id] && inp.value !== '' && inputsB[i].value !== '') nuevosEnUI++;
+                if(!inp.disabled && inp.value !== '' && inputsB[i].value !== '') nuevos++;
             });
 
-            inputsA.forEach((inp, i) => {
-                const id = inp.dataset.id;
-                const card = document.getElementById(`card-${id}`);
-                const isFilledInUI = inp.value !== '' && inputsB[i].value !== '';
-                
-                if(misVotos[id]) {
-                    card.style.borderColor = '#4cd137';
-                    card.style.background = 'rgba(76, 209, 55, 0.08)';
-                } else if(isFilledInUI) {
-                    card.style.borderColor = '#3498db';
-                    card.style.background = 'rgba(52, 152, 219, 0.08)';
-                } else if((cantGuardados + nuevosEnUI) >= cuposHabilitados) {
-                    card.style.borderColor = '#ff4d4d';
-                    card.style.background = 'rgba(255, 77, 77, 0.08)';
-                    inp.disabled = true;
-                    inputsB[i].disabled = true;
-                } else {
-                    card.style.borderColor = 'rgba(255,255,255,0.1)';
-                    card.style.background = 'transparent';
-                    inp.disabled = false;
-                    inputsB[i].disabled = false;
-                }
-            });
-
-            btnSave.style.display = (nuevosEnUI > 0) ? 'block' : 'none';
-            btnSave.innerText = `Guardar ${nuevosEnUI} Marcador(es)`;
+            btnSave.style.display = nuevos > 0 ? 'block' : 'none';
+            btnSave.innerText = `GUARDAR ${nuevos} PRONÓSTICO(S)`;
         }
 
         async function savePronostico() {
-            if(!confirm('¿Estás seguro de enviar tus pronósticos? No podrás cambiarlos después.')) return;
+            if(!confirm('¿Estás seguro de enviar tus nuevos pronósticos?')) return;
 
             const inputsA = document.querySelectorAll('.goles-a');
             const inputsB = document.querySelectorAll('.goles-b');
-            const pronosticos = {};
-
-            inputsA.forEach((input, i) => {
-                const id = input.dataset.id;
-                pronosticos[id] = {
-                    goles_a: parseInt(input.value) || 0,
-                    goles_b: parseInt(inputsB[i].value) || 0
-                };
+            const updates = {};
+            
+            inputsA.forEach((inp, i) => {
+                const id = inp.dataset.id;
+                // Solo guardar los que NO están deshabilitados (los nuevos)
+                if(!inp.disabled && inp.value !== '') {
+                    updates[id] = {
+                        goles_a: parseInt(inp.value) || 0,
+                        goles_b: parseInt(inputsB[i].value) || 0
+                    };
+                }
             });
 
-            try {
-                // Guardar pronósticos
-                await db.ref(`polla/pronosticos/${currentUser.telefono}`).set(pronosticos);
-                // Marcar como votado
-                await db.ref(`polla/usuarios/${currentUser.telefono}/voto_realizado`).set(true);
-                alert('¡Pronóstico guardado exitosamente!');
-            } catch(e) {
-                alert('Error al guardar: ' + e.message);
+            if(Object.keys(updates).length > 0) {
+                try {
+                    await db.ref(`polla/pronosticos/${currentUser.telefono}`).update(updates);
+                    alert('¡Nuevos pronósticos guardados exitosamente!');
+                    // El listener de 'pronosticos' hará que se recargue la UI sola
+                } catch(e) {
+                    alert('Error al guardar: ' + e.message);
+                }
             }
         }
 
