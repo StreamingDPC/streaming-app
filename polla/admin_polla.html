@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Polla - Streaming DPC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #050507; color: white; padding: 20px; box-sizing: border-box; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; margin-bottom: 30px; }
+        h2 { color: #4cd137; margin-top: 0; font-size: 1.2rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        th { color: #aaa; font-size: 0.8rem; text-transform: uppercase; }
+        .btn-sm { padding: 6px 12px; border-radius: 6px; border: none; font-size: 0.75rem; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-success { background: #4cd137; color: black; font-weight: bold; }
+        .btn-danger { background: #ff4d4d; color: white; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .badge-pending { background: #f39c12; color: black; }
+        .badge-success { background: #4cd137; color: black; }
+        input { padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #111; color: white; margin-right: 10px; font-family: inherit; }
+        .form-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>⚙️ Admin Polla (Firebase)</h1>
+
+    <!-- Configuración -->
+    <div class="card">
+        <h2>Ajustes Generales</h2>
+        <div class="form-row">
+            <div>
+                <label style="font-size:0.8rem; color:#888;">Precio ($)</label><br>
+                <input type="number" id="conf-precio" value="10000">
+            </div>
+            <div>
+                <label style="font-size:0.8rem; color:#888;">Número Nequi</label><br>
+                <input type="text" id="conf-nequi" value="3000000000">
+            </div>
+            <button onclick="saveGeneralConfig()" class="btn-sm btn-success" style="margin-top:20px;">Guardar Cambios</button>
+        </div>
+    </div>
+
+    <!-- Gestión de Partidos -->
+    <div class="card">
+        <h2>Partidos de la Polla</h2>
+        <div class="form-row" style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px;">
+            <input type="text" id="p-equipo-a" placeholder="Equipo A">
+            <input type="text" id="p-equipo-b" placeholder="Equipo B">
+            <input type="datetime-local" id="p-fecha">
+            <button onclick="addPartido()" class="btn-sm btn-success">Agregar Partido</button>
+        </div>
+        <table id="partidos-table">
+            <thead>
+                <tr>
+                    <th>Local</th>
+                    <th>Visitante</th>
+                    <th>Fecha / Hora</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Gestión de Participantes -->
+    <div class="card">
+        <h2>Participantes</h2>
+        <table id="usuarios-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Pago</th>
+                    <th>Estado Voto</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBscP8FT1dcnHlSFMXc3DlfXSgRO9ET9s4",
+            authDomain: "streamingdpc-7e7fa.firebaseapp.com",
+            databaseURL: "https://streamingdpc-7e7fa-default-rtdb.firebaseio.com",
+            projectId: "streamingdpc-7e7fa",
+            storageBucket: "streamingdpc-7e7fa.firebasestorage.app",
+            messagingSenderId: "831116907849",
+            appId: "1:831116907849:web:ee8e744db342970fd0b698"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Cargar Todo
+        window.onload = () => {
+            loadConfig();
+            loadPartidos();
+            loadUsuarios();
+        };
+
+        function loadConfig() {
+            db.ref('polla/config').on('value', snap => {
+                if(snap.exists()) {
+                    const data = snap.val();
+                    document.getElementById('conf-precio').value = data.precio;
+                    document.getElementById('conf-nequi').value = data.nequi;
+                }
+            });
+        }
+
+        function saveGeneralConfig() {
+            const precio = parseInt(document.getElementById('conf-precio').value);
+            const nequi = document.getElementById('conf-nequi').value;
+            db.ref('polla/config').set({ precio, nequi })
+                .then(() => alert('Configuración guardada'));
+        }
+
+        function loadPartidos() {
+            db.ref('polla/partidos').on('value', snap => {
+                const tbody = document.querySelector('#partidos-table tbody');
+                tbody.innerHTML = '';
+                snap.forEach(child => {
+                    const p = child.val();
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${p.equipo_a}</td>
+                            <td>${p.equipo_b}</td>
+                            <td>${new Date(p.fecha).toLocaleString()}</td>
+                            <td><button class="btn-sm btn-danger" onclick="deletePartido('${child.key}')">Eliminar</button></td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+
+        function addPartido() {
+            const equipo_a = document.getElementById('p-equipo-a').value;
+            const equipo_b = document.getElementById('p-equipo-b').value;
+            const fecha = document.getElementById('p-fecha').value;
+            if(!equipo_a || !equipo_b || !fecha) return alert('Completa todos los campos');
+            
+            db.ref('polla/partidos').push({ equipo_a, equipo_b, fecha: new Date(fecha).getTime() })
+                .then(() => {
+                    document.getElementById('p-equipo-a').value = '';
+                    document.getElementById('p-equipo-b').value = '';
+                });
+        }
+
+        function deletePartido(id) {
+            if(confirm('¿Eliminar partido?')) db.ref(`polla/partidos/${id}`).remove();
+        }
+
+        function loadUsuarios() {
+            db.ref('polla/usuarios').on('value', snap => {
+                const tbody = document.querySelector('#usuarios-table tbody');
+                tbody.innerHTML = '';
+                snap.forEach(child => {
+                    const u = child.val();
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${u.nombre}</td>
+                            <td>${u.telefono}</td>
+                            <td><span class="badge ${u.pago_confirmado ? 'badge-success' : 'badge-pending'}">${u.pago_confirmado ? 'SÍ' : 'PENDIENTE'}</span></td>
+                            <td><span class="badge ${u.voto_realizado ? 'badge-success' : 'badge-pending'}">${u.voto_realizado ? 'VOTÓ' : 'Pte'}</span></td>
+                            <td>
+                                ${!u.pago_confirmado ? `<button class="btn-sm btn-success" onclick="togglePago('${u.telefono}', true)">Confirmar Pago</button>` : `<button class="btn-sm btn-danger" onclick="togglePago('${u.telefono}', false)">Anular Pago</button>`}
+                                <button class="btn-sm btn-danger" onclick="deleteUser('${u.telefono}')">X</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+
+        function togglePago(phone, val) {
+            db.ref(`polla/usuarios/${phone}/pago_confirmado`).set(val);
+        }
+
+        function deleteUser(phone) {
+            if(confirm('¿Eliminar participante?')) db.ref(`polla/usuarios/${phone}`).remove();
+        }
+    </script>
+</body>
+</html>

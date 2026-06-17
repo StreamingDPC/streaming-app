@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polla Deportiva - Streaming DPC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary: #4cd137;
+            --secondary: #3498db;
+            --bg: #0a0a0c;
+            --card: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--bg); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+        .container { width: 100%; max-width: 500px; background: var(--card); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 24px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { text-align: center; color: var(--primary); font-weight: 800; margin-bottom: 20px; }
+        .alert { padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
+        .alert-warning { background: rgba(243, 156, 18, 0.2); border: 1px solid #f39c12; color: #f39c12; }
+        .alert-info { background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #3498db; }
+        .alert-success { background: rgba(76, 209, 55, 0.2); border: 1px solid #4cd137; color: #4cd137; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; }
+        input[type="text"], input[type="email"], input[type="number"], input[type="tel"] { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; color: white; box-sizing: border-box; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: var(--primary); color: #000; }
+        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+        .partido-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 15px; }
+        .partido-header { text-align: center; font-size: 0.8rem; color: #888; margin-bottom: 10px; }
+        .score-grid { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .team { flex: 1; text-align: center; font-weight: 600; font-size: 0.95rem; }
+        .score-input { width: 60px !important; text-align: center; font-size: 1.2rem; font-weight: 800; }
+        .user-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.9rem; }
+        .logout { color: #ff6b6b; text-decoration: none; cursor:pointer; }
+        #loading { text-align: center; padding: 20px; color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div id="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+    
+    <div class="container" id="main-container" style="display:none;">
+        <h1>⚽ Polla Deportiva</h1>
+
+        <!-- SECCIÓN: LOGIN / REGISTRO -->
+        <div id="login-section" style="display:none;">
+            <p style="text-align:center; color:#ccc; margin-bottom: 20px;">Identifícate con tu WhatsApp para participar</p>
+            <div class="form-group">
+                <label>Tu Número de WhatsApp</label>
+                <input type="tel" id="user-phone" placeholder="Ej: 3155182545">
+            </div>
+            <div id="register-fields" style="display:none;">
+                <div class="form-group">
+                    <label>Tu Nombre Completo (Para el registro)</label>
+                    <input type="text" id="user-name" placeholder="Ej: Juan Pérez">
+                </div>
+            </div>
+            <button onclick="identifyUser()" class="btn btn-primary" id="btn-identify">Entrar al Módulo</button>
+        </div>
+
+        <!-- SECCIÓN: INTERFAZ DE USUARIO -->
+        <div id="user-section" style="display:none;">
+            <div class="user-info">
+                <span>Hola, <strong id="display-name">...</strong></span>
+                <span class="logout" onclick="logout()">Cerrar Sesión</span>
+            </div>
+
+            <div id="status-container"></div>
+            <div id="partidos-container"></div>
+            <button id="btn-save-vote" onclick="savePronostico()" class="btn btn-primary" style="margin-top: 20px; display:none;">Guardar Pronóstico</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Firebase (Extraída de app.js)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBscP8FT1dcnHlSFMXc3DlfXSgRO9ET9s4",
+            authDomain: "streamingdpc-7e7fa.firebaseapp.com",
+            databaseURL: "https://streamingdpc-7e7fa-default-rtdb.firebaseio.com",
+            projectId: "streamingdpc-7e7fa",
+            storageBucket: "streamingdpc-7e7fa.firebasestorage.app",
+            messagingSenderId: "831116907849",
+            appId: "1:831116907849:web:ee8e744db342970fd0b698"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUser = null;
+        let pollaConfig = { precio: 10000, nequi: '3000000000' };
+
+        // Al iniciar
+        window.onload = async () => {
+            // Cargar Configuración
+            db.ref('polla/config').on('value', snap => {
+                if(snap.exists()) pollaConfig = snap.val();
+            });
+
+            const savedPhone = localStorage.getItem('polla_phone');
+            if(savedPhone) {
+                checkUser(savedPhone);
+            } else {
+                showView('login');
+            }
+        };
+
+        function showView(view) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('main-container').style.display = 'block';
+            document.getElementById('login-section').style.display = view === 'login' ? 'block' : 'none';
+            document.getElementById('user-section').style.display = view === 'user' ? 'block' : 'none';
+        }
+
+        async function identifyUser() {
+            const phone = document.getElementById('user-phone').value.trim();
+            const nameField = document.getElementById('register-fields');
+            const nameInput = document.getElementById('user-name');
+            
+            if(!phone) return alert('Ingresa tu teléfono');
+
+            const snap = await db.ref(`polla/usuarios/${phone}`).once('value');
+            if(snap.exists()) {
+                localStorage.setItem('polla_phone', phone);
+                checkUser(phone);
+            } else {
+                if(nameField.style.display === 'none') {
+                    nameField.style.display = 'block';
+                    document.getElementById('btn-identify').innerText = 'Crear Registro y Entrar';
+                } else {
+                    const name = nameInput.value.trim();
+                    if(!name) return alert('Ingresa tu nombre');
+                    await db.ref(`polla/usuarios/${phone}`).set({
+                        nombre: name,
+                        telefono: phone,
+                        pago_confirmado: false,
+                        voto_realizado: false,
+                        fecha_registro: Date.now()
+                    });
+                    localStorage.setItem('polla_phone', phone);
+                    checkUser(phone);
+                }
+            }
+        }
+
+        function checkUser(phone) {
+            db.ref(`polla/usuarios/${phone}`).on('value', snap => {
+                if(!snap.exists()) {
+                    logout();
+                    return;
+                }
+                currentUser = snap.val();
+                document.getElementById('display-name').innerText = currentUser.nombre;
+                renderStatus();
+                renderPartidos();
+                showView('user');
+            });
+        }
+
+        function renderStatus() {
+            const container = document.getElementById('status-container');
+            if(currentUser.voto_realizado) {
+                container.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> Pronóstico guardado con éxito. No se permiten cambios.</div>`;
+            } else if(!currentUser.pago_confirmado) {
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i><strong> Participación Pendiente</strong><br>
+                        Paga <strong>$${pollaConfig.precio.toLocaleString()}</strong> por Nequi al <strong>${pollaConfig.nequi}</strong> y envía el comprobante al admin.
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `<div class="alert alert-info">¡Pago confirmado! Ya puedes ingresar tus resultados.</div>`;
+            }
+        }
+
+        async function renderPartidos() {
+            const container = document.getElementById('partidos-container');
+            const btnSave = document.getElementById('btn-save-vote');
+            
+            // Cargar partidos
+            const snap = await db.ref('polla/partidos').once('value');
+            const partidos = [];
+            snap.forEach(child => {
+                partidos.push({ id: child.key, ...child.val() });
+            });
+
+            // Si ya votó, cargar sus votos
+            let misVotos = {};
+            if(currentUser.voto_realizado) {
+                const vSnap = await db.ref(`polla/pronosticos/${currentUser.telefono}`).once('value');
+                misVotos = vSnap.val() || {};
+            }
+
+            let html = '';
+            partidos.forEach(p => {
+                const canVote = currentUser.pago_confirmado && !currentUser.voto_realizado;
+                const vA = misVotos[p.id] ? misVotos[p.id].goles_a : 0;
+                const vB = misVotos[p.id] ? misVotos[p.id].goles_b : 0;
+
+                html += `
+                    <div class="partido-card">
+                        <div class="partido-header">${new Date(p.fecha).toLocaleString()}</div>
+                        <div class="score-grid">
+                            <div class="team">${p.equipo_a}</div>
+                            <input type="number" class="score-input goles-a" data-id="${p.id}" value="${canVote ? 0 : vA}" ${canVote ? '' : 'disabled'}>
+                            <span>-</span>
+                            <input type="number" class="score-input goles-b" data-id="${p.id}" value="${canVote ? 0 : vB}" ${canVote ? '' : 'disabled'}>
+                            <div class="team">${p.equipo_b}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html || '<p style="text-align:center;">No hay partidos programados.</p>';
+            btnSave.style.display = (currentUser.pago_confirmado && !currentUser.voto_realizado && partidos.length > 0) ? 'block' : 'none';
+        }
+
+        async function savePronostico() {
+            if(!confirm('¿Estás seguro de enviar tus pronósticos? No podrás cambiarlos después.')) return;
+
+            const inputsA = document.querySelectorAll('.goles-a');
+            const inputsB = document.querySelectorAll('.goles-b');
+            const pronosticos = {};
+
+            inputsA.forEach((input, i) => {
+                const id = input.dataset.id;
+                pronosticos[id] = {
+                    goles_a: parseInt(input.value) || 0,
+                    goles_b: parseInt(inputsB[i].value) || 0
+                };
+            });
+
+            try {
+                // Guardar pronósticos
+                await db.ref(`polla/pronosticos/${currentUser.telefono}`).set(pronosticos);
+                // Marcar como votado
+                await db.ref(`polla/usuarios/${currentUser.telefono}/voto_realizado`).set(true);
+                alert('¡Pronóstico guardado exitosamente!');
+            } catch(e) {
+                alert('Error al guardar: ' + e.message);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('polla_phone');
+            location.reload();
+        }
+    </script>
+</body>
+</html>
