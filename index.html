@@ -671,7 +671,7 @@
             if (btn) {
                 btn.addEventListener('click', () => {
                    if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
-                       alert('Debe ingresar primero a "Mis Compras" con su Celular y su PIN para participar en la Polla.');
+                       alert('🔐 Acceso Restringido: Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
                        document.getElementById('open-client-btn').click(); 
                        return;
                    }
@@ -691,7 +691,7 @@
                     if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
                        e.preventDefault();
                        e.stopPropagation();
-                       alert('Debe ingresar primero a "Mis Compras" con su Celular y su PIN para participar en la Polla.');
+                       alert('🔐 Acceso Restringido: Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
                        document.getElementById('open-client-btn').click(); 
                     }
                 }, true);
