@@ -743,7 +743,12 @@
             const btn = document.getElementById('open-polla-btn');
             if (btn) {
                 btn.addEventListener('click', () => {
-                   if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
+                   let activeUser = (typeof clientPhoneLoggedIn !== 'undefined' && clientPhoneLoggedIn) 
+                                    ? clientPhoneLoggedIn 
+                                    : ((typeof isSellerMode !== 'undefined' && isSellerMode && typeof currentSellerName !== 'undefined' && currentSellerName) 
+                                        ? currentSellerName : null);
+                                        
+                   if (!activeUser) {
                        showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión con su número de celular y PIN de seguridad.', () => {
                            showRoleSelectionModal();
                        });
@@ -752,8 +757,7 @@
                    const tab = document.querySelector('.tab-btn[data-tab="polla"]');
                    if (tab) {
                        const iframe = document.querySelector('#polla-grid iframe');
-                       // Añadir un timestamp dinámico para forzar la carga fresca cada vez
-                       if (iframe) iframe.src = 'polla/index.html?phone=' + clientPhoneLoggedIn + '&t=' + Date.now();
+                       if (iframe) iframe.src = 'polla/index.html?phone=' + activeUser + '&t=' + Date.now();
                        tab.click();
                    }
                 });
@@ -763,7 +767,12 @@
             const pollaTab = document.querySelector('.tab-btn[data-tab="polla"]');
             if(pollaTab) {
                 pollaTab.addEventListener('click', (e) => {
-                    if (typeof clientPhoneLoggedIn === 'undefined' || !clientPhoneLoggedIn) {
+                    let activeUser = (typeof clientPhoneLoggedIn !== 'undefined' && clientPhoneLoggedIn) 
+                                     ? clientPhoneLoggedIn 
+                                     : ((typeof isSellerMode !== 'undefined' && isSellerMode && typeof currentSellerName !== 'undefined' && currentSellerName) 
+                                         ? currentSellerName : null);
+                                         
+                    if (!activeUser) {
                        e.preventDefault();
                        e.stopPropagation();
                        showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión con su número de celular y PIN de seguridad.', () => {
@@ -771,7 +780,7 @@
                        });
                     } else {
                         const iframe = document.querySelector('#polla-grid iframe');
-                        if (iframe) iframe.src = 'polla/index.html?phone=' + clientPhoneLoggedIn + '&t=' + Date.now();
+                        if (iframe) iframe.src = 'polla/index.html?phone=' + activeUser + '&t=' + Date.now();
                     }
                 }, true);
             }
