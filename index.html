@@ -44,6 +44,10 @@
                     style="background: rgba(138,43,226,0.15); border-color: rgba(138,43,226,0.3); color: #c48dfc;">
                     <i class="fa-solid fa-user-tie"></i> <span class="hide-mobile">Vendedores</span>
                 </button>
+                <button id="open-polla-btn" class="get-code-btn"
+                    style="background: rgba(76, 209, 55, 0.15); border-color: rgba(76, 209, 55, 0.3); color: #4cd137;">
+                    <i class="fa-solid fa-trophy"></i> <span class="hide-mobile">Polla</span>
+                </button>
                 <button id="open-code-btn" class="get-code-btn">
                     <i class="fa-solid fa-key"></i> <span class="hide-mobile">Obtener Código</span>
                 </button>
@@ -661,6 +665,16 @@
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('open-polla-btn');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                   const tab = document.querySelector('.tab-btn[data-tab="polla"]');
+                   if (tab) tab.click();
+                });
+            }
+        });
+    </script>
 </body>
-
 </html>
