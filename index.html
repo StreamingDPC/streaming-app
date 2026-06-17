@@ -710,7 +710,8 @@
                    const tab = document.querySelector('.tab-btn[data-tab="polla"]');
                    if (tab) {
                        const iframe = document.querySelector('#polla-grid iframe');
-                       if (iframe) iframe.src = 'polla/index.html?v=1.1&phone=' + clientPhoneLoggedIn;
+                       // Añadir un timestamp dinámico para forzar la carga fresca cada vez
+                       if (iframe) iframe.src = 'polla/index.html?phone=' + clientPhoneLoggedIn + '&t=' + Date.now();
                        tab.click();
                    }
                 });
@@ -725,6 +726,9 @@
                        e.stopPropagation();
                        showCustomAlert('Para participar en la Polla Deportiva, por favor inicie sesión en la sección "Mis Compras" con su número de celular y PIN de seguridad.');
                        document.getElementById('open-client-btn').click(); 
+                    } else {
+                        const iframe = document.querySelector('#polla-grid iframe');
+                        if (iframe) iframe.src = 'polla/index.html?phone=' + clientPhoneLoggedIn + '&t=' + Date.now();
                     }
                 }, true);
             }
