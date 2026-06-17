@@ -767,7 +767,8 @@ function setupEventListeners() {
     const refreshBtn = document.getElementById('refresh-page-btn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
-            location.reload();
+            const sep = window.location.href.includes('?') ? '&' : '?';
+            window.location.href = window.location.href.split('#')[0] + sep + 't=' + Date.now();
         });
     }
 
