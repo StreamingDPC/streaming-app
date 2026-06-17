@@ -447,6 +447,16 @@ function getPrice(product) {
 }
 
 function renderProducts(category) {
+    const pollaGrid = document.getElementById('polla-grid');
+    if (category === 'polla') {
+        productsGrid.style.display = 'none';
+        if (pollaGrid) pollaGrid.style.display = 'block';
+        return;
+    } else {
+        productsGrid.style.display = 'grid';
+        if (pollaGrid) pollaGrid.style.display = 'none';
+    }
+
     productsGrid.innerHTML = '';
 
     // CASO ESPECIAL TAB ESTRENOS
@@ -1933,7 +1943,7 @@ window.sendRenovadaFromDash = function (clientNameEnc, clientPhone, itemsEncoded
     const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
     let monthText = 'el próximo mes';
     if (expirationDateTS && expirationDateTS !== 0) {
-        const d = new Date(parseInt(expirationDateTS));
+        const d = new Date(parseInt(expirationDateTS) + (30 * 24 * 60 * 60 * 1000));
         monthText = `${d.getDate()} ${months[d.getMonth()]}`;
     }
 
