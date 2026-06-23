@@ -2368,7 +2368,8 @@ const loadInitialData = () => {
 
     Promise.all([configPromise, productsPromise]).then(([configSnap, prodsSnap]) => {
         storeConfig = configSnap.val() || {};
-        products = prodsSnap.val() || [];
+        const pObj = prodsSnap.val() || [];
+        products = Array.isArray(pObj) ? pObj : Object.values(pObj);
 
         if (publicSellerRef) {
             db.ref(`sellerStores/${publicSellerRef}`).once('value').then(sp => {
