@@ -2171,6 +2171,44 @@ function renderSaleItem(sale, isExpired, container) {
                         </button>
                         `;
                     }
+                    return '';
+                }).join('')}
+            </div>
+            ${daysLeft <= 3 ? `
+            <button onclick="renewFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
+                style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
+                <i class="fa-solid fa-redo"></i> ⚠️ Renovar mis pantallas
+            </button>` : ''}
+        </div>
+        ` : ''}
+    `;
+    container.appendChild(div);
+
+    if (sale.sellerName && sale.sellerName !== 'Página Web Oficial') {
+        db.ref(`sellerStores/${sale.sellerName}`).once('value').then(storeSnap => {
+            const sData = storeSnap.val();
+            const netDiv = document.getElementById(sellerNetworksHtmlId);
+            if(netDiv) {
+                if(sData) {
+                    let netsHtml = '';
+                    if(sData.whatsapp) netsHtml += `<a href="https://wa.me/${formatWaPhone(sData.whatsapp)}" target="_blank" style="color:#25D366; transition:transform 0.2s;"><i class="fa-brands fa-whatsapp"></i></a>`;
+                    if(sData.facebookUrl) netsHtml += `<a href="${sData.facebookUrl}" target="_blank" style="color:#1877F2; transition:transform 0.2s;"><i class="fa-brands fa-facebook"></i></a>`;
+                    if(sData.instagramUrl) netsHtml += `<a href="${sData.instagramUrl}" target="_blank" style="color:#E1306C; transition:transform 0.2s;"><i class="fa-brands fa-instagram"></i></a>`;
+                    if(sData.tiktokUrl) netsHtml += `<a href="${sData.tiktokUrl}" target="_blank" style="color:#ffffff; transition:transform 0.2s;"><i class="fa-brands fa-tiktok"></i></a>`;
+                    if(sData.kwaiUrl) netsHtml += `<a href="${sData.kwaiUrl}" target="_blank" style="color:#FF5E00; transition:transform 0.2s;"><i class="fa-solid fa-video"></i></a>`;
+                    if(sData.youtubeUrl) netsHtml += `<a href="${sData.youtubeUrl}" target="_blank" style="color:#FF0000; transition:transform 0.2s;"><i class="fa-brands fa-youtube"></i></a>`;
+                    
+                    netDiv.innerHTML = netsHtml || `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
+                } else {
+                    netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
+                }
+            }
+        }).catch(() => {
+            const netDiv = document.getElementById(sellerNetworksHtmlId);
+            if(netDiv) netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
+        });
+    }
+}
 // --- CRM / RESPUESTAS FUNCTIONS ---
 let _crmTargetClient = { name: '', phone: '', start: '', end: '', pin: '', fullItems: [], sellerName: '' };
 
