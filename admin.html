@@ -992,6 +992,13 @@
                             <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 0.5rem;">Gestiona el valor de venta y configuración básica de la Polla.</p>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <div style="flex:1;">
+                                    <label style="font-size:0.75rem;">Módulo Muestra a Clientes</label>
+                                    <select id="polla-enabled-input" style="width:100%; padding: 0.5rem; border-radius: 8px;">
+                                        <option value="true">Activo</option>
+                                        <option value="false">Desactivado</option>
+                                    </select>
+                                </div>
+                                <div style="flex:1;">
                                     <label style="font-size:0.75rem;">Precio de Participación ($)</label>
                                     <input type="number" id="polla-price-input" style="width:100%;" placeholder="10000">
                                 </div>
@@ -1002,20 +1009,29 @@
                         </div>
                     </div>
 
-                    <div id="polla-save-status" style="font-size: 0.8rem; text-align: right; margin-top: -1.5rem; margin-bottom: 1rem; color: #4cd137; display:none;">¡Precio actualizado!</div>
+                    <div id="polla-save-status" style="font-size: 0.8rem; text-align: right; margin-top: -1.5rem; margin-bottom: 1rem; color: #4cd137; display:none;">¡Ajustes actualizados!</div>
 
                     <script>
+                        db.ref('storeConfig/pollaEnabled').on('value', snap => {
+                            const val = snap.val();
+                            if(val !== null) document.getElementById('polla-enabled-input').value = val === true ? 'true' : 'false';
+                        });
+
                         async function updatePollaPrice() {
                             const price = document.getElementById('polla-price-input').value;
+                            const enabled = document.getElementById('polla-enabled-input').value === 'true';
                             const status = document.getElementById('polla-save-status');
                             try {
+                                storeConfig.pollaEnabled = enabled;
+                                await db.ref('storeConfig').set(storeConfig);
                                 await db.ref('polla/config/precio').set(parseInt(price));
                                 status.style.display = 'block';
                                 setTimeout(() => status.style.display = 'none', 3000);
                             } catch (e) {
-                                alert('Error al actualizar precio de la polla');
+                                alert('Error al actualizar ajustes de la polla');
                             }
                         }
+
                     </script>
 
                     <div class="form-grid" style="margin-bottom: 2rem; border: 2px solid #f39c12; border-radius: 12px; padding: 1rem; background: rgba(243, 156, 18, 0.05);">

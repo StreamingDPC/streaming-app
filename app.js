@@ -2371,6 +2371,18 @@ const loadInitialData = () => {
         const pObj = prodsSnap.val() || [];
         products = Array.isArray(pObj) ? pObj : Object.values(pObj);
 
+        if (storeConfig.pollaEnabled === false) {
+            const pollaTab = document.querySelector('.tab-btn[data-tab="polla"]');
+            if(pollaTab) pollaTab.style.display = 'none';
+            const openPollaBtn = document.getElementById('open-polla-btn');
+            if(openPollaBtn) openPollaBtn.style.display = 'none';
+        } else {
+            const pollaTab = document.querySelector('.tab-btn[data-tab="polla"]');
+            if(pollaTab) pollaTab.style.display = '';
+            const openPollaBtn = document.getElementById('open-polla-btn');
+            if(openPollaBtn) openPollaBtn.style.display = '';
+        }
+
         if (publicSellerRef) {
             db.ref(`sellerStores/${publicSellerRef}`).once('value').then(sp => {
                 const resellerData = sp.val();
@@ -2403,7 +2415,8 @@ db.ref('storeConfig').on('value', (snap) => {
 
 db.ref('products').on('value', (snap) => {
     if (!window.appInitialized) return;
-    products = snap.val() || [];
+    const pObj = snap.val() || [];
+    products = Array.isArray(pObj) ? pObj : Object.values(pObj);
     const activeTabBtn = document.querySelector('.tab-btn.active');
     if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
 });
