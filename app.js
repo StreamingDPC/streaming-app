@@ -2171,91 +2171,6 @@ function renderSaleItem(sale, isExpired, container) {
                         </button>
                         `;
                     }
-                    return '';
-                }).join('')}
-            </div>
-            ${daysLeft <= 3 ? `
-            <button onclick="renewFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
-                style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
-                <i class="fa-solid fa-redo"></i> ⚠️ Renovar mis pantallas
-            </button>` : ''}
-        </div>
-        ` : ''}
-    `;
-    container.appendChild(div);
-
-    if (sale.sellerName && sale.sellerName !== 'Página Web Oficial') {
-        db.ref(`sellerStores/${sale.sellerName}`).once('value').then(storeSnap => {
-            const sData = storeSnap.val();
-            const netDiv = document.getElementById(sellerNetworksHtmlId);
-            if(netDiv) {
-                if(sData) {
-                    let netsHtml = '';
-                    if(sData.whatsapp) netsHtml += `<a href="https://wa.me/${formatWaPhone(sData.whatsapp)}" target="_blank" style="color:#25D366; transition:transform 0.2s;"><i class="fa-brands fa-whatsapp"></i></a>`;
-                    if(sData.facebookUrl) netsHtml += `<a href="${sData.facebookUrl}" target="_blank" style="color:#1877F2; transition:transform 0.2s;"><i class="fa-brands fa-facebook"></i></a>`;
-                    if(sData.instagramUrl) netsHtml += `<a href="${sData.instagramUrl}" target="_blank" style="color:#E1306C; transition:transform 0.2s;"><i class="fa-brands fa-instagram"></i></a>`;
-                    if(sData.tiktokUrl) netsHtml += `<a href="${sData.tiktokUrl}" target="_blank" style="color:#ffffff; transition:transform 0.2s;"><i class="fa-brands fa-tiktok"></i></a>`;
-                    if(sData.kwaiUrl) netsHtml += `<a href="${sData.kwaiUrl}" target="_blank" style="color:#FF5E00; transition:transform 0.2s;"><i class="fa-solid fa-video"></i></a>`;
-                    if(sData.youtubeUrl) netsHtml += `<a href="${sData.youtubeUrl}" target="_blank" style="color:#FF0000; transition:transform 0.2s;"><i class="fa-brands fa-youtube"></i></a>`;
-                    
-                    netDiv.innerHTML = netsHtml || `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
-                } else {
-                    netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
-                }
-            }
-        }).catch(() => {
-            const netDiv = document.getElementById(sellerNetworksHtmlId);
-            if(netDiv) netDiv.innerHTML = `<span style="font-size:0.75rem; color:#a0a0a0;">Sin redes configuradas</span>`;
-        });
-    }
-}
-
-// Firebase Initialization and Loading Logic
-db.ref('/').once('value').then(snap => {
-    let data = snap.val();
-    // Lógica de migración eliminada por seguridad para evitar sobrescrituras accidentales.
-    if (!data) {
-        console.warn("La base de datos parece estar vacía o no se pudo cargar correctamente.");
-    }
-
-    // Configurar observador en vivo (Live sync)
-    db.ref('/').on('value', (snapshot) => {
-        let val = snapshot.val();
-        if (val) {
-            storeConfig = val.storeConfig || {};
-            products = val.products || [];
-            window.allClientProfiles = val.clientProfiles || {};
-
-            const runInit = () => {
-                if (!window.appInitialized) {
-                    window.appInitialized = true;
-                    init(); // Iniciar UI y Listeners por primera y unica vez
-                } else {
-                    // Actualizar UI en vivo si hubo algun cambio desde el admin backend
-                    setupConfigUI();
-                    const activeTabBtn = document.querySelector('.tab-btn.active');
-                    if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
-                    updateCartUI();
-                    renderCartItems();
-                }
-            };
-
-            if (publicSellerRef && !window.appInitialized) {
-                db.ref(`sellerStores/${publicSellerRef}`).once('value').then(sp => {
-                    const resellerData = sp.val();
-                    if (resellerData) {
-                        publicSellerStoreData = resellerData;
-                        isSellerMode = false; // Fuerza vista cliente global
-                    }
-                    runInit();
-                }).catch(() => runInit());
-            } else {
-                runInit();
-            }
-        }
-    });
-});
-
 // --- CRM / RESPUESTAS FUNCTIONS ---
 let _crmTargetClient = { name: '', phone: '', start: '', end: '', pin: '', fullItems: [], sellerName: '' };
 
@@ -2417,3 +2332,77 @@ window.openWhatsapp = function(phone, text) {
             let url = (phone && phone !== 'null' && phone !== 'undefined') ? 'https://wa.me/' + phone + '?text=' + encodedText : 'https://wa.me/?text=' + encodedText;
             window.open(url, '_blank');
         };
+
+// ============================================================
+// Firebase Initialization - OPTIMIZADO: Carga solo datos necesarios
+// NO se descarga toda la DB de una vez (evitar lentitud crítica)
+// ============================================================
+
+// Mostrar pantalla de carga inmediatamente temporal
+const hideLoader = () => {
+    const loader = document.getElementById('app-loading-screen');
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => { loader.style.display = 'none'; }, 400);
+    }
+};
+
+const runInit = () => {
+    if (!window.appInitialized) {
+        window.appInitialized = true;
+        hideLoader();
+        init();
+    } else {
+        setupConfigUI();
+        const activeTabBtn = document.querySelector('.tab-btn.active');
+        if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
+        updateCartUI();
+        renderCartItems();
+    }
+};
+
+// PASO 1: Cargar storeConfig y products en PARALELO (no toda la DB)
+const loadInitialData = () => {
+    const configPromise = db.ref('storeConfig').once('value');
+    const productsPromise = db.ref('products').once('value');
+
+    Promise.all([configPromise, productsPromise]).then(([configSnap, prodsSnap]) => {
+        storeConfig = configSnap.val() || {};
+        products = prodsSnap.val() || [];
+
+        if (publicSellerRef) {
+            db.ref(`sellerStores/${publicSellerRef}`).once('value').then(sp => {
+                const resellerData = sp.val();
+                if (resellerData) {
+                    publicSellerStoreData = resellerData;
+                    isSellerMode = false;
+                }
+                runInit();
+            }).catch(() => runInit());
+        } else {
+            runInit();
+        }
+    }).catch(err => {
+        console.error('Error cargando datos iniciales:', err);
+        hideLoader();
+    });
+};
+
+loadInitialData();
+
+// PASO 2: En vivo — solo escuchar cambios de storeConfig y products (NO toda la DB)
+db.ref('storeConfig').on('value', (snap) => {
+    if (!window.appInitialized) return; // Ignorar antes del primer init
+    storeConfig = snap.val() || {};
+    setupConfigUI();
+    const activeTabBtn = document.querySelector('.tab-btn.active');
+    if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
+    updateCartUI();
+});
+
+db.ref('products').on('value', (snap) => {
+    if (!window.appInitialized) return;
+    products = snap.val() || [];
+    const activeTabBtn = document.querySelector('.tab-btn.active');
+    if (activeTabBtn) renderProducts(activeTabBtn.dataset.tab);
+});
