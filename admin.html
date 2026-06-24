@@ -1022,8 +1022,10 @@
                             const enabled = document.getElementById('polla-enabled-input').value === 'true';
                             const status = document.getElementById('polla-save-status');
                             try {
-                                storeConfig.pollaEnabled = enabled;
-                                await db.ref('storeConfig').set(storeConfig);
+                                if (storeConfig) {
+                                    storeConfig.pollaEnabled = enabled;
+                                }
+                                await db.ref('storeConfig').update({ pollaEnabled: enabled });
                                 await db.ref('polla/config/precio').set(parseInt(price));
                                 status.style.display = 'block';
                                 setTimeout(() => status.style.display = 'none', 3000);
