@@ -58,7 +58,7 @@
             <div class="logo" style="display: flex; align-items: center; gap: 10px;">
                 <img src="https://github.com/StreamingDPC/streaming-dpc/blob/main/assets/streaming%20%20pag%202.jpg?raw=true"
                     alt="Streaming DPC" style="height: 80px; border-radius: 8px; object-fit: contain;">
-                <span style="font-size: 0.7rem; color: #4cd137; opacity: 0.5;">v3.8.16</span>
+                <span style="font-size: 0.7rem; color: #4cd137; opacity: 0.5;">v3.8.17</span>
             </div>
             <div class="header-actions"
                 style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
@@ -424,11 +424,47 @@
                                 <i class="fa-solid fa-tv"></i> Activar TV
                             </button>
                         </div>
-                        <!-- Estado de activación TV -->
-                        <div id="tv-activation-loading" style="display:none; text-align:center; margin-top:1rem;">
-                            <i class="fa-solid fa-spinner fa-spin" style="color:#E50914; font-size:1.5rem;"></i>
-                            <p style="color:#aaa; font-size:0.85rem; margin-top:0.4rem;">Registrando código e iniciando
-                                proceso...</p>
+                        <!-- Estado de activación TV con Aviso de Paciencia y Cuenta Regresiva -->
+                        <div id="tv-activation-loading" style="display:none; margin-top:1rem;">
+                            <!-- Letrero de Advertencia Requerido -->
+                            <div
+                                style="background:rgba(229, 9, 20, 0.15); border:1px solid rgba(229, 9, 20, 0.5); border-radius:12px; padding:12px 14px; margin-bottom:10px; text-align:left;">
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                    <span style="font-size:1.15rem;">⚠️</span>
+                                    <strong style="color:#ff4d4d; font-size:0.92rem;">Favor tener paciencia, se está
+                                        procesando</strong>
+                                </div>
+                                <p style="color:#eee; font-size:0.83rem; margin:0; line-height:1.35;">
+                                    No cierre esta ventana ni apague su dispositivo hasta finalizar la activación.
+                                </p>
+                            </div>
+
+                            <!-- Barra de Estado y Tiempo Restante -->
+                            <div
+                                style="background:rgba(20,20,28,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px 14px; text-align:left;">
+                                <div
+                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <span id="tv-status-phase"
+                                        style="font-size:0.84rem; color:#4cd137; font-weight:600; display:flex; align-items:center; gap:6px;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Conectando al sistema...
+                                    </span>
+                                    <span id="tv-countdown-timer"
+                                        style="font-size:0.85rem; color:#fff; font-weight:700; background:rgba(229,9,20,0.3); border:1px solid rgba(229,9,20,0.6); padding:2px 8px; border-radius:6px; min-width:38px; text-align:center;">
+                                        35s
+                                    </span>
+                                </div>
+                                <div
+                                    style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                                    <div id="tv-progress-bar"
+                                        style="width:5%; height:100%; background:linear-gradient(90deg, #E50914, #2ecc71); border-radius:3px; transition:width 1s linear;">
+                                    </div>
+                                </div>
+                                <p id="tv-queue-notice"
+                                    style="color:#f39c12; font-size:0.8rem; margin:8px 0 0 0; display:none; line-height:1.3;">
+                                    <i class="fa-solid fa-clock"></i> Hay clientes en fila. Tu turno se atenderá
+                                    automáticamente.
+                                </p>
+                            </div>
                         </div>
                         <div id="tv-activation-result"
                             style="display:none; margin-top:1rem; text-align:center; padding:1.2rem; border-radius:10px; background:rgba(243, 156, 18, 0.1); border:1px solid #f39c12;">
@@ -872,7 +908,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <!-- Lógica Principal -->
-    <script src="app.js?v=3.8.16"></script>
+    <script src="app.js?v=3.8.17"></script>
     <!-- CRM / Respuestas Selector Modal -->
     <div id="crm-selector-modal" class="modal" style="display:none; z-index: 5000;">
         <div class="modal-content"

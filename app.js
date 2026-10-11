@@ -1802,6 +1802,40 @@ function setupEventListeners() {
             document.getElementById('tv-activation-result').style.display = 'none';
             document.getElementById('tv-activation-error').style.display = 'none';
 
+            // Iniciar interfaz de cuenta regresiva y fases de proceso
+            let totalSeconds = 35;
+            let secondsRemaining = totalSeconds;
+            const timerEl = document.getElementById('tv-countdown-timer');
+            const progressEl = document.getElementById('tv-progress-bar');
+            const phaseEl = document.getElementById('tv-status-phase');
+            const queueNoticeEl = document.getElementById('tv-queue-notice');
+
+            if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+            if (progressEl) progressEl.style.width = '5%';
+            if (queueNoticeEl) queueNoticeEl.style.display = 'none';
+            if (phaseEl) phaseEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando al sistema...';
+
+            let countdownInterval = setInterval(() => {
+                if (secondsRemaining > 1) {
+                    secondsRemaining--;
+                    if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+                    const percent = Math.min(95, Math.round(((totalSeconds - secondsRemaining) / totalSeconds) * 100));
+                    if (progressEl) progressEl.style.width = `${percent}%`;
+
+                    if (phaseEl) {
+                        if (percent < 25) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-network-wired"></i> Conectando con Netflix...';
+                        } else if (percent < 55) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-key"></i> Validando código de acceso...';
+                        } else if (percent < 80) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-tv"></i> Vinculando Smart TV...';
+                        } else {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Finalizando activación...';
+                        }
+                    }
+                }
+            }, 1000);
+
             try {
                 // ── Seleccionar backend: ngrok (Firebase) → Bot Local → Render ──
                 const RENDER_URL = 'https://streaming-backend-ce1u.onrender.com';
@@ -1816,12 +1850,9 @@ function setupEventListeners() {
                 } catch (e) { /* Firebase no accesible */ }
 
                 if (ngrokUrl) {
-                    // Si existe URL en Firebase, asumimos que el bot local está vivo
                     botUrl = ngrokUrl;
                     usingLocal = true;
-                    document.getElementById('tv-activation-loading').querySelector('p').innerText =
-                        '✅ Conectando al Bot de Activación (Vía nube)...';
-                    console.log('[TV] Fuerza uso de ngrok:', ngrokUrl);
+                    console.log('[TV] Uso de ngrok:', ngrokUrl);
                 } else {
                     // Fallback a localhost
                     try {
@@ -1832,12 +1863,30 @@ function setupEventListeners() {
                         if (localCheck.ok) {
                             botUrl = 'http://localhost:3099';
                             usingLocal = true;
-                            document.getElementById('tv-activation-loading').querySelector('p').innerText =
-                                '✅ Bot local conectado (Red Local). Iniciando...';
                         }
                     } catch (e) {
-                        console.log('[TV] Bot local no disponible, usando Render como último recurso...');
+                        console.log('[TV] Bot local no disponible, usando Render...');
                     }
+                }
+
+                // Si hay bot local, consultar estado de la cola
+                if (usingLocal) {
+                    try {
+                        const qResp = await fetch(`${botUrl}/api/queue-status`, {
+                            headers: { 'ngrok-skip-browser-warning': 'true' }
+                        });
+                        const qData = await qResp.json();
+                        if (qData && qData.success && (qData.isBusy || qData.queueLength > 0)) {
+                            const extraTime = Math.max(30, (qData.queueLength + (qData.isBusy ? 1 : 0)) * 30);
+                            totalSeconds = extraTime;
+                            secondsRemaining = extraTime;
+                            if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+                            if (queueNoticeEl) {
+                                queueNoticeEl.style.display = 'block';
+                                queueNoticeEl.innerHTML = `<i class="fa-solid fa-clock"></i> Hay otro cliente en proceso. Turno #${qData.queueLength + 1}. Tu TV se activará automáticamente a continuación.`;
+                            }
+                        }
+                    } catch (e) { /* Silencioso */ }
                 }
 
                 // Llamar al robot
@@ -1845,12 +1894,14 @@ function setupEventListeners() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'ngrok-skip-browser-warning': 'true' // Vital para que ngrok gratuito deje pasar el CORS
+                        'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
                 });
                 const data = await response.json();
 
+                clearInterval(countdownInterval);
+                if (progressEl) progressEl.style.width = '100%';
                 document.getElementById('tv-activation-loading').style.display = 'none';
 
                 if (data.success) {
@@ -1885,6 +1936,7 @@ function setupEventListeners() {
                 }
 
             } catch (err) {
+                clearInterval(countdownInterval);
                 document.getElementById('tv-activation-loading').style.display = 'none';
                 document.getElementById('tv-activation-error').style.display = 'block';
                 document.getElementById('tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';

@@ -154,7 +154,45 @@ async function findNetflixPassword(targetEmail) {
 // ── Función helper para esperar ────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ── ENDPOINT PRINCIPAL: Activar TV ────────────────────────────────────────
+// ── Cola de Activación Concurrente ─────────────────────────────────────────
+const activationQueue = [];
+let isProcessingQueue = false;
+
+// Estado público de la cola
+app.get('/api/queue-status', (req, res) => {
+    const queueLength = activationQueue.length;
+    const isBusy = isProcessingQueue;
+    const estimatedSeconds = (queueLength + (isBusy ? 1 : 0)) * 32;
+    res.json({
+        success: true,
+        isBusy,
+        queueLength,
+        estimatedSeconds
+    });
+});
+
+// Función que procesa la cola elemento por elemento
+async function processQueue() {
+    if (isProcessingQueue || activationQueue.length === 0) return;
+    isProcessingQueue = true;
+
+    while (activationQueue.length > 0) {
+        const item = activationQueue[0];
+        try {
+            console.log(`\n[BOT-QUEUE] ⏳ Procesando turno: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
+            const result = await doActivateTv(item.email, item.tvCode);
+            item.resolve(result);
+        } catch (err) {
+            item.reject(err);
+        } finally {
+            activationQueue.shift(); // Remover el completado
+        }
+    }
+
+    isProcessingQueue = false;
+}
+
+// ── ENDPOINT PRINCIPAL: Activar TV (Pasa por la cola ordenada) ──────────────
 app.post('/api/activate-tv', async (req, res) => {
     const { email, tvCode } = req.body;
 
@@ -162,6 +200,27 @@ app.post('/api/activate-tv', async (req, res) => {
         return res.status(400).json({ success: false, error: 'Email y código de TV son requeridos.' });
     }
 
+    // Colocar en la cola de espera para evitar colisiones
+    const queuePromise = new Promise((resolve, reject) => {
+        activationQueue.push({ email, tvCode, resolve, reject, time: Date.now() });
+    });
+
+    // Iniciar procesamiento en background si no estaba corriendo
+    processQueue();
+
+    try {
+        const result = await queuePromise;
+        return res.json(result);
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            error: err.message || 'Error en la activación del bot local.'
+        });
+    }
+});
+
+// ── LÓGICA DE ACTIVACIÓN CON CHROME (Segundo Plano) ────────────────────────
+async function doActivateTv(email, tvCode) {
     let browser = null;
     try {
         console.log(`\n[BOT] ════════════════════════════════════`);
@@ -170,31 +229,31 @@ app.post('/api/activate-tv', async (req, res) => {
         // 1. Buscar contraseña
         const netflixPass = await findNetflixPassword(email);
         if (!netflixPass) {
-            return res.status(404).json({
+            return {
                 success: false,
                 error: `No se encontró la contraseña de Netflix para ${email}. Verifica que esté en la configuración de pantallas de la venta.`
-            });
+            };
         }
-        console.log(`[BOT] 🔑 Contraseña lista (oculta). Iniciando Chrome...`);
+        console.log(`[BOT] 🔑 Contraseña lista (oculta). Iniciando Chrome en segundo plano...`);
 
-        // 2. Lanzar Chrome local
+        // 2. Lanzar Chrome local en segundo plano (fuera de la pantalla para no interrumpir al usuario)
         const chromePath = getChromePath();
         if (!chromePath) {
-            return res.status(500).json({
+            return {
                 success: false,
                 error: 'Google Chrome no está instalado en esta PC. Instala Chrome e intenta de nuevo.'
-            });
+            };
         }
 
         browser = await puppeteer.launch({
             executablePath: chromePath,
-            headless: false,  // VISIBLE — Netflix no puede detectarlo como bot
+            headless: false,  // false para que Netflix detecte navegación 100% humana y real
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
                 '--disable-dev-shm-usage',
-                '--start-maximized',
+                '--window-position=-3000,-3000', // FUERA DE PANTALLA: Corre en segundo plano sin interrumpir
                 '--window-size=1280,800'
             ]
         });
@@ -260,11 +319,11 @@ app.post('/api/activate-tv', async (req, res) => {
         if (!loginCode) {
             const ss = await page.screenshot({ encoding: 'base64' });
             await browser.close();
-            return res.status(408).json({
+            return {
                 success: false,
                 error: 'No se pudo leer el código de inicio de sesión del correo. Inténtalo de nuevo en 1 minuto.',
                 screenshot: `data:image/png;base64,${ss}`
-            });
+            };
         }
 
         // 7. Escribir el código en los cajoncitos de Netflix
@@ -299,11 +358,11 @@ app.post('/api/activate-tv', async (req, res) => {
             const errText = await page.evaluate(() => document.body.innerText.substring(0, 200));
             const ss = await page.screenshot({ encoding: 'base64' });
             await browser.close();
-            return res.status(401).json({
+            return {
                 success: false,
                 error: `Credenciales incorrectas. Netflix dice: "${errText}"`,
                 screenshot: `data:image/png;base64,${ss}`
-            });
+            };
         }
 
         // 9. Ir a la página de activación de TV
@@ -383,11 +442,11 @@ app.post('/api/activate-tv', async (req, res) => {
         );
 
         if (isError) {
-            return res.json({ success: false, error: 'Código inválido o expirado. Obtén un nuevo código en tu TV.' });
+            return { success: false, error: 'Código inválido o expirado. Obtén un nuevo código en tu TV.' };
         }
 
         console.log('[BOT] 🎉 ¡Activación completada!');
-        return res.json({ success: true, message: '¡TV activada exitosamente! Ya puedes disfrutar Netflix.' });
+        return { success: true, message: '¡TV activada exitosamente! Ya puedes disfrutar Netflix.' };
 
     } catch (err) {
         console.error('[BOT] ❌ Error:', err.message);
@@ -403,9 +462,9 @@ app.post('/api/activate-tv', async (req, res) => {
 
         const payload = { success: false, error: 'Error del bot local: ' + err.message };
         if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
-        return res.status(500).json(payload);
+        return payload;
     }
-});
+}
 
 // ── Iniciar servidor ───────────────────────────────────────────────────────
 app.listen(PORT, '127.0.0.1', async () => {
