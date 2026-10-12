@@ -81,22 +81,37 @@ async function executeVixActivation(vixLink, email) {
             headless: chromium.headless,
         });
         const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 25000 });
-        await new Promise(r => setTimeout(r, 2000));
-
-        // Hacer clic en "Entendido", "Continuar", "Aceptar" o "Iniciar sesión" si existe en pantalla
-        await page.evaluate(() => {
-            const els = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
-            for (const el of els) {
-                const t = (el.innerText || el.textContent || '').trim().toLowerCase();
-                if (t.includes('entendido') || t.includes('continuar') || t.includes('aceptar') || t.includes('iniciar sesión') || t.includes('iniciar sesion')) {
-                    el.click();
-                    break;
-                }
-            }
+        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1');
+        await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
-        await new Promise(r => setTimeout(r, 2000));
+
+        await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 35000 });
+        await new Promise(r => setTimeout(r, 2500));
+
+        // Hacer clic en "Entendido", "Continuar", "Aceptar" o "Iniciar sesión"
+        let clicked = null;
+        for (let i = 0; i < 12; i++) {
+            clicked = await page.evaluate(() => {
+                const els = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+                for (const el of els) {
+                    const t = (el.innerText || el.textContent || '').trim().toLowerCase();
+                    if (t === 'entendido' || t === 'continuar' || t === 'aceptar' || t.includes('entendido')) {
+                        el.click();
+                        return (el.innerText || el.textContent || '').trim();
+                    }
+                }
+                return null;
+            });
+            if (clicked) {
+                console.log(`[VIX-BOT] ✅ Botón presionado en Render: "${clicked}"`);
+                break;
+            }
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        await new Promise(r => setTimeout(r, 3500));
         console.log(`[VIX-BOT] Sesión activada en ViX correctamente vía Puppeteer en Render.`);
         return { success: true };
     } catch (err) {

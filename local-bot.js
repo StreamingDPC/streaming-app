@@ -551,38 +551,99 @@ async function doActivateVix(email, vixLink) {
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
                 '--window-position=50,50',
-                '--window-size=1100,750'
+                '--window-size=480,850'
             ]
         });
 
         const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        await page.setViewport({ width: 1100, height: 750 });
 
-        console.log('[VIX-BOT] 🌐 Abriendo enlace de inicio de sesión de ViX en Chrome...');
-        await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 30000 });
-        await sleep(2500);
+        // 1. Emular iPhone real con touch: esto previene que ViX/PerimeterX active el captcha de escritorio
+        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1');
+        await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
 
-        // Buscar y hacer clic en el botón de confirmación ("Entendido", "Continuar", "Iniciar sesión", etc.)
-        const clickedBtn = await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
-            for (const b of btns) {
-                const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
-                if (txt === 'entendido' || txt === 'continuar' || txt === 'aceptar' || txt.includes('entendido')) {
-                    b.click();
-                    return txt;
-                }
-            }
-            return null;
+        // Ocultar webdriver
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
 
-        if (clickedBtn) {
-            console.log(`[VIX-BOT] ✅ Se hizo clic en el botón: "${clickedBtn}"`);
-            await sleep(2500);
-        } else {
-            console.log('[VIX-BOT] ℹ️ Página cargada y procesada sin requerir botón manual.');
-            await sleep(2000);
+        await page.setExtraHTTPHeaders({
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
+        });
+
+        console.log('[VIX-BOT] 🌐 Abriendo enlace de inicio de sesión de ViX en Chrome...');
+        await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 35000 });
+        await sleep(2500);
+
+        // 2. Si aparece el desafío "Press & Hold", resolverlo automáticamente manteniendo el clic
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const hasCaptcha = await page.evaluate(() => {
+                const txt = (document.body ? document.body.innerText : '') || '';
+                return txt.includes('Press & Hold') || txt.includes('Press and Hold') || !!document.querySelector('#px-captcha');
+            });
+
+            if (hasCaptcha) {
+                console.log('[VIX-BOT] 🛡️ Detectado desafío "Press & Hold". Manteniendo presionado para verificar humano...');
+                let box = null;
+                const captchaEl = await page.$('#px-captcha, #px-captcha-wrapper, [aria-label*="Press & Hold"]');
+                if (captchaEl) {
+                    box = await captchaEl.boundingBox();
+                }
+                if (!box) {
+                    box = await page.evaluate(() => {
+                        const all = Array.from(document.querySelectorAll('div, button, a'));
+                        for (const el of all) {
+                            if (el.innerText && el.innerText.includes('Press & Hold')) {
+                                const r = el.getBoundingClientRect();
+                                return { x: r.x, y: r.y, width: r.width, height: r.height };
+                            }
+                        }
+                        return null;
+                    });
+                }
+
+                if (box) {
+                    const clickX = box.x + box.width / 2;
+                    const clickY = box.y + box.height / 2;
+                    console.log(`[VIX-BOT] 🖱️ Manteniendo presionado en (${Math.round(clickX)}, ${Math.round(clickY)}) durante 8.5 segundos...`);
+                    await page.mouse.move(clickX, clickY);
+                    await page.mouse.down();
+                    await sleep(8500);
+                    await page.mouse.up();
+                    console.log('[VIX-BOT] ⏳ Soltado. Esperando validación...');
+                    await sleep(4000);
+                } else {
+                    await sleep(2000);
+                }
+            } else {
+                break;
+            }
         }
+
+        // 3. Esperar y hacer clic en el botón naranja "Entendido" (¡Inicio de sesión exitoso!)
+        console.log('[VIX-BOT] 🔍 Buscando botón naranja "Entendido"...');
+        let clickedBtn = null;
+        for (let i = 0; i < 15; i++) {
+            clickedBtn = await page.evaluate(() => {
+                const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+                for (const b of btns) {
+                    const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+                    if (txt === 'entendido' || txt === 'continuar' || txt === 'aceptar' || txt.includes('entendido')) {
+                        b.click();
+                        return (b.innerText || b.textContent || '').trim();
+                    }
+                }
+                return null;
+            });
+
+            if (clickedBtn) {
+                console.log(`[VIX-BOT] ✅ ¡Se hizo clic en "${clickedBtn}" con éxito!`);
+                break;
+            }
+            await sleep(1000);
+        }
+
+        // Esperar 3.5 segundos para que ViX emita los tokens y active el celular
+        await sleep(3500);
 
         const currentUrl = page.url();
         console.log(`[VIX-BOT] 🏁 URL final: ${currentUrl}`);
