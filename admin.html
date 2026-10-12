@@ -1185,57 +1185,219 @@
                     </div>
 
                     <!-- SECCIÓN: Habilitar Intentos de Código (Solo Admin) MOVIDA ARRIBA -->
+                    <!-- SECCIÓN: Centro Maestro de Activación y Códigos (Admin Ilimitado) -->
                     <div
-                        style="margin-bottom:2.5rem; background: rgba(243, 156, 18, 0.05); border: 1px solid rgba(243, 156, 18, 0.3); border-radius: 12px; padding:1.5rem; position:relative; z-index:10;">
-                        <h3 style="color:#f39c12; font-size:1.1rem; margin-top:0; margin-bottom:0.8rem;">
-                            <i class="fa-solid fa-key"></i> Gestión de Intentos de Código
-                        </h3>
-                        <p style="font-size:0.85rem; color:#ccc; margin-bottom:1rem;">Si un cliente no pudo usar su
-                            código a tiempo, ingresa su celular para habilitar un nuevo intento.</p>
-                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom: 0.8rem;">
-                            <select id="admin-platform-reset"
-                                style="flex:1; min-width:150px; padding:12px 15px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.95rem; position:relative; z-index:10;">
-                                <option value="all">TODAS las pantallas</option>
-                                <option value="netflix">Netflix</option>
-                                <option value="netflix_update">Actualiza tu Hogar</option>
-                                <option value="netflix_temp">Acceso temporal Netflix</option>
-                                <option value="netflix_tv">Activar TV (Netflix)</option>
-                                <option value="disney">Disney+</option>
-                                <option value="hbomax">HBO Max</option>
-                                <option value="prime">Prime Video</option>
-                            </select>
-                            <input type="text" id="admin-client-phone-reset"
-                                placeholder="Celular del cliente (Ej: 3105551234)"
-                                style="flex:2; min-width:200px; padding:12px 15px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.95rem; position:relative; z-index:10;">
-                            <button type="button"
-                                onclick="resetClientCodeAttempt(document.getElementById('admin-client-phone-reset').value.trim())"
-                                style="background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:white; font-weight:bold; padding:12px 20px; border-radius:8px; cursor:pointer; font-size:0.95rem; white-space:nowrap; position:relative; z-index:10; box-shadow: 0 4px 10px rgba(243,156,18,0.3);">
-                                <i class="fa-solid fa-rotate-right"></i> Habilitar Intento
+                        style="margin-bottom:2.5rem; background: rgba(243, 156, 18, 0.05); border: 1px solid rgba(243, 156, 18, 0.35); border-radius: 14px; padding:1.5rem; position:relative; z-index:10; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:0.6rem;">
+                            <h3
+                                style="color:#f39c12; font-size:1.25rem; margin:0; display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-bolt-lightning"></i> Centro Maestro de Activación y Códigos
+                            </h3>
+                            <span
+                                style="background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.4); font-size:0.75rem; font-weight:bold; padding:4px 12px; border-radius:20px; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-infinity"></i> INTENTOS ILIMITADOS (ADMIN)
+                            </span>
+                        </div>
+                        <p style="font-size:0.86rem; color:#ccc; margin-bottom:1.2rem;">
+                            Busca a cualquier cliente por <strong>Nombre</strong> o por <strong>Celular</strong>. Podrás
+                            solicitar sus códigos, activar su celular ViX o activar su Smart TV sin límites, o habilitar
+                            sus intentos si se le agotaron.
+                        </p>
+
+                        <!-- BUSCADOR INTELIGENTE UNIVERSAL -->
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+                            <div style="flex:1; min-width:240px; position:relative;">
+                                <i class="fa-solid fa-magnifying-glass"
+                                    style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#f39c12; font-size:1rem;"></i>
+                                <input type="text" id="admin-master-search-input"
+                                    placeholder="🔍 Escribe Nombre o Celular del cliente (Ej: Martha o 3001234567)..."
+                                    style="width:100%; padding:12px 14px 12px 42px; border-radius:10px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.6); color:white; font-size:0.95rem; outline:none;"
+                                    onkeydown="if(event.key === 'Enter') adminSearchClientsUniversal()">
+                            </div>
+                            <button type="button" onclick="adminSearchClientsUniversal()"
+                                style="background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:white; font-weight:bold; padding:12px 22px; border-radius:10px; cursor:pointer; font-size:0.95rem; box-shadow: 0 4px 12px rgba(243,156,18,0.3); display:flex; align-items:center; gap:8px;">
+                                <i class="fa-solid fa-magnifying-glass"></i> Buscar Cliente
                             </button>
                         </div>
 
-                        <!-- MODO 2: Buscar por Vendedor + Nombre Cliente -->
-                        <div
-                            style="margin-top:1.2rem; padding-top:1.2rem; border-top:1px dashed rgba(243,156,18,0.25);">
-                            <p style="font-size:0.82rem; color:#aaa; margin-bottom:0.8rem;">
-                                <i class="fa-solid fa-magnifying-glass"></i> <strong style="color:#f39c12;">¿El vendedor
-                                    no te da el número del cliente?</strong>
-                                Búscalo por nombre del vendedor y nombre del cliente:
-                            </p>
-                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                                <input type="text" id="admin-seller-name-reset"
-                                    placeholder="Nombre del vendedor (Ej: Laura)"
-                                    style="flex:1; min-width:160px; padding:11px 14px; border-radius:8px; border:1px solid rgba(100,180,255,0.4); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem; position:relative; z-index:10;">
-                                <input type="text" id="admin-client-name-reset"
-                                    placeholder="Nombre del cliente (Ej: Martha)"
-                                    style="flex:1; min-width:160px; padding:11px 14px; border-radius:8px; border:1px solid rgba(100,180,255,0.4); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem; position:relative; z-index:10;">
-                                <button type="button"
-                                    onclick="resetClientCodeAttemptBySeller(document.getElementById('admin-seller-name-reset').value.trim(), document.getElementById('admin-client-name-reset').value.trim())"
-                                    style="background:linear-gradient(135deg,#3498db,#2980b9); border:none; color:white; font-weight:bold; padding:11px 18px; border-radius:8px; cursor:pointer; font-size:0.9rem; white-space:nowrap; box-shadow: 0 4px 10px rgba(52,152,219,0.3); position:relative; z-index:10;">
-                                    <i class="fa-solid fa-magnifying-glass"></i> Buscar y Habilitar
+                        <!-- RESULTADOS DEL BUSCADOR -->
+                        <div id="admin-master-search-results" style="display:none; margin-bottom:1.2rem;"></div>
+
+                        <!-- CONSOLA DE ACTIVACIÓN Y CÓDIGOS DEL CLIENTE SELECCIONADO -->
+                        <div id="admin-master-activation-console"
+                            style="display:none; background:rgba(15,20,30,0.85); border:1px solid rgba(52,152,219,0.4); border-radius:12px; padding:1.4rem; margin-bottom:1.5rem; box-shadow:0 8px 30px rgba(0,0,0,0.5);">
+                            <!-- Header de Cliente Seleccionado -->
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem; margin-bottom:1rem;">
+                                <div>
+                                    <div
+                                        style="font-size:1.15rem; font-weight:bold; color:white; display:flex; align-items:center; gap:8px;">
+                                        <i class="fa-solid fa-user-check" style="color:#2ecc71;"></i> <span
+                                            id="admin-console-client-name">Cliente</span>
+                                    </div>
+                                    <div
+                                        style="font-size:0.82rem; color:#aaa; margin-top:4px; display:flex; align-items:center; flex-wrap:wrap; gap:12px;">
+                                        <span id="admin-console-client-phone-wrap">📱 <span
+                                                id="admin-console-client-phone">--</span></span>
+                                        <span id="admin-console-seller-wrap">🏪 Vendedor: <span
+                                                id="admin-console-seller-name" style="color:#f39c12;">--</span></span>
+                                        <span id="admin-console-product-wrap">🎬 <span id="admin-console-product-name"
+                                                style="color:#3498db;">--</span></span>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="closeAdminActivationConsole()"
+                                    style="background:rgba(255,255,255,0.1); border:none; color:#bbb; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem;">
+                                    <i class="fa-solid fa-xmark"></i> Cerrar Consola
                                 </button>
                             </div>
-                            <div id="reset-seller-result" style="margin-top:0.8rem; font-size:0.85rem; display:none;">
+
+                            <!-- Selector de Correo -->
+                            <div style="margin-bottom:1.2rem;">
+                                <label
+                                    style="display:block; font-size:0.82rem; color:#f39c12; font-weight:bold; margin-bottom:5px;">
+                                    <i class="fa-solid fa-envelope"></i> Correo de la cuenta a consultar:
+                                </label>
+                                <select id="admin-console-email-select"
+                                    style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(243,156,18,0.4); background:rgba(0,0,0,0.8); color:white; font-size:0.9rem;">
+                                    <option value="">Cargando correos vinculados...</option>
+                                </select>
+                            </div>
+
+                            <!-- GRID DE ACCIONES -->
+                            <div style="display:flex; flex-direction:column; gap:1rem;">
+                                <!-- GRUPO 1: CÓDIGOS CEL O PC -->
+                                <div>
+                                    <div
+                                        style="font-size:0.8rem; color:#aaa; font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+                                        📱 Códigos de Inicio de Sesión (CEL O PC):
+                                    </div>
+                                    <div
+                                        style="display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:8px;">
+                                        <button type="button" onclick="adminExecuteAction('netflix')"
+                                            style="background:#E50914; border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-play"></i> Código Netflix
+                                        </button>
+                                        <button type="button" onclick="adminExecuteAction('disney')"
+                                            style="background:#113CCF; border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i> Código Disney+
+                                        </button>
+                                        <button type="button" onclick="adminExecuteAction('hbomax')"
+                                            style="background:#6c5ce7; border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-film"></i> Código HBO Max
+                                        </button>
+                                        <button type="button" onclick="adminExecuteAction('prime')"
+                                            style="background:#00A8E1; border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-box-open"></i> Código Prime
+                                        </button>
+                                        <button type="button" onclick="adminExecuteAction('vix')"
+                                            style="background:linear-gradient(135deg,#e67e22,#d35400); border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-fire"></i> Activar Celular ViX
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- GRUPO 2: ACTUALIZACIONES DE RED / HOGAR -->
+                                <div>
+                                    <div
+                                        style="font-size:0.8rem; color:#aaa; font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+                                        🏠 Actualizaciones de Red / Hogar:
+                                    </div>
+                                    <div
+                                        style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:8px;">
+                                        <button type="button" onclick="adminExecuteAction('netflix_update')"
+                                            style="background:linear-gradient(135deg,#f39c12,#d68910); border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-house-signal"></i> Actualizar Hogar Netflix
+                                        </button>
+                                        <button type="button" onclick="adminExecuteAction('netflix_temp')"
+                                            style="background:linear-gradient(135deg,#0984e3,#00cec9); border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-plane"></i> Acceso Temporal Netflix
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- GRUPO 3: SMART TV -->
+                                <div>
+                                    <div
+                                        style="font-size:0.8rem; color:#aaa; font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
+                                        📺 Activar Dispositivo (Smart TV):
+                                    </div>
+                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                        <input type="text" id="admin-console-tv-code"
+                                            placeholder="Ingresa el código que da el televisor (Ej: 1234-5678)"
+                                            style="flex:2; min-width:220px; padding:10px 12px; border-radius:8px; border:1px solid rgba(46,204,113,0.5); background:rgba(0,0,0,0.7); color:white; font-size:0.9rem;">
+                                        <button type="button" onclick="adminExecuteAction('netflix_tv')"
+                                            style="flex:1; min-width:180px; background:linear-gradient(135deg,#2ecc71,#27ae60); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-tv"></i> Activar Smart TV
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CAJA DE RESULTADO EN VIVO -->
+                            <div id="admin-console-result-box"
+                                style="display:none; margin-top:1.2rem; padding:1.2rem; border-radius:10px; background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.15); text-align:center;">
+                                <div id="admin-console-result-spinner" style="display:none;">
+                                    <i class="fa-solid fa-spinner fa-spin"
+                                        style="font-size:2rem; color:#f39c12; margin-bottom:8px;"></i>
+                                    <div style="color:white; font-size:0.95rem; font-weight:bold;">Consultando
+                                        servicio...</div>
+                                    <div style="color:#aaa; font-size:0.8rem; margin-top:4px;"
+                                        id="admin-console-result-status-text">Buscando correo o iniciando bot...</div>
+                                </div>
+                                <div id="admin-console-result-content" style="display:none;">
+                                    <div id="admin-console-result-badge"
+                                        style="font-size:0.85rem; color:#aaa; margin-bottom:6px;"></div>
+                                    <div id="admin-console-result-code"
+                                        style="font-size:2.2rem; font-weight:900; letter-spacing:4px; color:#2ecc71; font-family:monospace; margin:8px 0;">
+                                    </div>
+                                    <div id="admin-console-result-msg"
+                                        style="font-size:0.9rem; color:#ccc; margin-bottom:12px;"></div>
+                                    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                        <button type="button" id="admin-console-copy-btn"
+                                            onclick="adminCopyConsoleCode()"
+                                            style="background:#34495e; border:none; color:white; font-weight:bold; padding:8px 16px; border-radius:7px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+                                            <i class="fa-solid fa-copy"></i> Copiar Código
+                                        </button>
+                                        <button type="button" id="admin-console-wa-btn"
+                                            onclick="adminSendCodeViaWhatsApp()"
+                                            style="background:#25D366; border:none; color:white; font-weight:bold; padding:8px 16px; border-radius:7px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+                                            <i class="fa-brands fa-whatsapp"></i> Enviar por WhatsApp al Cliente
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN INFERIOR: Habilitación Manual Rápida de Intentos -->
+                        <div
+                            style="margin-top:1.5rem; padding-top:1.2rem; border-top:1px dashed rgba(243,156,18,0.25);">
+                            <div
+                                style="font-size:0.88rem; color:#f39c12; font-weight:bold; margin-bottom:0.5rem; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-rotate-right"></i> Habilitar / Reiniciar Intentos de un Celular
+                                Específico:
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <select id="admin-platform-reset"
+                                    style="flex:1; min-width:150px; padding:11px 14px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem;">
+                                    <option value="all">TODAS las pantallas</option>
+                                    <option value="netflix">Netflix</option>
+                                    <option value="netflix_update">Actualiza tu Hogar</option>
+                                    <option value="netflix_temp">Acceso temporal Netflix</option>
+                                    <option value="netflix_tv">Activar TV (Netflix)</option>
+                                    <option value="disney">Disney+</option>
+                                    <option value="hbomax">HBO Max</option>
+                                    <option value="prime">Prime Video</option>
+                                    <option value="vix">ViX</option>
+                                </select>
+                                <input type="text" id="admin-client-phone-reset"
+                                    placeholder="Celular del cliente (Ej: 3105551234)"
+                                    style="flex:2; min-width:180px; padding:11px 14px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem;">
+                                <button type="button"
+                                    onclick="resetClientCodeAttempt(document.getElementById('admin-client-phone-reset').value.trim())"
+                                    style="background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:white; font-weight:bold; padding:11px 18px; border-radius:8px; cursor:pointer; font-size:0.9rem; white-space:nowrap; box-shadow: 0 4px 10px rgba(243,156,18,0.3);">
+                                    <i class="fa-solid fa-rotate-right"></i> Habilitar Intento
+                                </button>
                             </div>
                         </div>
 
@@ -2449,6 +2611,413 @@
                 alert('Error al eliminar duplicados: ' + e.message);
             }
         }
+
+        // =====================================================
+        // CENTRO MAESTRO DE ACTIVACIÓN Y CÓDIGOS (ADMIN ILIMITADO)
+        // =====================================================
+        window.adminActiveClient = null;
+        window.adminLastGeneratedCode = '';
+        window.adminLastGeneratedPlatform = '';
+        window.adminLastGeneratedMessage = '';
+
+        window.adminSearchClientsUniversal = async function () {
+            const input = document.getElementById('admin-master-search-input');
+            const resultsDiv = document.getElementById('admin-master-search-results');
+            const query = (input ? input.value : '').trim().toLowerCase();
+
+            if (!query) {
+                alert('Por favor escribe un Nombre o un Número de Celular para buscar.');
+                return;
+            }
+
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '<div style="color:#f39c12; font-size:0.9rem; padding:15px; text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando clientes en perfiles y ventas...</div>';
+
+            try {
+                // Consultar ventas de vendedores, ventas directas y perfiles
+                const [sellerSnap, profilesSnap, clientsSnap] = await Promise.all([
+                    db.ref('sellerSales').once('value'),
+                    db.ref('clientProfiles').once('value'),
+                    db.ref('clients').once('value').catch(() => ({ val: () => ({}) }))
+                ]);
+
+                const allSellerSales = sellerSnap.val() || {};
+                const allProfiles = profilesSnap.val() || {};
+                const allClients = (clientsSnap && clientsSnap.val) ? (clientsSnap.val() || {}) : {};
+
+                let matches = [];
+
+                // 1. Buscar en sellerSales
+                Object.entries(allSellerSales).forEach(([vendedor, sales]) => {
+                    if (!sales || typeof sales !== 'object') return;
+                    Object.values(sales).forEach(sale => {
+                        if (!sale) return;
+                        const cName = String(sale.clientName || '').trim();
+                        const cPhone = String(sale.clientPhone || '').trim();
+                        const vName = String(sale.sellerName || vendedor).trim();
+                        const prod = (sale.items || []).map(i => i.name).join(', ') || sale.product || 'Servicio Streaming';
+
+                        if (cName.toLowerCase().includes(query) || cPhone.toLowerCase().includes(query) || vName.toLowerCase().includes(query)) {
+                            matches.push({
+                                clientName: cName || 'Sin nombre',
+                                phone: cPhone,
+                                sellerName: vName,
+                                product: prod
+                            });
+                        }
+                    });
+                });
+
+                // 2. Buscar en clients
+                Object.values(allClients).forEach(c => {
+                    if (!c) return;
+                    const cName = String(c.name || c.clientName || '').trim();
+                    const cPhone = String(c.phone || c.clientPhone || '').trim();
+                    const vName = String(c.seller || 'Admin / Directo').trim();
+                    const prod = c.product || c.plan || 'Servicio Streaming';
+
+                    if (cName.toLowerCase().includes(query) || cPhone.toLowerCase().includes(query)) {
+                        matches.push({
+                            clientName: cName || 'Sin nombre',
+                            phone: cPhone,
+                            sellerName: vName,
+                            product: prod
+                        });
+                    }
+                });
+
+                // 3. Buscar en clientProfiles
+                Object.entries(allProfiles).forEach(([rawPhone, prof]) => {
+                    if (!prof || typeof prof !== 'object') return;
+                    const cName = String(prof.name || prof.clientName || '').trim();
+                    const cPhone = String(rawPhone || '').trim();
+
+                    if (cPhone.toLowerCase().includes(query) || (cName && cName.toLowerCase().includes(query))) {
+                        matches.push({
+                            clientName: cName || 'Cliente ' + cPhone,
+                            phone: cPhone,
+                            sellerName: prof.sellerName || 'Directo',
+                            product: prof.lastService || 'Servicio Streaming'
+                        });
+                    }
+                });
+
+                // Filtrar duplicados por nombre y teléfono
+                const seenKeys = new Set();
+                matches = matches.filter(m => {
+                    const key = `${m.phone}_${m.clientName.toLowerCase()}`;
+                    if (seenKeys.has(key)) return false;
+                    seenKeys.add(key);
+                    return true;
+                });
+
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = `<div style="background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.3); border-radius:8px; padding:12px; color:#ff6b6b; font-size:0.88rem; text-align:center;">
+                        ❌ No se encontraron clientes con el criterio "<strong>${query}</strong>". Intenta con otro nombre o número.
+                    </div>`;
+                    return;
+                }
+
+                // Obtener datos de intentos de cada cliente encontrado
+                let html = `<div style="font-size:0.85rem; color:#f39c12; margin-bottom:0.8rem; font-weight:bold;">
+                    ✅ Se encontraron ${matches.length} cliente(s). Haz clic en <strong>⚡ Abrir Consola</strong> para obtener códigos o activar:
+                </div>`;
+
+                matches.forEach((m, idx) => {
+                    const phoneDisplay = m.phone ? m.phone : '<em style="color:#888;">Sin cel registrado</em>';
+                    const profileData = (m.phone && allProfiles[m.phone]) ? allProfiles[m.phone] : {};
+                    const usedData = profileData.codeAttemptUsed;
+
+                    let attemptBadges = [];
+                    if (usedData === true) {
+                        attemptBadges.push('<span style="color:#ff4d4d; font-weight:bold;">Agotado Global</span>');
+                    } else if (usedData && typeof usedData === 'object') {
+                        if (usedData['netflix_update']) attemptBadges.push(`<span style="color:#f39c12;">Hogar: ${usedData['netflix_update']}/2</span>`);
+                        if (usedData['netflix_temp']) attemptBadges.push(`<span style="color:#0984e3;">Temporal</span>`);
+                        if (usedData['netflix_tv']) attemptBadges.push(`<span style="color:#2ecc71;">TV</span>`);
+                        if (usedData['netflix']) attemptBadges.push(`<span style="color:#e50914;">Nflx</span>`);
+                        if (usedData['disney']) attemptBadges.push(`<span style="color:#113ccf;">Disn</span>`);
+                        if (usedData['hbomax']) attemptBadges.push(`<span style="color:#6c5ce7;">Max</span>`);
+                        if (usedData['prime']) attemptBadges.push(`<span style="color:#00a8e1;">Prm</span>`);
+                        if (usedData['vix']) attemptBadges.push(`<span style="color:#e67e22;">ViX</span>`);
+                    }
+
+                    const statusHtml = attemptBadges.length > 0
+                        ? `<div style="font-size:0.75rem; color:#aaa; margin-top:3px; background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; display:inline-block;"><i class="fa-solid fa-chart-pie"></i> Consumidos: ${attemptBadges.join(' | ')}</div>`
+                        : `<div style="color:#2ecc71; font-size:0.75rem; font-weight:bold; margin-top:3px;"><i class="fa-solid fa-circle-check"></i> Intentos Libres</div>`;
+
+                    const safeName = m.clientName.replace(/'/g, "\\'");
+                    const safeSeller = m.sellerName.replace(/'/g, "\\'");
+                    const safeProduct = m.product.replace(/'/g, "\\'");
+
+                    html += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 16px; margin-bottom:8px; flex-wrap:wrap; gap:10px;">
+                            <div>
+                                <div style="font-weight:bold; color:white; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                                    ${m.clientName}
+                                    ${m.phone ? `<a href="https://wa.me/${m.phone.replace(/\D/g, '')}" target="_blank" style="color:#25D366; font-size:0.9rem;" title="Abrir WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>` : ''}
+                                </div>
+                                <div style="color:#aaa; font-size:0.8rem; margin-top:2px;">
+                                    📱 ${phoneDisplay} &nbsp;|&nbsp; 🏪 Vendedor: <strong style="color:#f39c12;">${m.sellerName}</strong> &nbsp;|&nbsp; 🎬 ${m.product}
+                                </div>
+                                ${statusHtml}
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                <button type="button" 
+                                    onclick="openAdminActivationConsole('${m.phone}', '${safeName}', '${safeSeller}', '${safeProduct}')"
+                                    style="background:linear-gradient(135deg,#2ecc71,#27ae60); border:none; color:white; font-weight:bold; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; display:flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(46,204,113,0.3);">
+                                    <i class="fa-solid fa-bolt"></i> Abrir Consola (Admin)
+                                </button>
+                                ${m.phone ? `
+                                <button type="button" 
+                                    onclick="resetClientCodeAttempt('${m.phone}')"
+                                    style="background:rgba(243,156,18,0.15); border:1px solid #f39c12; color:#f39c12; font-weight:bold; padding:7px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;">
+                                    <i class="fa-solid fa-rotate-right"></i> Resetear Intentos
+                                </button>` : ''}
+                            </div>
+                        </div>`;
+                });
+
+                resultsDiv.innerHTML = html;
+            } catch (err) {
+                console.error('[ADMIN-SEARCH] Error:', err);
+                resultsDiv.innerHTML = `<div style="color:#e74c3c; padding:10px;">❌ Error al buscar: ${err.message}</div>`;
+            }
+        };
+
+        window.openAdminActivationConsole = async function (phone, clientName, sellerName, product) {
+            window.adminActiveClient = { phone, clientName, sellerName, product };
+
+            const consoleBox = document.getElementById('admin-master-activation-console');
+            const nameEl = document.getElementById('admin-console-client-name');
+            const phoneEl = document.getElementById('admin-console-client-phone');
+            const sellerEl = document.getElementById('admin-console-seller-name');
+            const prodEl = document.getElementById('admin-console-product-name');
+            const emailSelect = document.getElementById('admin-console-email-select');
+            const resultBox = document.getElementById('admin-console-result-box');
+
+            if (nameEl) nameEl.innerText = clientName || 'Cliente';
+            if (phoneEl) phoneEl.innerText = phone || 'Sin celular registrado';
+            if (sellerEl) sellerEl.innerText = sellerName || 'Directo';
+            if (prodEl) prodEl.innerText = product || 'Streaming';
+            if (resultBox) resultBox.style.display = 'none';
+
+            // Cargar lista de correos vinculados desde Firebase
+            if (emailSelect) {
+                emailSelect.innerHTML = '<option value="">Cargando correos vinculados...</option>';
+                try {
+                    const snap = await db.ref('emailAccounts').once('value');
+                    const accounts = snap.val() || {};
+                    const entries = Object.values(accounts);
+
+                    if (entries.length === 0) {
+                        emailSelect.innerHTML = '<option value="">⚠️ No hay correos registrados en "Mis Cuentas de Correo"</option>';
+                    } else {
+                        // Ordenar correos
+                        const emails = Array.from(new Set(entries.map(a => a.email).filter(Boolean))).sort();
+                        let optionsHtml = '';
+                        emails.forEach(e => {
+                            optionsHtml += `<option value="${e}">${e}</option>`;
+                        });
+                        emailSelect.innerHTML = optionsHtml;
+                    }
+                } catch (e) {
+                    console.error('[ADMIN-CONSOLE] Error cargando correos:', e);
+                    emailSelect.innerHTML = '<option value="">Error cargando cuentas</option>';
+                }
+            }
+
+            consoleBox.style.display = 'block';
+            consoleBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        window.closeAdminActivationConsole = function () {
+            const consoleBox = document.getElementById('admin-master-activation-console');
+            if (consoleBox) consoleBox.style.display = 'none';
+            window.adminActiveClient = null;
+        };
+
+        window.adminExecuteAction = async function (platform) {
+            if (!window.adminActiveClient) {
+                alert('No hay cliente seleccionado. Por favor busca un cliente primero.');
+                return;
+            }
+
+            const emailSelect = document.getElementById('admin-console-email-select');
+            const email = emailSelect ? emailSelect.value.trim() : '';
+
+            if (!email) {
+                alert('Por favor selecciona o ingresa el correo de la cuenta a consultar.');
+                return;
+            }
+
+            const client = window.adminActiveClient;
+            const resultBox = document.getElementById('admin-console-result-box');
+            const spinner = document.getElementById('admin-console-result-spinner');
+            const content = document.getElementById('admin-console-result-content');
+            const statusText = document.getElementById('admin-console-result-status-text');
+            const badgeEl = document.getElementById('admin-console-result-badge');
+            const codeEl = document.getElementById('admin-console-result-code');
+            const msgEl = document.getElementById('admin-console-result-msg');
+            const copyBtn = document.getElementById('admin-console-copy-btn');
+            const waBtn = document.getElementById('admin-console-wa-btn');
+
+            resultBox.style.display = 'block';
+            spinner.style.display = 'block';
+            content.style.display = 'none';
+
+            // CASO ESPECIAL: Smart TV
+            if (platform === 'netflix_tv') {
+                const tvInput = document.getElementById('admin-console-tv-code');
+                const tvCode = tvInput ? tvInput.value.trim() : '';
+                if (!tvCode) {
+                    spinner.style.display = 'none';
+                    alert('Por favor ingresa el código numérico o letras que muestra el televisor del cliente.');
+                    return;
+                }
+
+                if (statusText) statusText.innerText = 'Conectando con el bot de Smart TV e iniciando sesión...';
+
+                try {
+                    // Resolver URL del bot (ngrok o localhost o backend)
+                    let botUrl = 'https://streaming-backend-ce1u.onrender.com';
+                    try {
+                        const snap = await db.ref('config/botUrl').once('value');
+                        const ngrok = snap.val();
+                        if (ngrok) botUrl = ngrok;
+                        else {
+                            const localCheck = await Promise.race([
+                                fetch('http://localhost:3099/status'),
+                                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000))
+                            ]);
+                            if (localCheck.ok) botUrl = 'http://localhost:3099';
+                        }
+                    } catch (e) { }
+
+                    const response = await fetch(`${botUrl}/api/activate-tv`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                        body: JSON.stringify({ email, tvCode, phone: client.phone || 'admin' })
+                    });
+                    const data = await response.json();
+
+                    spinner.style.display = 'none';
+                    content.style.display = 'block';
+
+                    if (data.success) {
+                        badgeEl.innerHTML = '<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> SMART TV ACTIVADA CON ÉXITO</span>';
+                        codeEl.style.color = '#2ecc71';
+                        codeEl.innerText = 'ACTIVADA';
+                        msgEl.innerHTML = `¡El televisor de <strong>${client.clientName}</strong> con código <strong>${tvCode}</strong> quedó vinculado y listo para reproducir!`;
+                        if (copyBtn) copyBtn.style.display = 'none';
+                        if (waBtn) {
+                            waBtn.style.display = 'inline-flex';
+                            window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Tu Smart TV de Netflix ya quedó activada con éxito. Ya puedes disfrutar de tus series y películas favoritas.`;
+                        }
+                    } else {
+                        badgeEl.innerHTML = '<span style="color:#ff4d4d; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> ERROR EN SMART TV</span>';
+                        codeEl.style.color = '#ff4d4d';
+                        codeEl.innerText = 'FALLÓ';
+                        msgEl.innerText = data.error || 'No se pudo activar. Verifica que el televisor siga mostrando el mismo código.';
+                        if (copyBtn) copyBtn.style.display = 'none';
+                        if (waBtn) waBtn.style.display = 'none';
+                    }
+                } catch (err) {
+                    spinner.style.display = 'none';
+                    content.style.display = 'block';
+                    badgeEl.innerHTML = '<span style="color:#ff4d4d;"><i class="fa-solid fa-circle-xmark"></i> ERROR DE CONEXIÓN</span>';
+                    codeEl.innerText = 'ERROR';
+                    codeEl.style.color = '#ff4d4d';
+                    msgEl.innerText = 'No se pudo conectar con el bot de TV. Verifica que Iniciar_Bot_Local.bat esté encendido.';
+                    if (copyBtn) copyBtn.style.display = 'none';
+                    if (waBtn) waBtn.style.display = 'none';
+                }
+                return;
+            }
+
+            // CASO: Códigos de Plataformas o ViX
+            if (statusText) {
+                if (platform === 'vix') {
+                    statusText.innerText = 'Buscando enlace en el correo y abriendo Chrome para activar el celular ViX...';
+                } else {
+                    statusText.innerText = `Consultando bandeja de correo para ${platform.toUpperCase()}...`;
+                }
+            }
+
+            try {
+                const response = await fetch('https://streaming-backend-ce1u.onrender.com/api/get-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, platform, isAdmin: true })
+                });
+                const data = await response.json();
+
+                spinner.style.display = 'none';
+                content.style.display = 'block';
+
+                if (data.success) {
+                    if (platform === 'vix') {
+                        badgeEl.innerHTML = '<span style="color:#e67e22; font-weight:bold;"><i class="fa-solid fa-fire"></i> ¡VIX ACTIVADO CON ÉXITO!</span>';
+                        codeEl.style.color = '#2ecc71';
+                        codeEl.innerText = 'ACTIVADO';
+                        msgEl.innerHTML = `¡El celular de <strong>${client.clientName}</strong> quedó activado en ViX! El navegador procesó el enlace inmediatamente.`;
+                        if (copyBtn) copyBtn.style.display = 'none';
+                        if (waBtn) {
+                            waBtn.style.display = 'inline-flex';
+                            window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Tu cuenta de ViX ya quedó activada en tu celular con éxito. Ya puedes ingresar y disfrutar del contenido.`;
+                        }
+                    } else {
+                        window.adminLastGeneratedCode = data.code;
+                        window.adminLastGeneratedPlatform = platform;
+                        badgeEl.innerHTML = `<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-key"></i> CÓDIGO DE ${platform.toUpperCase()}</span>`;
+                        codeEl.style.color = '#2ecc71';
+                        codeEl.innerText = data.code;
+                        msgEl.innerHTML = `Obtenido de <code>${email}</code>. Válido por 15 minutos.`;
+                        if (copyBtn) copyBtn.style.display = 'inline-flex';
+                        if (waBtn) {
+                            waBtn.style.display = 'inline-flex';
+                            const platName = platform === 'netflix_update' ? 'Actualización de Hogar (Netflix)'
+                                : platform === 'netflix_temp' ? 'Acceso Temporal (Netflix)'
+                                    : platform.toUpperCase();
+                            window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Aquí tienes tu código para ${platName}: *${data.code}*. Ingrésalo en tu pantalla antes de 15 minutos.`;
+                        }
+                    }
+                } else {
+                    badgeEl.innerHTML = '<span style="color:#ff4d4d; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> NO SE ENCONTRÓ CÓDIGO</span>';
+                    codeEl.style.color = '#ff4d4d';
+                    codeEl.innerText = 'SIN CÓDIGO';
+                    msgEl.innerText = data.error || 'No se encontró ningún correo reciente con código para esta cuenta.';
+                    if (copyBtn) copyBtn.style.display = 'none';
+                    if (waBtn) waBtn.style.display = 'none';
+                }
+            } catch (err) {
+                spinner.style.display = 'none';
+                content.style.display = 'block';
+                badgeEl.innerHTML = '<span style="color:#ff4d4d;"><i class="fa-solid fa-circle-xmark"></i> ERROR AL CONSULTAR</span>';
+                codeEl.innerText = 'ERROR';
+                codeEl.style.color = '#ff4d4d';
+                msgEl.innerText = err.message || 'Error de conexión con el servidor.';
+                if (copyBtn) copyBtn.style.display = 'none';
+                if (waBtn) waBtn.style.display = 'none';
+            }
+        };
+
+        window.adminCopyConsoleCode = function () {
+            if (!window.adminLastGeneratedCode) return;
+            navigator.clipboard.writeText(window.adminLastGeneratedCode).then(() => {
+                alert(`📋 Código "${window.adminLastGeneratedCode}" copiado al portapapeles.`);
+            }).catch(() => {
+                alert(`Código: ${window.adminLastGeneratedCode}`);
+            });
+        };
+
+        window.adminSendCodeViaWhatsApp = function () {
+            if (!window.adminActiveClient || !window.adminLastGeneratedMessage) return;
+            const phone = (window.adminActiveClient.phone || '').replace(/\D/g, '');
+            const encoded = encodeURIComponent(window.adminLastGeneratedMessage);
+            const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+            window.open(url, '_blank');
+        };
 
         // =====================================================
         // BOTÓN EXCLUSIVO ADMIN: Habilitar nuevo intento de código
