@@ -24,5 +24,7 @@ if NOT ERRORLEVEL 1 (
 echo.
 echo  [2/2] Iniciando Bot Local...
 echo.
+REM Liberar puerto 3099 si quedo tomado por una sesion anterior
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3099 ^| findstr LISTENING') do taskkill /F /PID %%a 2>nul
 node local-bot.js
 pause
