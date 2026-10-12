@@ -260,8 +260,8 @@ async function doActivateTv(email, tvCode) {
                 '--disable-backgrounding-occluded-windows',
                 '--disable-background-timer-throttling',
                 '--disable-renderer-backgrounding',
-                '--window-position=-3000,-3000', // FUERA DE PANTALLA: Corre en segundo plano sin interrumpir
-                '--window-size=1280,800'
+                '--window-position=50,50', // Ventana visible en pantalla para supervisar el proceso
+                '--window-size=1100,750'
             ]
         });
 
@@ -531,8 +531,88 @@ async function doActivateTv(email, tvCode) {
     }
 }
 
+// ── FUNCIÓN: Activar ViX usando Chrome local visible ────────────────────────
+async function doActivateVix(email, vixLink) {
+    console.log(`\n[VIX-BOT] 🚀 Iniciando activación de ViX para ${email}...`);
+    console.log(`[VIX-BOT] 🔗 Enlace: ${vixLink}`);
+
+    const chromePath = getChromePath();
+    if (!chromePath) {
+        return { success: false, error: 'Google Chrome no está instalado en esta PC.' };
+    }
+
+    let browser = null;
+    try {
+        browser = await puppeteer.launch({
+            executablePath: chromePath,
+            headless: false,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--window-position=50,50',
+                '--window-size=1100,750'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1100, height: 750 });
+
+        console.log('[VIX-BOT] 🌐 Abriendo enlace de inicio de sesión de ViX en Chrome...');
+        await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 30000 });
+        await sleep(2500);
+
+        // Buscar y hacer clic en el botón de confirmación ("Entendido", "Continuar", "Iniciar sesión", etc.)
+        const clickedBtn = await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+            for (const b of btns) {
+                const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+                if (txt === 'entendido' || txt === 'continuar' || txt === 'aceptar' || txt.includes('entendido')) {
+                    b.click();
+                    return txt;
+                }
+            }
+            return null;
+        });
+
+        if (clickedBtn) {
+            console.log(`[VIX-BOT] ✅ Se hizo clic en el botón: "${clickedBtn}"`);
+            await sleep(2500);
+        } else {
+            console.log('[VIX-BOT] ℹ️ Página cargada y procesada sin requerir botón manual.');
+            await sleep(2000);
+        }
+
+        const currentUrl = page.url();
+        console.log(`[VIX-BOT] 🏁 URL final: ${currentUrl}`);
+
+        await browser.close();
+        browser = null;
+
+        console.log('[VIX-BOT] 🎉 ¡Activación de ViX completada con éxito!');
+        return { success: true, message: '¡Dispositivo ViX activado con éxito en Chrome local!' };
+    } catch (err) {
+        console.error('[VIX-BOT] ❌ Error en ViX:', err.message);
+        if (browser) {
+            try { await browser.close(); } catch (e) { }
+        }
+        return { success: false, error: err.message };
+    }
+}
+
+// ── ENDPOINT: Activar ViX desde el bot local ──────────────────────────────
+app.post('/api/activate-vix', async (req, res) => {
+    const { email, vixLink } = req.body;
+    if (!vixLink) {
+        return res.status(400).json({ success: false, error: 'vixLink es requerido.' });
+    }
+    const result = await doActivateVix(email, vixLink);
+    return res.json(result);
+});
+
 // ── Iniciar servidor ───────────────────────────────────────────────────────
-app.listen(PORT, '127.0.0.1', async () => {
+app.listen(PORT, async () => {
     const chromePath = getChromePath();
     console.log('\n╔════════════════════════════════════════════════╗');
     console.log('║   🤖  StreamingDPC — Bot Local de TV  ✅       ║');

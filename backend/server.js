@@ -50,8 +50,28 @@ async function getCodeFromNetflixUrl(url) {
 // ============================================================
 // HELPER: Activar enlace de ViX con el Bot Invisible
 // ============================================================
-async function executeVixActivation(vixLink) {
+async function executeVixActivation(vixLink, email) {
     console.log(`[VIX-BOT] Bot ejecutando activación automática para ViX: ${vixLink}`);
+
+    // 1º Si hay un Bot Local en Firebase, enviarle la petición para que abra Chrome en la PC del usuario
+    try {
+        const botUrlResp = await axios.get(`${FIREBASE_DB_URL}/config/botUrl.json`, { timeout: 3000 });
+        const botUrl = botUrlResp.data;
+        if (botUrl && botUrl.startsWith('http')) {
+            console.log(`[VIX-BOT] 🔀 Bot local detectado en Firebase: ${botUrl}. Reenviando activación a la PC...`);
+            const localResp = await axios.post(`${botUrl}/api/activate-vix`, { email, vixLink }, {
+                timeout: 45000,
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            if (localResp.data && localResp.data.success) {
+                console.log(`[VIX-BOT] ✅ Bot local en la PC completó la activación de ViX.`);
+                return localResp.data;
+            }
+        }
+    } catch (e) {
+        console.warn(`[VIX-BOT] Bot local no disponible o falló (${e.message}). Continuando con navegador en Render...`);
+    }
+
     let browser = null;
     try {
         browser = await puppeteer.launch({
@@ -77,7 +97,7 @@ async function executeVixActivation(vixLink) {
             }
         });
         await new Promise(r => setTimeout(r, 2000));
-        console.log(`[VIX-BOT] Sesión activada en ViX correctamente vía Puppeteer.`);
+        console.log(`[VIX-BOT] Sesión activada en ViX correctamente vía Puppeteer en Render.`);
         return { success: true };
     } catch (err) {
         console.warn(`[VIX-BOT] Puppeteer falló o no disponible en este entorno (${err.message}). Ejecutando fallback HTTP...`);
@@ -176,11 +196,11 @@ app.post('/api/get-code', async (req, res) => {
                     const parsed = await simpleParser(all.body);
 
                     // Filtrar por antigüedad del correo:
-                    // Para Prime Video el usuario requiere que no supere los 3 minutos de antigüedad.
+                    // Para Prime Video y ViX el usuario requiere que no supere los 3 minutos de antigüedad.
                     const exactDate = (item.attributes && item.attributes.date) ? item.attributes.date : parsed.date;
                     const emailDate = exactDate ? new Date(exactDate).getTime() : 0;
                     const platformLower = platform.toLowerCase();
-                    const maxAgeMinutes = platformLower.includes('prime') ? 3 : 10;
+                    const maxAgeMinutes = (platformLower.includes('prime') || platformLower.includes('vix')) ? 3 : 10;
                     const minAllowedTime = Date.now() - (maxAgeMinutes * 60 * 1000);
 
                     if (!emailDate || emailDate < minAllowedTime) {
@@ -468,7 +488,7 @@ app.post('/api/get-code', async (req, res) => {
         if (foundCode) {
             if (platform.toLowerCase() === 'vix') {
                 console.log(`[DEBUG] ViX detectado. Ejecutando enlace en segundo plano por el bot...`);
-                await executeVixActivation(foundCode);
+                await executeVixActivation(foundCode, email);
                 return res.json({
                     success: true,
                     activated: true,
