@@ -577,16 +577,16 @@ async function doActivateVix(email, vixLink) {
         await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 35000 });
         await sleep(2500);
 
-        // 2. Si aparece el desafío "Press & Hold", resolverlo con jitter humano
-        for (let attempt = 0; attempt < 3; attempt++) {
+        // 2. Si aparece el desafío "Press & Hold", resolverlo con jitter humano continuo
+        for (let attempt = 0; attempt < 4; attempt++) {
             const hasCaptcha = await page.evaluate(() => {
                 const txt = (document.body ? document.body.innerText : '') || '';
                 return txt.includes('Press & Hold') || txt.includes('Press and Hold') || !!document.querySelector('#px-captcha');
             });
 
             if (hasCaptcha) {
-                console.log('[VIX-BOT] 🛡️ Detectado "Press & Hold". Manteniendo presionado con micropulsaciones humanas...');
-                console.log('[VIX-BOT] 💡 (Si lo prefieres, también puedes mantener presionado el botón azul con tu mouse)');
+                console.log(`[VIX-BOT] 🛡️ [Intento ${attempt + 1}/4] Detectado "Press & Hold". Manteniendo presionado...`);
+                console.log('[VIX-BOT] 💡 Puedes mantener presionado el botón azul con tu propio mouse si deseas acelerarlo.');
                 let box = null;
                 const captchaEl = await page.$('#px-captcha, #px-captcha-wrapper, [aria-label*="Press & Hold"]');
                 if (captchaEl) {
@@ -608,20 +608,30 @@ async function doActivateVix(email, vixLink) {
                 if (box) {
                     const clickX = box.x + box.width / 2;
                     const clickY = box.y + box.height / 2;
-                    console.log(`[VIX-BOT] 🖱️ Pulsando en (${Math.round(clickX)}, ${Math.round(clickY)}) con jitter humano durante 9 seg...`);
+                    console.log(`[VIX-BOT] 🖱️ Manteniendo presionado en (${Math.round(clickX)}, ${Math.round(clickY)}) durante 14 segundos para llenar el círculo...`);
                     await page.mouse.move(clickX, clickY);
                     await page.mouse.down();
 
                     const holdStart = Date.now();
-                    while (Date.now() - holdStart < 9200) {
+                    while (Date.now() - holdStart < 14000) {
                         const jitterX = clickX + (Math.random() - 0.5) * 4;
                         const jitterY = clickY + (Math.random() - 0.5) * 4;
                         await page.mouse.move(jitterX, jitterY);
-                        await sleep(70 + Math.random() * 50);
+                        await sleep(65 + Math.random() * 45);
+
+                        // Si la página ya cambió y validó el captcha, soltar de inmediato
+                        const clearedEarly = await page.evaluate(() => {
+                            const t = (document.body ? document.body.innerText : '') || '';
+                            return t.includes('exitoso') || t.includes('Entendido') || !t.includes('Press & Hold');
+                        });
+                        if (clearedEarly) {
+                            console.log('[VIX-BOT] 🚀 ¡Validación completada anticipadamente!');
+                            break;
+                        }
                     }
                     await page.mouse.up();
-                    console.log('[VIX-BOT] ⏳ Soltado. Esperando a que el círculo naranja valide...');
-                    await sleep(4000);
+                    console.log('[VIX-BOT] ⏳ Soltado. Verificando si el círculo naranja completó el acceso...');
+                    await sleep(3500);
                 } else {
                     await sleep(2000);
                 }
@@ -633,7 +643,7 @@ async function doActivateVix(email, vixLink) {
         // 3. Esperar y hacer clic en el botón naranja "Entendido" (¡Inicio de sesión exitoso!)
         console.log('[VIX-BOT] 🔍 Buscando botón naranja "Entendido"...');
         let clickedBtn = null;
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 45; i++) {
             // Guardar screenshot para diagnóstico
             try {
                 await page.screenshot({ path: 'vix_debug.png' });
@@ -659,7 +669,9 @@ async function doActivateVix(email, vixLink) {
                 console.log(`[VIX-BOT] ✅ ¡Se hizo clic en "${clickedBtn}" con éxito!`);
                 break;
             } else {
-                console.log(`[VIX-BOT] [${i + 1}/25] Esperando "Entendido"... En pantalla: "${pageInfo.textPreview.replace(/\n+/g, ' ')}"`);
+                if (i % 5 === 0) {
+                    console.log(`[VIX-BOT] [${i + 1}/45] Esperando "Entendido"... En pantalla: "${pageInfo.textPreview.replace(/\n+/g, ' ')}"`);
+                }
             }
             await sleep(1000);
         }
