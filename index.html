@@ -512,28 +512,63 @@
                             bandeja de entrada... esto puede tardar unos 10-30 seg.</p>
                     </div>
 
-                    <!-- Result Code Box -->
-                    <div id="code-result"
-                        style="display: none; margin-top: 1.5rem; background: var(--glass); border: 1px solid var(--accent-primary); border-radius: 16px; padding: 1.5rem; text-align: center;">
-                        <h3 id="code-result-title"
-                            style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">Tu código de
-                            acceso es:</h3>
+                    <!-- Floating Modal para el Código de Acceso (Overlay Flotante) -->
+                    <div id="code-result" class="floating-code-overlay"
+                        style="display: none; position: fixed; inset: 0; z-index: 10005; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); justify-content: center; align-items: center; padding: 1.2rem;">
+                        <div class="floating-code-card"
+                            style="position: relative; max-width: 420px; width: 100%; background: linear-gradient(160deg, #181822 0%, #0e0e13 100%); border: 1.5px solid rgba(229,9,20,0.5); border-radius: 24px; padding: 2rem 1.6rem; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(229,9,20,0.25); animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
 
-                        <!-- Contenedor númerico -->
-                        <div id="the-magic-code"
-                            style="font-size: 2.5rem; font-weight: 900; letter-spacing: 5px; color: white;">----</div>
+                            <!-- Botón Superior Cerrar (X) -->
+                            <button type="button" onclick="closeCodeResultModal()"
+                                style="position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 1.3rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(229,9,20,0.8)'; this.style.borderColor='#e50914';"
+                                onmouseout="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';"
+                                title="Cerrar">&times;</button>
 
-                        <!-- Contenedor Enlace -->
-                        <div id="the-magic-link-container" style="display: none; margin-top: 0.5rem;">
-                            <a id="the-magic-link-btn" href="#" target="_blank"
-                                style="display:inline-block; background:linear-gradient(135deg, #E50914, #B81D24); color:white; font-weight:bold; padding:15px 30px; border-radius:10px; text-decoration:none; font-size:1.1rem; box-shadow:0 4px 15px rgba(229,9,20,0.4);">
-                                <i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización
-                            </a>
+                            <div
+                                style="font-size: 2.8rem; margin-bottom: 0.3rem; filter: drop-shadow(0 0 10px rgba(229,9,20,0.5));">
+                                🔑</div>
+
+                            <h3 id="code-result-title"
+                                style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin-bottom: 0.8rem; letter-spacing: 0.5px;">
+                                Tu código de acceso es:</h3>
+
+                            <!-- Contenedor numérico flotante con brillo -->
+                            <div id="magic-code-box"
+                                style="background: rgba(0,0,0,0.6); border: 1.5px dashed rgba(229,9,20,0.6); border-radius: 16px; padding: 1.2rem 1rem; margin: 1rem 0;">
+                                <div id="the-magic-code"
+                                    style="font-size: 3.4rem; font-weight: 900; letter-spacing: 8px; color: white; font-family: monospace; text-shadow: 0 0 20px rgba(229,9,20,0.8), 0 0 35px rgba(255,255,255,0.3);">
+                                    ----</div>
+                                <button id="copy-magic-code-btn" type="button" onclick="copyFloatingCode()"
+                                    style="margin-top: 0.6rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                                    <i class="fa-regular fa-copy"></i> Copiar Código
+                                </button>
+                            </div>
+
+                            <!-- Contenedor Enlace -->
+                            <div id="the-magic-link-container" style="display: none; margin: 1rem 0;">
+                                <a id="the-magic-link-btn" href="#" target="_blank"
+                                    style="display: inline-block; background: linear-gradient(135deg, #E50914, #B81D24); color: white; font-weight: bold; padding: 14px 24px; border-radius: 12px; text-decoration: none; font-size: 1rem; box-shadow: 0 6px 20px rgba(229,9,20,0.45); transition: transform 0.2s;">
+                                    <i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización
+                                </a>
+                            </div>
+
+                            <!-- Contenedor para notas dinámicas adicionales -->
+                            <div id="floating-code-notes"></div>
+
+                            <p
+                                style="font-size: 0.85rem; color: #ff4d4d; margin: 1rem 0 1.5rem 0; background: rgba(229,9,20,0.1); border: 1px solid rgba(229,9,20,0.3); border-radius: 10px; padding: 10px 12px; line-height: 1.4;">
+                                <i class="fa-solid fa-clock"></i> Tienes <strong>15 minutos</strong> para usarlo.<br>
+                                <span style="color: #aaa; font-size: 0.78rem;">Esta fue tu única oportunidad de
+                                    solicitud.</span>
+                            </p>
+
+                            <!-- Botón Inferior de Cerrar -->
+                            <button type="button" onclick="closeCodeResultModal()"
+                                style="width: 100%; padding: 13px; background: linear-gradient(135deg, #E50914, #990000); border: none; color: white; font-weight: 800; font-size: 1rem; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 20px rgba(229,9,20,0.4); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i class="fa-solid fa-circle-check"></i> Cerrar / Entendido
+                            </button>
                         </div>
-
-                        <p style="font-size: 0.8rem; color: #ff4d4d; margin-top: 1rem;"><i
-                                class="fa-solid fa-clock"></i> Tienes <strong>15 minutos</strong> para usarlo. Esta fue
-                            tu única oportunidad.</p>
                     </div>
 
                     <!-- Error Box -->
@@ -908,7 +943,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <!-- Lógica Principal -->
-    <script src="app.js?v=3.8.18"></script>
+    <script src="app.js?v=3.8.19"></script>
     <!-- CRM / Respuestas Selector Modal -->
     <div id="crm-selector-modal" class="modal" style="display:none; z-index: 5000;">
         <div class="modal-content"

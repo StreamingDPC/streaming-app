@@ -1705,7 +1705,8 @@ function setupEventListeners() {
                     });
 
                     document.getElementById('code-loading').style.display = 'none';
-                    document.getElementById('code-result').style.display = 'block';
+                    const codeResultOverlay = document.getElementById('code-result');
+                    if (codeResultOverlay) codeResultOverlay.style.display = 'flex';
 
                     const codeVal = data.code.toString().trim();
                     const titleEl = document.getElementById('code-result-title');
@@ -1715,30 +1716,43 @@ function setupEventListeners() {
 
                     // Si el código que trajo es un enlace (empieza con http)
                     if (codeVal.startsWith('http://') || codeVal.startsWith('https://')) {
-                        magicCodeEl.style.display = 'none';
-                        linkContainer.style.display = 'block';
-                        linkBtn.href = codeVal;
-                        linkBtn.target = '_blank';
+                        if (magicCodeEl) magicCodeEl.style.display = 'none';
+                        const copyBtn = document.getElementById('copy-magic-code-btn');
+                        if (copyBtn) copyBtn.style.display = 'none';
+                        const codeBox = document.getElementById('magic-code-box');
+                        if (codeBox) codeBox.style.display = 'none';
+                        if (linkContainer) linkContainer.style.display = 'block';
+                        if (linkBtn) {
+                            linkBtn.href = codeVal;
+                            linkBtn.target = '_blank';
+                        }
                         if (platform === 'netflix_temp') {
-                            titleEl.innerText = 'Tu enlace de código temporal:';
-                            linkBtn.innerHTML = '<i class="fa-solid fa-mobile-screen-button"></i> Clic aquí → Ver mi Código en Netflix';
+                            if (titleEl) titleEl.innerText = 'Tu enlace de código temporal:';
+                            if (linkBtn) linkBtn.innerHTML = '<i class="fa-solid fa-mobile-screen-button"></i> Clic aquí → Ver mi Código en Netflix';
                             const existingNote = document.getElementById('temp-access-note');
                             if (!existingNote) {
                                 const note = document.createElement('p');
                                 note.id = 'temp-access-note';
                                 note.style.cssText = 'font-size:0.78rem; color:#aaa; margin-top:0.8rem; background:rgba(229,9,20,0.08); border:1px solid rgba(229,9,20,0.3); border-radius:8px; padding:8px 12px; text-align:left;';
                                 note.innerHTML = '<i class="fa-solid fa-circle-info" style="color:#E50914;"></i> <strong style="color:white;">¿Cómo funciona?</strong> Al dar clic se abrirá la página de Netflix. Allí verás un código de 4 dígitos en pantalla. Úsalo para acceder desde tu dispositivo. El enlace vence en <strong style="color:#f39c12;">15 minutos</strong>.';
-                                document.getElementById('code-result').appendChild(note);
+                                const noteContainer = document.getElementById('floating-code-notes') || document.getElementById('code-result');
+                                if (noteContainer) noteContainer.appendChild(note);
                             }
                         } else {
-                            titleEl.innerText = 'Confirmación requerida:';
-                            linkBtn.innerHTML = '<i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización';
+                            if (titleEl) titleEl.innerText = 'Confirmación requerida:';
+                            if (linkBtn) linkBtn.innerHTML = '<i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización';
                         }
                     } else {
-                        titleEl.innerText = 'Tu código de acceso es:';
-                        linkContainer.style.display = 'none';
-                        magicCodeEl.style.display = 'block';
-                        magicCodeEl.innerText = codeVal;
+                        if (titleEl) titleEl.innerText = 'Tu código de acceso es:';
+                        if (linkContainer) linkContainer.style.display = 'none';
+                        const codeBox = document.getElementById('magic-code-box');
+                        if (codeBox) codeBox.style.display = 'block';
+                        const copyBtn = document.getElementById('copy-magic-code-btn');
+                        if (copyBtn) copyBtn.style.display = 'inline-flex';
+                        if (magicCodeEl) {
+                            magicCodeEl.style.display = 'block';
+                            magicCodeEl.innerText = codeVal;
+                        }
                     }
 
                     // No mostrar el botón de nuevo — ya usó su intento
@@ -1775,6 +1789,38 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Modal Flotante de Código: Cerrar y Copiar
+    window.closeCodeResultModal = function () {
+        const el = document.getElementById('code-result');
+        if (el) el.style.display = 'none';
+    };
+
+    window.copyFloatingCode = function () {
+        const codeEl = document.getElementById('the-magic-code');
+        const text = codeEl ? codeEl.innerText.trim() : '';
+        if (!text || text === '----') return;
+        const btn = document.getElementById('copy-magic-code-btn');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                if (btn) {
+                    const oldHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-check" style="color:#2ecc71;"></i> ¡Copiado!';
+                    btn.style.borderColor = '#2ecc71';
+                    btn.style.color = '#2ecc71';
+                    setTimeout(() => {
+                        btn.innerHTML = oldHtml;
+                        btn.style.borderColor = 'rgba(255,255,255,0.2)';
+                        btn.style.color = '#fff';
+                    }, 2000);
+                }
+            }).catch(() => {
+                alert('Código: ' + text);
+            });
+        } else {
+            alert('Código: ' + text);
+        }
+    };
 
     // ============================================
     // ACTIVAR TV (netflix.com/tv8)
