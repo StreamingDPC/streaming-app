@@ -14,10 +14,10 @@ tasklist /FI "IMAGENAME eq ngrok.exe" 2>NUL | find /I /N "ngrok.exe" >NUL
 if NOT ERRORLEVEL 1 (
     echo  [OK] ngrok ya esta corriendo.
 ) else (
-    echo  [1/2] Iniciando ngrok (tunel publico para clientes remotos)...
+    echo  [1/2] Iniciando ngrok - tunel publico para clientes remotos...
     start /min ngrok http 3099
     echo  [OK] ngrok iniciado en segundo plano.
-    :: Esperar 5 segundos para que ngrok establezca el tunel
+    REM Esperar 5 segundos para que ngrok establezca el tunel
     timeout /t 5 /nobreak >nul
 )
 
