@@ -622,37 +622,54 @@ async function doActivateVix(email, vixLink) {
         // 3. Esperar y hacer clic en el botón naranja "Entendido" (¡Inicio de sesión exitoso!)
         console.log('[VIX-BOT] 🔍 Buscando botón naranja "Entendido"...');
         let clickedBtn = null;
-        for (let i = 0; i < 15; i++) {
-            clickedBtn = await page.evaluate(() => {
-                const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+        for (let i = 0; i < 25; i++) {
+            // Guardar screenshot para diagnóstico
+            try {
+                await page.screenshot({ path: 'vix_debug.png' });
+            } catch (e) { }
+
+            const pageInfo = await page.evaluate(() => {
+                const txt = (document.body ? document.body.innerText : '') || '';
+                const btns = Array.from(document.querySelectorAll('button, a, div[role="button"], span'));
+                let found = null;
                 for (const b of btns) {
-                    const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
-                    if (txt === 'entendido' || txt === 'continuar' || txt === 'aceptar' || txt.includes('entendido')) {
+                    const t = (b.innerText || b.textContent || '').trim().toLowerCase();
+                    if (t === 'entendido' || t === 'continuar' || t === 'aceptar' || t.includes('entendido')) {
                         b.click();
-                        return (b.innerText || b.textContent || '').trim();
+                        found = (b.innerText || b.textContent || '').trim();
+                        break;
                     }
                 }
-                return null;
+                return { found, textPreview: txt.substring(0, 150) };
             });
 
-            if (clickedBtn) {
+            if (pageInfo.found) {
+                clickedBtn = pageInfo.found;
                 console.log(`[VIX-BOT] ✅ ¡Se hizo clic en "${clickedBtn}" con éxito!`);
                 break;
+            } else {
+                console.log(`[VIX-BOT] [${i + 1}/25] Esperando "Entendido"... En pantalla: "${pageInfo.textPreview.replace(/\n+/g, ' ')}"`);
             }
             await sleep(1000);
         }
 
-        // Esperar 3.5 segundos para que ViX emita los tokens y active el celular
-        await sleep(3500);
-
         const currentUrl = page.url();
         console.log(`[VIX-BOT] 🏁 URL final: ${currentUrl}`);
 
-        await browser.close();
-        browser = null;
-
-        console.log('[VIX-BOT] 🎉 ¡Activación de ViX completada con éxito!');
-        return { success: true, message: '¡Dispositivo ViX activado con éxito en Chrome local!' };
+        if (clickedBtn) {
+            // Esperar 4 segundos para que ViX propague el inicio de sesión a la app móvil
+            await sleep(4000);
+            await browser.close();
+            browser = null;
+            console.log('[VIX-BOT] 🎉 ¡Activación de ViX completada con éxito!');
+            return { success: true, message: '¡Dispositivo ViX activado con éxito en Chrome local!' };
+        } else {
+            console.warn('[VIX-BOT] ⚠️ No se detectó "Entendido" automáticamente. Manteniendo ventana 15 seg para inspección...');
+            await sleep(15000);
+            await browser.close();
+            browser = null;
+            return { success: false, error: 'No se completó la confirmación de ViX en pantalla. Revisa si el enlace ya había caducado.' };
+        }
     } catch (err) {
         console.error('[VIX-BOT] ❌ Error en ViX:', err.message);
         if (browser) {
