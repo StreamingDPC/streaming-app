@@ -115,21 +115,8 @@ async function executeVixActivation(vixLink, email) {
         console.log(`[VIX-BOT] Sesión activada en ViX correctamente vía Puppeteer en Render.`);
         return { success: true };
     } catch (err) {
-        console.warn(`[VIX-BOT] Puppeteer falló o no disponible en este entorno (${err.message}). Ejecutando fallback HTTP...`);
-        try {
-            await axios.get(vixLink, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                },
-                maxRedirects: 10,
-                timeout: 15000
-            });
-            console.log(`[VIX-BOT] Sesión activada en ViX vía HTTP fallback.`);
-            return { success: true, fallback: true };
-        } catch (e2) {
-            console.error(`[VIX-BOT] Fallback HTTP también falló:`, e2.message);
-            return { success: false, error: e2.message };
-        }
+        console.error(`[VIX-BOT] Falló la automatización de ViX: ${err.message}`);
+        return { success: false, error: 'No se pudo completar la activación automática de ViX.' };
     } finally {
         if (browser) {
             try { await browser.close(); } catch (e) { }
@@ -503,14 +490,21 @@ app.post('/api/get-code', async (req, res) => {
         if (foundCode) {
             if (platform.toLowerCase() === 'vix') {
                 console.log(`[DEBUG] ViX detectado. Ejecutando enlace en segundo plano por el bot...`);
-                await executeVixActivation(foundCode, email);
-                return res.json({
-                    success: true,
-                    activated: true,
-                    platform: 'vix',
-                    code: 'ACTIVADO',
-                    message: '¡Tu dispositivo ViX ha sido activado con éxito! Ya puedes abrir la app en tu celular.'
-                });
+                const vixResult = await executeVixActivation(foundCode, email);
+                if (vixResult && vixResult.success) {
+                    return res.json({
+                        success: true,
+                        activated: true,
+                        platform: 'vix',
+                        code: 'ACTIVADO',
+                        message: '¡Tu dispositivo ViX ha sido activado con éxito! Ya puedes abrir la app en tu celular.'
+                    });
+                } else {
+                    return res.status(500).json({
+                        success: false,
+                        error: vixResult && vixResult.error ? vixResult.error : 'No se pudo confirmar la activación en ViX.'
+                    });
+                }
             }
 
             console.log(`[DEBUG] ÉXITO FINAL: ${foundCode}`);
