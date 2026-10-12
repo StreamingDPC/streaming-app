@@ -554,15 +554,15 @@ async function doActivateVix(email, vixLink) {
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
                 '--window-position=50,50',
-                '--window-size=480,850'
+                '--window-size=1024,768'
             ]
         });
 
         const page = await browser.newPage();
 
-        // 1. Emular iPhone real con touch: esto previene que ViX/PerimeterX active el captcha de escritorio
-        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1');
-        await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+        // Usar User-Agent de escritorio real para que ViX complete la sesión web en lugar de colgarse esperando la app de iOS
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1024, height: 768 });
 
         // Ocultar webdriver
         await page.evaluateOnNewDocument(() => {
@@ -574,8 +574,8 @@ async function doActivateVix(email, vixLink) {
         });
 
         console.log('[VIX-BOT] 🌐 Abriendo enlace de inicio de sesión de ViX en Chrome...');
-        await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 35000 });
-        await sleep(2500);
+        await page.goto(vixLink, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        await sleep(1500);
 
         // 2. Si aparece el desafío "Press & Hold", resolverlo con jitter humano continuo
         for (let attempt = 0; attempt < 4; attempt++) {
