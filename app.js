@@ -1428,8 +1428,19 @@ function setupEventListeners() {
         }
 
         // 2. RECUPERAR INTENTOS USADOS EN FIREBASE (AHORA POR PLATAFORMA)
-        const attemptSnap = await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed`).once('value');
-        window.clientUsedAttempts = attemptSnap.val() || {};
+        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+        let attemptSnap = await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed`).once('value');
+        let usedData = attemptSnap.val();
+        if (!usedData && cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+            const fallbackSnap = await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed`).once('value');
+            usedData = fallbackSnap.val();
+        }
+        if (!usedData && cleanPhone && !cleanPhone.startsWith('57')) {
+            const coSnap = await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed`).once('value');
+            if (coSnap.val()) usedData = coSnap.val();
+        }
+
+        window.clientUsedAttempts = usedData || {};
         // Si era true (sistema viejo), lo convertimos a objeto preventivo.
         if (window.clientUsedAttempts === true) {
             window.clientUsedAttempts = { netflix: true, disney: true, hbomax: true, prime: true };
@@ -1442,8 +1453,17 @@ function setupEventListeners() {
         if (emailSelect) {
             emailSelect.innerHTML = '<option value="">-- Cargando tus cuentas... --</option>';
             try {
-                const salesSnap = await db.ref(`clientSales/${clientPhoneLoggedIn}`).once('value');
-                const sales = salesSnap.val() || {};
+                let salesSnap = await db.ref(`clientSales/${clientPhoneLoggedIn}`).once('value');
+                let sales = salesSnap.val();
+                if (!sales && cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    const fallbackSales = await db.ref(`clientSales/${cleanPhone}`).once('value');
+                    sales = fallbackSales.val();
+                }
+                if (!sales && cleanPhone && !cleanPhone.startsWith('57')) {
+                    const coSales = await db.ref(`clientSales/57${cleanPhone}`).once('value');
+                    if (coSales.val()) sales = coSales.val();
+                }
+                sales = sales || {};
                 // Mapear plataformas activas y sus correos
                 window.clientActivePlatforms = {
                     netflix: new Set(),
@@ -1977,8 +1997,16 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
                     await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, timestamp: Date.now() });
                     await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/netflix_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/netflix_tv`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/netflix_tv`).set(true);
+                    }
+
                     if (window.clientUsedAttempts) {
                         window.clientUsedAttempts['netflix_tv'] = true;
                         if (window.updateCodeCountersUI) window.updateCodeCountersUI();
@@ -1993,6 +2021,8 @@ function setupEventListeners() {
                     if (icon) { icon.className = 'fa-solid fa-circle-check'; icon.style.color = '#2ecc71'; }
                     const msg = document.getElementById('tv-activation-msg');
                     if (msg) { msg.style.color = '#2ecc71'; msg.innerText = '¡TV Activada Exitosamente!'; }
+                    const desc = document.getElementById('tv-activation-desc');
+                    if (desc) { desc.innerHTML = '¡Tu Smart TV ya quedó vinculada y lista para reproducir!'; }
                     const codeShow = document.getElementById('tv-activation-code-show');
                     if (codeShow) codeShow.style.display = 'none';
                     const linkBtn = document.querySelector('#tv-activation-result a');
@@ -2013,8 +2043,18 @@ function setupEventListeners() {
                 document.getElementById('tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    activateTvBtn.innerHTML = originalBtnText;
-                    activateTvBtn.disabled = false;
+                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || window.clientUsedAttempts['netflix_tv'] >= 1);
+                    if (isTvUsedNow) {
+                        activateTvBtn.disabled = true;
+                        activateTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Smart TV agotado (1/1)';
+                        activateTvBtn.style.opacity = '0.5';
+                        activateTvBtn.style.cursor = 'not-allowed';
+                    } else {
+                        activateTvBtn.innerHTML = originalBtnText;
+                        activateTvBtn.disabled = false;
+                        activateTvBtn.style.opacity = '1';
+                        activateTvBtn.style.cursor = 'pointer';
+                    }
                 }, 1500);
             }
         });

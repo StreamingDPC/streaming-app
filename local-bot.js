@@ -60,29 +60,34 @@ app.get('/status', (req, res) => {
     res.json({ online: true, source: 'local-bot', time: new Date().toISOString() });
 });
 
-// ── Al arrancar: registrar URL pública de ngrok en Firebase ────────────────
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── Al arrancar: registrar y mantener URL pública de ngrok en Firebase ──────
+let currentRegisteredNgrokUrl = null;
+
 async function registerNgrokUrl() {
-    for (let i = 0; i < 5; i++) {
-        try {
-            const resp = await axios.get('http://localhost:4040/api/tunnels', { timeout: 3000 });
-            const tunnels = resp.data && resp.data.tunnels;
-            if (tunnels && tunnels.length > 0) {
-                const https = tunnels.find(t => t.proto === 'https') || tunnels[0];
-                const publicUrl = https.public_url;
+    try {
+        const resp = await axios.get('http://localhost:4040/api/tunnels', { timeout: 3000 });
+        const tunnels = resp.data && resp.data.tunnels;
+        if (tunnels && tunnels.length > 0) {
+            const https = tunnels.find(t => t.proto === 'https') || tunnels[0];
+            const publicUrl = https.public_url;
+            if (publicUrl && publicUrl !== currentRegisteredNgrokUrl) {
                 await axios.put(`${FIREBASE_DB_URL}/config/botUrl.json`, JSON.stringify(publicUrl));
+                currentRegisteredNgrokUrl = publicUrl;
                 console.log(`[BOT] 🌐 URL pública ngrok registrada en Firebase: ${publicUrl}`);
-                console.log(`[BOT] ✅ Clientes remotos podrán activar TV desde cualquier lugar.`);
-                return publicUrl;
+                console.log(`[BOT] ✅ Clientes desde celular y redes externas listos para activar TV.`);
             }
-        } catch (e) {
-            // Ignorar y reintentar
+            return publicUrl;
         }
-        await sleep(2000); // Esperar 2 segundos antes de reintentar
+    } catch (e) {
+        // ngrok no disponible en este ciclo
     }
-    console.log('[BOT] ℹ️  ngrok no conectó a tiempo. Clientes externos podrían no funcionar.');
-    console.log('[BOT]    Ejecuta manualmente: ngrok http 3099');
     return null;
 }
+
+// Mantener vivo y sincronizado el enlace de ngrok continuamente cada 15 segundos
+setInterval(registerNgrokUrl, 15000);
 
 // ── Al cerrar el bot: limpiar la URL de Firebase ───────────────────────────
 async function clearBotUrl() {
@@ -151,8 +156,7 @@ async function findNetflixPassword(targetEmail) {
     return null;
 }
 
-// ── Función helper para esperar ────────────────────────────────────────────
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 
 // ── Cola de Activación Concurrente ─────────────────────────────────────────
 const activationQueue = [];
