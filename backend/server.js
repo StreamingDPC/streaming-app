@@ -120,14 +120,16 @@ app.post('/api/get-code', async (req, res) => {
 
                     const parsed = await simpleParser(all.body);
 
-                    // Filtrar correos que tengan más de 15 minutos de antigüedad (15 * 60 * 1000 ms)
-                    // Preferimos item.attributes.date (Fecha IMAP Interna) que es mucho más precisa.
+                    // Filtrar por antigüedad del correo:
+                    // Para Prime Video el usuario requiere que no supere los 3 minutos de antigüedad.
                     const exactDate = (item.attributes && item.attributes.date) ? item.attributes.date : parsed.date;
                     const emailDate = exactDate ? new Date(exactDate).getTime() : 0;
-                    const fifteenMinsAgo = Date.now() - 15 * 60 * 1000;
+                    const platformLower = platform.toLowerCase();
+                    const maxAgeMinutes = platformLower.includes('prime') ? 3 : 10;
+                    const minAllowedTime = Date.now() - (maxAgeMinutes * 60 * 1000);
 
-                    if (!emailDate || emailDate < fifteenMinsAgo) {
-                        console.log(`[DEBUG] Correo ignorado (>15 min o sin fecha). Fecha email: ${exactDate}`);
+                    if (!emailDate || emailDate < minAllowedTime) {
+                        console.log(`[DEBUG] Correo ignorado (>${maxAgeMinutes} min o sin fecha). Fecha email: ${exactDate}`);
                         continue;
                     }
 
@@ -142,7 +144,6 @@ app.post('/api/get-code', async (req, res) => {
                     if (parsed.from && parsed.from.text) fromText = parsed.from.text.toLowerCase();
 
                     const targetEmail = email.toLowerCase();
-                    const platformLower = platform.toLowerCase();
 
                     // isFromPlatform: verifica que el correo sea de la plataforma seleccionada
                     let isFromPlatform = false;
