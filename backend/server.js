@@ -151,7 +151,9 @@ app.post('/api/get-code', async (req, res) => {
                     } else if (platformLower === 'hbomax') {
                         // HBO Max envía desde dominios hbo.com, max.com, hbomax.com
                         isFromPlatform = subject.includes('hbo') || subject.includes(' max') ||
-                            fromText.includes('hbo') || fromText.includes('max.com');
+                            fromText.includes('hbo') || fromText.includes('max.com') ||
+                            subject.includes('código único') || subject.includes('codigo unico') ||
+                            textContent.includes('código único para hbo max') || textContent.includes('codigo unico para hbo max');
                     } else if (platformLower === 'prime') {
                         // Prime Video / Amazon envía desde amazon.com
                         isFromPlatform = subject.includes('amazon') || fromText.includes('amazon');
@@ -239,8 +241,30 @@ app.post('/api/get-code', async (req, res) => {
                                 return validCode;
                             }
                         } else if (platformLower.includes('hbomax')) {
-                            // HBO Max: correo confirmado por isFromPlatform (contiene hbo/max).
-                            // Extraer el primer número de 6 dígitos.
+                            // HBO Max / Max: frase clave "Tu código único para HBO Max es" y extracción de 6 dígitos
+                            const hboPhraseKeywords = [
+                                'tu código único para hbo max es',
+                                'tu codigo unico para hbo max es',
+                                'tu código único para hbo max',
+                                'tu codigo unico para hbo max',
+                                'código único para hbo max',
+                                'codigo unico para hbo max',
+                                'código único para max',
+                                'codigo unico para max',
+                                'tu código único',
+                                'tu codigo unico',
+                                'código único',
+                                'codigo unico',
+                                'hbo max',
+                                'max'
+                            ];
+                            const hasHboPhrase = hboPhraseKeywords.some(kw =>
+                                subject.includes(kw) ||
+                                textContent.includes(kw) ||
+                                htmlContent.toLowerCase().includes(kw)
+                            );
+
+                            // Extraemos el código numérico de 6 dígitos
                             let matches = textContent.match(/\b\d{6}\b/g) || [];
                             if (matches.length === 0) {
                                 const htmlText = htmlContent.replace(/<[^>]*>/gm, ' ').toLowerCase();
@@ -248,6 +272,7 @@ app.post('/api/get-code', async (req, res) => {
                             }
                             const validCode = matches.find(m => m !== '000000');
                             if (validCode) {
+                                console.log(`[DEBUG] Código HBO Max de 6 dígitos encontrado: ${validCode}`);
                                 accountLogs.found = true;
                                 return validCode;
                             }
