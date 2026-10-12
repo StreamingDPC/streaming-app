@@ -2509,10 +2509,16 @@
             msg += '¿Confirmas que el código NO fue usado exitosamente y se debe habilitar otro intento?';
 
             if (confirm(msg)) {
-                if (platform === 'all') {
-                    await db.ref(`clientProfiles/${clientPhone}/codeAttemptUsed`).remove();
-                } else {
-                    await db.ref(`clientProfiles/${clientPhone}/codeAttemptUsed/${platform}`).remove();
+                const rawPhone = String(clientPhone).trim();
+                const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
+                const phonesToClean = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
+
+                for (const p of phonesToClean) {
+                    if (platform === 'all') {
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed`).remove();
+                    } else {
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/${platform}`).remove();
+                    }
                 }
                 alert(`✅ Intento de ${platLabel} habilitado correctamente para ${clientPhone}. El cliente ya puede solicitar su código nuevamente.`);
             }
@@ -2690,10 +2696,16 @@
             msg += `¿Confirmas que deseas habilitarlo?`;
 
             if (confirm(msg)) {
-                if (platform === 'all') {
-                    await db.ref(`clientProfiles/${phone}/codeAttemptUsed`).remove();
-                } else {
-                    await db.ref(`clientProfiles/${phone}/codeAttemptUsed/${platform}`).remove();
+                const rawPhone = String(phone).trim();
+                const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
+                const phonesToClean = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
+
+                for (const p of phonesToClean) {
+                    if (platform === 'all') {
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed`).remove();
+                    } else {
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/${platform}`).remove();
+                    }
                 }
                 const btns = document.querySelectorAll('#reset-seller-result button');
                 if (btns[idx]) btns[idx].disabled = true;

@@ -1371,35 +1371,40 @@ function setupEventListeners() {
         if (!phone || typeof db === 'undefined') return;
         window.stopCodeAttemptsLiveSync();
 
-        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(phone) : phone;
+        const rawPhone = String(phone).trim();
+        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '').replace(/^57/, '');
+        const altPhone = (!rawPhone.startsWith('57')) ? `57${cleanPhone}` : cleanPhone;
 
-        function handleData(val) {
-            if (val === true) {
-                val = { netflix: true, disney: true, hbomax: true, prime: true };
-            }
-            if (val && typeof val === 'object') {
-                window.clientUsedAttempts = Object.assign(window.clientUsedAttempts || {}, val);
-            } else if (!window.clientUsedAttempts) {
-                window.clientUsedAttempts = {};
-            }
+        let primaryData = null;
+        let altData = null;
+
+        function applySync() {
+            let combined = {};
+            if (primaryData === true) combined = { netflix: true, disney: true, hbomax: true, prime: true };
+            else if (primaryData && typeof primaryData === 'object') Object.assign(combined, primaryData);
+
+            if (altData === true) Object.assign(combined, { netflix: true, disney: true, hbomax: true, prime: true });
+            else if (altData && typeof altData === 'object') Object.assign(combined, altData);
+
+            window.clientUsedAttempts = combined;
             if (window.updateCodeCountersUI) {
                 window.updateCodeCountersUI();
             }
         }
 
         // 1. Escuchar nodo primario con .on('value') para tiempo real
-        _codeAttemptsRefPrimary = db.ref(`clientProfiles/${phone}/codeAttemptUsed`);
+        _codeAttemptsRefPrimary = db.ref(`clientProfiles/${rawPhone}/codeAttemptUsed`);
         _codeAttemptsListenerPrimary = _codeAttemptsRefPrimary.on('value', snap => {
-            const val = snap.val();
-            if (val) handleData(val);
+            primaryData = snap.val();
+            applySync();
         });
 
-        // 2. Si hay variante limpia sin prefijo 57, escuchar también
-        if (cleanPhone && cleanPhone !== phone) {
-            _codeAttemptsRefClean = db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed`);
+        // 2. Si hay variante alterna (con o sin prefijo 57), escuchar también
+        if (altPhone && altPhone !== rawPhone) {
+            _codeAttemptsRefClean = db.ref(`clientProfiles/${altPhone}/codeAttemptUsed`);
             _codeAttemptsListenerClean = _codeAttemptsRefClean.on('value', snap => {
-                const val = snap.val();
-                if (val) handleData(val);
+                altData = snap.val();
+                applySync();
             });
         }
     };
@@ -1574,24 +1579,20 @@ function setupEventListeners() {
         }
 
         // 2. RECUPERAR INTENTOS USADOS EN FIREBASE (AHORA POR PLATAFORMA)
-        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
-        let attemptSnap = await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed`).once('value');
-        let usedData = attemptSnap.val();
-        if (!usedData && cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
-            const fallbackSnap = await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed`).once('value');
-            usedData = fallbackSnap.val();
-        }
-        if (!usedData && cleanPhone && !cleanPhone.startsWith('57')) {
-            const coSnap = await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed`).once('value');
-            if (coSnap.val()) usedData = coSnap.val();
+        const rawP = String(clientPhoneLoggedIn).trim();
+        const cleanP = window.sanitizePhone ? window.sanitizePhone(rawP) : rawP.replace(/\D/g, '').replace(/^57/, '');
+        const altP = (!rawP.startsWith('57')) ? `57${cleanP}` : cleanP;
+
+        let combinedUsed = {};
+        const pList = Array.from(new Set([rawP, cleanP, altP])).filter(Boolean);
+        for (const pk of pList) {
+            const snap = await db.ref(`clientProfiles/${pk}/codeAttemptUsed`).once('value');
+            const v = snap.val();
+            if (v === true) Object.assign(combinedUsed, { netflix: true, disney: true, hbomax: true, prime: true });
+            else if (v && typeof v === 'object') Object.assign(combinedUsed, v);
         }
 
-        window.clientUsedAttempts = usedData || {};
-        // Si era true (sistema viejo), lo convertimos a objeto preventivo.
-        if (window.clientUsedAttempts === true) {
-            window.clientUsedAttempts = { netflix: true, disney: true, hbomax: true, prime: true };
-        }
-
+        window.clientUsedAttempts = combinedUsed;
         if (window.updateCodeCountersUI) window.updateCodeCountersUI();
 
         // 3. CARGAR CORREOS DESDE SUS COMPRAS EN FIREBASE
