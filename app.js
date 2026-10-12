@@ -1510,8 +1510,8 @@ function setupEventListeners() {
                 platName = 'Código Prime Video';
                 platIcon = 'fa-satellite-dish';
             } else if (plat === 'vix') {
-                platName = 'Enlace ViX';
-                platIcon = 'fa-satellite-dish';
+                platName = 'Celular ViX';
+                platIcon = 'fa-mobile-screen-button';
             } else if (plat === 'netflix_update') {
                 maxUses = 2;
                 platName = 'Código Actualizar Hogar';
@@ -1530,7 +1530,7 @@ function setupEventListeners() {
                 dBtn.style.boxShadow = 'none';
             } else {
                 dBtn.disabled = false;
-                dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
+                dBtn.innerHTML = plat === 'vix' ? `<i class="fa-solid fa-mobile-screen-button"></i> Activar Celular ViX` : `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
                 dBtn.style.opacity = '1';
                 dBtn.style.cursor = 'pointer';
             }
@@ -1943,7 +1943,9 @@ function setupEventListeners() {
         if (triggerBtn) {
             originalBtnHtml = triggerBtn.innerHTML;
             triggerBtn.disabled = true;
-            triggerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando código...';
+            triggerBtn.innerHTML = platform === 'vix'
+                ? '<i class="fa-solid fa-spinner fa-spin"></i> Activando tu celular...'
+                : '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando código...';
         }
 
         try {
@@ -2001,7 +2003,36 @@ function setupEventListeners() {
                 const linkContainer = document.getElementById('the-magic-link-container');
                 const linkBtn = document.getElementById('the-magic-link-btn');
 
-                if (codeVal.startsWith('http://') || codeVal.startsWith('https://')) {
+                if (platform === 'vix' || (data && data.activated) || codeVal === 'ACTIVADO') {
+                    if (magicCodeEl) magicCodeEl.style.display = 'none';
+                    const copyBtn = document.getElementById('copy-magic-code-btn');
+                    if (copyBtn) copyBtn.style.display = 'none';
+                    const codeBox = document.getElementById('magic-code-box');
+                    if (codeBox) codeBox.style.display = 'none';
+                    if (linkContainer) linkContainer.style.display = 'none';
+
+                    if (titleEl) titleEl.innerText = '¡Dispositivo ViX Activado!';
+
+                    const existingCard = document.getElementById('vix-success-card');
+                    if (!existingCard) {
+                        const vCard = document.createElement('div');
+                        vCard.id = 'vix-success-card';
+                        vCard.style.cssText = 'background:rgba(46,204,113,0.12); border:1.5px solid #2ecc71; border-radius:14px; padding:1.2rem; margin:1rem 0; text-align:center;';
+                        vCard.innerHTML = `
+                            <div style="font-size:3rem; margin-bottom:0.5rem; filter:drop-shadow(0 0 10px rgba(46,204,113,0.5));">🎉</div>
+                            <h4 style="color:#2ecc71; font-size:1.15rem; margin-bottom:0.4rem; font-weight:700;">¡Tu sesión ha sido iniciada con éxito!</h4>
+                            <p style="color:#eee; font-size:0.9rem; line-height:1.4; margin:0 0 1rem 0;">
+                                El bot ejecutó la validación del enlace en segundo plano.<br>
+                                <strong style="color:#fff;">Ya puedes abrir la aplicación de ViX en tu celular o TV</strong>, tu cuenta ha iniciado sesión automáticamente.
+                            </p>
+                            <button type="button" onclick="closeCodeResultModal()" style="background:#2ecc71; border:none; color:#111; font-weight:bold; padding:10px 22px; border-radius:8px; cursor:pointer; font-size:0.95rem; box-shadow:0 4px 12px rgba(46,204,113,0.3);">
+                                <i class="fa-solid fa-check"></i> Entendido
+                            </button>
+                        `;
+                        const noteContainer = document.getElementById('floating-code-notes') || document.getElementById('code-result');
+                        if (noteContainer) noteContainer.appendChild(vCard);
+                    }
+                } else if (codeVal.startsWith('http://') || codeVal.startsWith('https://')) {
                     if (magicCodeEl) magicCodeEl.style.display = 'none';
                     const copyBtn = document.getElementById('copy-magic-code-btn');
                     if (copyBtn) copyBtn.style.display = 'none';
@@ -2024,13 +2055,6 @@ function setupEventListeners() {
                             note.innerHTML = '<i class="fa-solid fa-circle-info" style="color:#E50914;"></i> <strong style="color:white;">¿Cómo funciona?</strong> Al dar clic se abrirá la página de Netflix. Allí verás un código de 4 dígitos en pantalla. Úsalo para acceder desde tu dispositivo. El enlace vence en <strong style="color:#f39c12;">15 minutos</strong>.';
                             const noteContainer = document.getElementById('floating-code-notes') || document.getElementById('code-result');
                             if (noteContainer) noteContainer.appendChild(note);
-                        }
-                    } else if (platform === 'vix') {
-                        if (titleEl) titleEl.innerText = 'Activa tu cuenta de ViX:';
-                        if (linkBtn) {
-                            linkBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Clic aquí para activar';
-                            linkBtn.style.background = 'linear-gradient(135deg, #FF5B00, #C83800)';
-                            linkBtn.style.boxShadow = '0 6px 20px rgba(255,91,0,0.45)';
                         }
                     } else {
                         if (titleEl) titleEl.innerText = 'Confirmación requerida:';
@@ -2100,6 +2124,10 @@ function setupEventListeners() {
     window.closeCodeResultModal = function () {
         const el = document.getElementById('code-result');
         if (el) el.style.display = 'none';
+        const vCard = document.getElementById('vix-success-card');
+        if (vCard) vCard.remove();
+        const tNote = document.getElementById('temp-access-note');
+        if (tNote) tNote.remove();
     };
 
     window.copyFloatingCode = function () {
