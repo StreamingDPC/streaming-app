@@ -542,10 +542,12 @@ async function doActivateVix(email, vixLink) {
     }
 
     let browser = null;
+    const userDataDir = path.join(__dirname, '.vix-profile');
     try {
         browser = await puppeteer.launch({
             executablePath: chromePath,
             headless: false,
+            userDataDir: userDataDir,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -574,7 +576,7 @@ async function doActivateVix(email, vixLink) {
         await page.goto(vixLink, { waitUntil: 'networkidle2', timeout: 35000 });
         await sleep(2500);
 
-        // 2. Si aparece el desafío "Press & Hold", resolverlo automáticamente manteniendo el clic
+        // 2. Si aparece el desafío "Press & Hold", resolverlo con jitter humano
         for (let attempt = 0; attempt < 3; attempt++) {
             const hasCaptcha = await page.evaluate(() => {
                 const txt = (document.body ? document.body.innerText : '') || '';
@@ -582,7 +584,8 @@ async function doActivateVix(email, vixLink) {
             });
 
             if (hasCaptcha) {
-                console.log('[VIX-BOT] 🛡️ Detectado desafío "Press & Hold". Manteniendo presionado para verificar humano...');
+                console.log('[VIX-BOT] 🛡️ Detectado "Press & Hold". Manteniendo presionado con micropulsaciones humanas...');
+                console.log('[VIX-BOT] 💡 (Si lo prefieres, también puedes mantener presionado el botón azul con tu mouse)');
                 let box = null;
                 const captchaEl = await page.$('#px-captcha, #px-captcha-wrapper, [aria-label*="Press & Hold"]');
                 if (captchaEl) {
@@ -604,12 +607,19 @@ async function doActivateVix(email, vixLink) {
                 if (box) {
                     const clickX = box.x + box.width / 2;
                     const clickY = box.y + box.height / 2;
-                    console.log(`[VIX-BOT] 🖱️ Manteniendo presionado en (${Math.round(clickX)}, ${Math.round(clickY)}) durante 8.5 segundos...`);
+                    console.log(`[VIX-BOT] 🖱️ Pulsando en (${Math.round(clickX)}, ${Math.round(clickY)}) con jitter humano durante 9 seg...`);
                     await page.mouse.move(clickX, clickY);
                     await page.mouse.down();
-                    await sleep(8500);
+
+                    const holdStart = Date.now();
+                    while (Date.now() - holdStart < 9200) {
+                        const jitterX = clickX + (Math.random() - 0.5) * 4;
+                        const jitterY = clickY + (Math.random() - 0.5) * 4;
+                        await page.mouse.move(jitterX, jitterY);
+                        await sleep(70 + Math.random() * 50);
+                    }
                     await page.mouse.up();
-                    console.log('[VIX-BOT] ⏳ Soltado. Esperando validación...');
+                    console.log('[VIX-BOT] ⏳ Soltado. Esperando a que el círculo naranja valide...');
                     await sleep(4000);
                 } else {
                     await sleep(2000);
