@@ -60,7 +60,7 @@ async function executeVixActivation(vixLink, email) {
         if (botUrl && botUrl.startsWith('http')) {
             console.log(`[VIX-BOT] 🔀 Bot local detectado en Firebase: ${botUrl}. Reenviando activación a la PC...`);
             const localResp = await axios.post(`${botUrl}/api/activate-vix`, { email, vixLink }, {
-                timeout: 45000,
+                timeout: 90000,
                 headers: { 'ngrok-skip-browser-warning': 'true' }
             });
             if (localResp.data && localResp.data.success) {

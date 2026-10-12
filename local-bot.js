@@ -661,12 +661,13 @@ async function doActivateVix(email, vixLink) {
                         break;
                     }
                 }
-                return { found, textPreview: txt.substring(0, 150) };
+                const isSuccessPage = txt.includes('exitoso') || txt.includes('Vuelve a tu dispositivo') || txt.includes('disfrutar lo mejor de ViX');
+                return { found, isSuccessPage, textPreview: txt.substring(0, 150) };
             });
 
-            if (pageInfo.found) {
-                clickedBtn = pageInfo.found;
-                console.log(`[VIX-BOT] ✅ ¡Se hizo clic en "${clickedBtn}" con éxito!`);
+            if (pageInfo.found || pageInfo.isSuccessPage) {
+                clickedBtn = pageInfo.found || 'Pantalla de éxito ViX';
+                console.log(`[VIX-BOT] ✅ ¡Confirmación detectada: "${clickedBtn}"!`);
                 break;
             } else {
                 if (i % 5 === 0) {
