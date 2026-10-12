@@ -398,10 +398,18 @@
                                     <i class="fa-solid fa-satellite-dish"></i> Obtener Código HBO Max
                                 </button>
                             </div>
-                            <button type="button" class="platform-tab-btn" data-platform="prime"
-                                style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(0,168,225,0.08); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s;">
-                                <span style="font-size:1.1rem;">📦</span> Prime Video (1 vez)
-                            </button>
+                            <!-- Prime Video con botón de Obtener Código directo abajo -->
+                            <div class="platform-action-card" data-platform-container="prime"
+                                style="display:flex; flex-direction:column; gap:6px;">
+                                <button type="button" class="platform-tab-btn" data-platform="prime"
+                                    style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(0,168,225,0.08); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
+                                    <span style="font-size:1.1rem;">📦</span> Prime Video (1 vez)
+                                </button>
+                                <button type="button" class="direct-fetch-code-btn" data-platform="prime"
+                                    style="background: linear-gradient(135deg, #00A8E1, #005A87); border:none; color:white; font-weight:bold; padding:11px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(0,168,225,0.3); transition:all 0.2s;">
+                                    <i class="fa-solid fa-satellite-dish"></i> Obtener Código Prime Video
+                                </button>
+                            </div>
                         </div>
 
                         <label
@@ -993,7 +1001,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <!-- Lógica Principal -->
-    <script src="app.js?v=3.8.27"></script>
+    <script src="app.js?v=3.8.28"></script>
     <!-- CRM / Respuestas Selector Modal -->
     <div id="crm-selector-modal" class="modal" style="display:none; z-index: 5000;">
         <div class="modal-content"

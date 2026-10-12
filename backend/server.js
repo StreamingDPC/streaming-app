@@ -156,7 +156,10 @@ app.post('/api/get-code', async (req, res) => {
                             textContent.includes('código único para hbo max') || textContent.includes('codigo unico para hbo max');
                     } else if (platformLower === 'prime') {
                         // Prime Video / Amazon envía desde amazon.com
-                        isFromPlatform = subject.includes('amazon') || fromText.includes('amazon');
+                        isFromPlatform = subject.includes('amazon') || fromText.includes('amazon') ||
+                            subject.includes('prime') || fromText.includes('prime') ||
+                            subject.includes('intento de acceso a los datos de la cuenta') ||
+                            textContent.includes('intento de acceso a los datos de la cuenta');
                     } else if (platformLower.includes('disney')) {
                         isFromPlatform = subject.includes('disney') || fromText.includes('disney') ||
                             subject.includes('código de acceso único') || subject.includes('codigo de acceso unico') ||
@@ -277,8 +280,24 @@ app.post('/api/get-code', async (req, res) => {
                                 return validCode;
                             }
                         } else if (platformLower.includes('prime')) {
-                            // Prime Video: correo confirmado por isFromPlatform (contiene amazon).
-                            // Extraer el primer número de 6 dígitos.
+                            // Prime Video / Amazon: frase clave "Intento de acceso a los datos de la cuenta" y código de 6 dígitos
+                            const primePhraseKeywords = [
+                                'intento de acceso a los datos de la cuenta',
+                                'intento de acceso',
+                                'código de verificación',
+                                'codigo de verificacion',
+                                'código temporal',
+                                'codigo temporal',
+                                'amazon',
+                                'prime video'
+                            ];
+                            const hasPrimePhrase = primePhraseKeywords.some(kw =>
+                                subject.includes(kw) ||
+                                textContent.includes(kw) ||
+                                htmlContent.toLowerCase().includes(kw)
+                            );
+
+                            // Extraemos el código numérico de 6 dígitos
                             let matches = textContent.match(/\b\d{6}\b/g) || [];
                             if (matches.length === 0) {
                                 const htmlText = htmlContent.replace(/<[^>]*>/gm, ' ').toLowerCase();
@@ -286,6 +305,7 @@ app.post('/api/get-code', async (req, res) => {
                             }
                             const validCode = matches.find(m => m !== '000000');
                             if (validCode) {
+                                console.log(`[DEBUG] Código Prime Video de 6 dígitos encontrado: ${validCode}`);
                                 accountLogs.found = true;
                                 return validCode;
                             }
