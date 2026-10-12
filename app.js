@@ -1520,6 +1520,10 @@ function setupEventListeners() {
                 maxUses = 2;
                 platName = 'Código Hogar / Fuera de casa';
                 platIcon = 'fa-house-chimney-window';
+            } else if (plat === 'hbomax_update') {
+                maxUses = 2;
+                platName = 'Código Fuera de Casa HBO Max';
+                platIcon = 'fa-house-user';
             } else if (plat === 'netflix_temp') {
                 platName = 'Código Acceso Temporal';
                 platIcon = 'fa-plane-departure';
@@ -1528,7 +1532,7 @@ function setupEventListeners() {
             let rem = maxUses - numUsed;
             if (rem <= 0) {
                 dBtn.disabled = true;
-                dBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ${(plat === 'netflix_update' || plat === 'disney_update') ? 'Actualizaciones agotadas (2/2)' : 'Intento agotado (1/1)'}`;
+                dBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ${(plat === 'netflix_update' || plat === 'disney_update' || plat === 'hbomax_update') ? 'Actualizaciones agotadas (2/2)' : 'Intento agotado (1/1)'}`;
                 dBtn.style.opacity = '0.5';
                 dBtn.style.cursor = 'not-allowed';
                 dBtn.style.boxShadow = 'none';
@@ -1538,6 +1542,8 @@ function setupEventListeners() {
                     dBtn.innerHTML = `<i class="fa-solid fa-mobile-screen-button"></i> Activar Celular ViX`;
                 } else if (plat === 'disney_update') {
                     dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar y/o Fuera de casa`;
+                } else if (plat === 'hbomax_update') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obten codigo fuera de casa Hbo Max`;
                 } else {
                     dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
                 }
@@ -1552,7 +1558,7 @@ function setupEventListeners() {
         if (codePlatformInput && fetchBtn) {
             const chosen = codePlatformInput.value;
             // Si es una de las opciones con botón directo, mantener el inferior oculto
-            if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'disney_update', 'netflix_temp'].includes(chosen)) {
+            if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'disney_update', 'hbomax_update', 'netflix_temp'].includes(chosen)) {
                 fetchBtn.style.display = 'none';
             } else {
                 fetchBtn.style.display = 'block';
@@ -1913,7 +1919,7 @@ function setupEventListeners() {
         // Validar si el intento YA fue consumido
         let isExhausted = false;
         if (window.clientUsedAttempts) {
-            if (platform === 'netflix_update' || platform === 'disney_update') {
+            if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
                 const updatesUsed = parseInt(window.clientUsedAttempts[platform]) || 0;
                 if (updatesUsed >= 2) isExhausted = true;
             } else if (window.clientUsedAttempts[platform] === true || (typeof window.clientUsedAttempts[platform] === 'number' && window.clientUsedAttempts[platform] >= 1)) {
@@ -1922,19 +1928,20 @@ function setupEventListeners() {
         }
 
         if (isExhausted) {
-            if (platform === 'netflix_update' || platform === 'disney_update') {
-                const brand = platform === 'netflix_update' ? 'Netflix' : 'Disney+';
+            if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
+                const brand = platform === 'netflix_update' ? 'Netflix' : (platform === 'disney_update' ? 'Disney+' : 'HBO Max');
+                const brandColor = platform === 'netflix_update' ? '#E50914' : (platform === 'disney_update' ? '#113CCF' : '#6c5ce7');
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Límite de Actualización Alcanzado',
-                        html: `<span style="color:#aaa;">Ya has utilizado tus 2 intentos de actualización de hogar en ${brand}.</span><br><br><strong style="color:white;">Por favor, solicita a tu vendedor un CAMBIO DE CUENTA para evitar que pierdas el acceso.</strong>`,
-                        confirmButtonColor: platform === 'netflix_update' ? '#E50914' : '#113CCF',
+                        html: `<span style="color:#aaa;">Ya has utilizado tus 2 intentos de actualización / fuera de casa en ${brand}.</span><br><br><strong style="color:white;">Por favor, solicita a tu vendedor un CAMBIO DE CUENTA para evitar que pierdas el acceso.</strong>`,
+                        confirmButtonColor: brandColor,
                         background: '#1a1a1a',
                         color: '#fff'
                     });
                 } else {
-                    alert(`Atención: Ya has utilizado tus 2 intentos de actualización de hogar en ${brand}.`);
+                    alert(`Atención: Ya has utilizado tus 2 intentos en ${brand}.`);
                 }
             } else {
                 alert('Ya has utilizado el intento disponible para esta plataforma.');
@@ -1973,7 +1980,7 @@ function setupEventListeners() {
                 const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
                 if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
 
-                if (platform === 'netflix_update' || platform === 'disney_update') {
+                if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
                     const currentAttempts = parseInt(window.clientUsedAttempts[platform]) || 0;
                     const nextCount = currentAttempts + 1;
                     await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(nextCount);
@@ -2083,6 +2090,8 @@ function setupEventListeners() {
                                 : (data.detectedType === 'fuera_de_casa'
                                     ? 'Tu código de Fuera de Casa Disney+:'
                                     : 'Tu código de Disney+ es:');
+                        } else if (platform === 'hbomax_update') {
+                            titleEl.innerText = 'Tu código Fuera de Casa HBO Max:';
                         } else {
                             titleEl.innerText = 'Tu código de acceso es:';
                         }

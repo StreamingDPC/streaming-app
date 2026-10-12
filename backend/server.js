@@ -226,12 +226,19 @@ app.post('/api/get-code', async (req, res) => {
                     let isFromPlatform = false;
                     if (platformLower === 'logincode') {
                         isFromPlatform = true;
-                    } else if (platformLower === 'hbomax') {
+                    } else if (platformLower.includes('hbomax') || platformLower.includes('max')) {
                         // HBO Max envía desde dominios hbo.com, max.com, hbomax.com
-                        isFromPlatform = subject.includes('hbo') || subject.includes(' max') ||
-                            fromText.includes('hbo') || fromText.includes('max.com') ||
-                            subject.includes('código único') || subject.includes('codigo unico') ||
-                            textContent.includes('código único para hbo max') || textContent.includes('codigo unico para hbo max');
+                        const normSub = subject.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const normTxt = textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const normFr = fromText.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                        isFromPlatform = normSub.includes('hbo') || normSub.includes('max') ||
+                            normFr.includes('hbo') || normFr.includes('max.com') ||
+                            normSub.includes('codigo de un solo uso') || normSub.includes('un solo uso') ||
+                            normSub.includes('codigo unico') ||
+                            normTxt.includes('codigo de un solo uso de hbo max') ||
+                            normTxt.includes('codigo de un solo uso') ||
+                            normTxt.includes('codigo unico para hbo max');
                     } else if (platformLower === 'prime') {
                         // Prime Video / Amazon envía desde amazon.com
                         isFromPlatform = subject.includes('amazon') || fromText.includes('amazon') ||
@@ -369,9 +376,24 @@ app.post('/api/get-code', async (req, res) => {
                                     };
                                 }
                             }
-                        } else if (platformLower.includes('hbomax')) {
-                            // HBO Max / Max: frase clave "Tu código único para HBO Max es" y extracción de 6 dígitos
+                        } else if (platformLower.includes('hbomax') || platformLower.includes('max')) {
+                            // HBO Max / Max: frase clave "Tu código de un solo uso de HBO Max", "Tu código único para HBO Max es" y extracción de 6 dígitos
                             const hboPhraseKeywords = [
+                                'tu código de un solo uso de hbo max',
+                                'tu codigo de un solo uso de hbo max',
+                                'código de un solo uso de hbo max',
+                                'codigo de un solo uso de hbo max',
+                                'tu código de un solo uso de max',
+                                'tu codigo de un solo uso de max',
+                                'código de un solo uso de max',
+                                'codigo de un solo uso de max',
+                                'tu código de un solo uso',
+                                'tu codigo de un solo uso',
+                                'código de un solo uso',
+                                'codigo de un solo uso',
+                                'un solo uso de hbo max',
+                                'un solo uso de max',
+                                'un solo uso',
                                 'tu código único para hbo max es',
                                 'tu codigo unico para hbo max es',
                                 'tu código único para hbo max',
@@ -384,20 +406,35 @@ app.post('/api/get-code', async (req, res) => {
                                 'tu codigo unico',
                                 'código único',
                                 'codigo unico',
+                                'one-time passcode for hbo max',
+                                'one-time passcode',
                                 'hbo max',
                                 'max'
                             ];
-                            const hasHboPhrase = hboPhraseKeywords.some(kw =>
-                                subject.includes(kw) ||
-                                textContent.includes(kw) ||
-                                htmlContent.toLowerCase().includes(kw)
-                            );
+                            const normSub = subject.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            const normTxt = textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                            const hasHboPhrase = hboPhraseKeywords.some(kw => {
+                                const normKw = kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                return normSub.includes(normKw) ||
+                                    normTxt.includes(normKw) ||
+                                    subject.includes(kw) ||
+                                    textContent.includes(kw) ||
+                                    htmlContent.toLowerCase().includes(kw);
+                            });
 
                             // Extraemos el código numérico de 6 dígitos
-                            let matches = textContent.match(/\b\d{6}\b/g) || [];
+                            let matches = [];
+                            const subjectCodeMatch = subject.match(/\b\d{6}\b/);
+                            if (subjectCodeMatch) matches.push(subjectCodeMatch[0]);
+
+                            const textMatches = textContent.match(/\b\d{6}\b/g) || [];
+                            matches.push(...textMatches);
+
                             if (matches.length === 0) {
                                 const htmlText = htmlContent.replace(/<[^>]*>/gm, ' ').toLowerCase();
-                                matches = htmlText.match(/\b\d{6}\b/g) || [];
+                                const htmlMatches = htmlText.match(/\b\d{6}\b/g) || [];
+                                matches.push(...htmlMatches);
                             }
                             const validCode = matches.find(m => m !== '000000');
                             if (validCode) {

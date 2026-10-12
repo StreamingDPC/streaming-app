@@ -1318,6 +1318,10 @@
                                             <i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar y/o
                                             Fuera de casa
                                         </button>
+                                        <button type="button" onclick="adminExecuteAction('hbomax_update')"
+                                            style="background:linear-gradient(135deg,#6c5ce7,#a29bfe); border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-house-user"></i> Obten codigo fuera de casa Hbo Max
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1393,6 +1397,7 @@
                                     <option value="disney">Disney+</option>
                                     <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
                                     <option value="hbomax">HBO Max</option>
+                                    <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
                                     <option value="prime">Prime Video</option>
                                     <option value="vix">ViX</option>
                                 </select>
@@ -2745,6 +2750,7 @@
                         if (usedData['netflix']) attemptBadges.push(`<span style="color:#e50914;">Nflx</span>`);
                         if (usedData['disney']) attemptBadges.push(`<span style="color:#113ccf;">Disn</span>`);
                         if (usedData['hbomax']) attemptBadges.push(`<span style="color:#6c5ce7;">Max</span>`);
+                        if (usedData['hbomax_update']) attemptBadges.push(`<span style="color:#a29bfe;">Fuera Casa Max: ${usedData['hbomax_update']}/2</span>`);
                         if (usedData['prime']) attemptBadges.push(`<span style="color:#00a8e1;">Prm</span>`);
                         if (usedData['vix']) attemptBadges.push(`<span style="color:#e67e22;">ViX</span>`);
                     }
@@ -3000,6 +3006,10 @@
                                 badgeTitle = 'DISNEY+ (HOGAR / FUERA DE CASA)';
                                 platName = 'Hogar y/o Fuera de casa (Disney+)';
                             }
+                        } else if (platform === 'hbomax_update') {
+                            badgeTitle = 'HBO MAX (FUERA DE CASA)';
+                            platName = 'Fuera de Casa (HBO Max)';
+                            detailsMsg = `Detectado: <strong>Tu código de un solo uso de HBO Max</strong> en <code>${email}</code>.`;
                         }
 
                         badgeEl.innerHTML = `<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-key"></i> ${badgeTitle}</span>`;
@@ -3085,6 +3095,13 @@
                     msg += `🚨 ALERTA: Este cliente YA AGOTÓ su límite (2/2) actualizaciones de Hogar / Fuera de casa Disney+.\n\n`;
                 } else {
                     msg += `✅ Estado de Actualizaciones Disney+: ${disneyUpdates} consumidas de 2 posibles.\n\n`;
+                }
+            } else if (platform === 'hbomax_update') {
+                const maxUpdates = (usedData && typeof usedData === 'object') ? (usedData['hbomax_update'] || 0) : 0;
+                if (maxUpdates >= 2) {
+                    msg += `🚨 ALERTA: Este cliente YA AGOTÓ su límite (2/2) fuera de casa HBO Max.\n\n`;
+                } else {
+                    msg += `✅ Estado de Fuera de Casa HBO Max: ${maxUpdates} consumidas de 2 posibles.\n\n`;
                 }
             } else if (usedData) {
                 msg += `ℹ️ ESTADO ACTUAL: `;
@@ -3215,6 +3232,8 @@
                             if (usedData['netflix_temp'] === true) badges.push(`<span style="color:#e74c3c;">✈️ Acc. Temporal</span>`);
                             if (usedData['netflix_tv'] === true) badges.push(`<span style="color:#2ecc71;">📺 TV Act.</span>`);
                             if (usedData['netflix'] === true) badges.push(`<span style="color:#e74c3c;">🎬 Nflx</span>`);
+                            if (usedData['disney_update']) badges.push(`<span style="color:#00d2d3; font-weight:bold;">🏰 Hogar Disney: ${usedData['disney_update']}/2</span>`);
+                            if (usedData['hbomax_update']) badges.push(`<span style="color:#a29bfe; font-weight:bold;">📺 Fuera Casa Max: ${usedData['hbomax_update']}/2</span>`);
                             if (usedData['disney'] === true) badges.push(`<span style="color:#3498db;">🏰 Disn</span>`);
                             if (usedData['hbomax'] === true) badges.push(`<span style="color:#9b59b6;">📺 Max</span>`);
                             if (usedData['prime'] === true) badges.push(`<span style="color:#2980b9;">📦 Prm</span>`);
@@ -3242,12 +3261,13 @@
                                     <option value="netflix_update">Actualiza tu Hogar</option>
                                     <option value="netflix_temp">Acceso temporal Netflix</option>
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
-                                     <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney+</option>
-                                     <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
-                                     <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
-                                     <option value="prime" ${defaultPlatform === 'prime' ? 'selected' : ''}>Prime Video</option>
-                                     <option value="vix">ViX</option>
-                                     <option value="all" ${defaultPlatform === 'all' ? 'selected' : ''}>TODAS LAS PANTALLAS</option>
+                                    <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney+</option>
+                                    <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
+                                    <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
+                                    <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
+                                    <option value="prime" ${defaultPlatform === 'prime' ? 'selected' : ''}>Prime Video</option>
+                                    <option value="vix">ViX</option>
+                                    <option value="all" ${defaultPlatform === 'all' ? 'selected' : ''}>TODAS LAS PANTALLAS</option>
                                 </select>
                                 <button type="button"
                                     onclick="doResetAttemptFromSearch('${m.phone}', '${m.clientName.replace(/'/g, "\\'")}', ${idx})"
