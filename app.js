@@ -1516,6 +1516,10 @@ function setupEventListeners() {
                 maxUses = 2;
                 platName = 'Código Actualizar Hogar';
                 platIcon = 'fa-house-chimney';
+            } else if (plat === 'disney_update') {
+                maxUses = 2;
+                platName = 'Código Hogar / Fuera de casa';
+                platIcon = 'fa-house-chimney-window';
             } else if (plat === 'netflix_temp') {
                 platName = 'Código Acceso Temporal';
                 platIcon = 'fa-plane-departure';
@@ -1524,13 +1528,19 @@ function setupEventListeners() {
             let rem = maxUses - numUsed;
             if (rem <= 0) {
                 dBtn.disabled = true;
-                dBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ${plat === 'netflix_update' ? 'Actualizaciones agotadas (2/2)' : 'Intento agotado (1/1)'}`;
+                dBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ${(plat === 'netflix_update' || plat === 'disney_update') ? 'Actualizaciones agotadas (2/2)' : 'Intento agotado (1/1)'}`;
                 dBtn.style.opacity = '0.5';
                 dBtn.style.cursor = 'not-allowed';
                 dBtn.style.boxShadow = 'none';
             } else {
                 dBtn.disabled = false;
-                dBtn.innerHTML = plat === 'vix' ? `<i class="fa-solid fa-mobile-screen-button"></i> Activar Celular ViX` : `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
+                if (plat === 'vix') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-mobile-screen-button"></i> Activar Celular ViX`;
+                } else if (plat === 'disney_update') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar y/o Fuera de casa`;
+                } else {
+                    dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
+                }
                 dBtn.style.opacity = '1';
                 dBtn.style.cursor = 'pointer';
             }
@@ -1542,7 +1552,7 @@ function setupEventListeners() {
         if (codePlatformInput && fetchBtn) {
             const chosen = codePlatformInput.value;
             // Si es una de las opciones con botón directo, mantener el inferior oculto
-            if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp'].includes(chosen)) {
+            if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'disney_update', 'netflix_temp'].includes(chosen)) {
                 fetchBtn.style.display = 'none';
             } else {
                 fetchBtn.style.display = 'block';
@@ -1903,7 +1913,7 @@ function setupEventListeners() {
         // Validar si el intento YA fue consumido
         let isExhausted = false;
         if (window.clientUsedAttempts) {
-            if (platform === 'netflix_update') {
+            if (platform === 'netflix_update' || platform === 'disney_update') {
                 const updatesUsed = parseInt(window.clientUsedAttempts[platform]) || 0;
                 if (updatesUsed >= 2) isExhausted = true;
             } else if (window.clientUsedAttempts[platform] === true || (typeof window.clientUsedAttempts[platform] === 'number' && window.clientUsedAttempts[platform] >= 1)) {
@@ -1912,18 +1922,19 @@ function setupEventListeners() {
         }
 
         if (isExhausted) {
-            if (platform === 'netflix_update') {
+            if (platform === 'netflix_update' || platform === 'disney_update') {
+                const brand = platform === 'netflix_update' ? 'Netflix' : 'Disney+';
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Límite de Actualización Alcanzado',
-                        html: '<span style="color:#aaa;">Ya has utilizado tus 2 intentos de actualización de hogar (solo se permite 1 cliente por hogar).</span><br><br><strong style="color:white;">Por favor, solicita a tu vendedor un CAMBIO DE CUENTA para evitar que pierdas el acceso.</strong>',
-                        confirmButtonColor: '#E50914',
+                        html: `<span style="color:#aaa;">Ya has utilizado tus 2 intentos de actualización de hogar en ${brand}.</span><br><br><strong style="color:white;">Por favor, solicita a tu vendedor un CAMBIO DE CUENTA para evitar que pierdas el acceso.</strong>`,
+                        confirmButtonColor: platform === 'netflix_update' ? '#E50914' : '#113CCF',
                         background: '#1a1a1a',
                         color: '#fff'
                     });
                 } else {
-                    alert('Atención: Ya has utilizado tus 2 intentos de actualización de hogar.');
+                    alert(`Atención: Ya has utilizado tus 2 intentos de actualización de hogar en ${brand}.`);
                 }
             } else {
                 alert('Ya has utilizado el intento disponible para esta plataforma.');
@@ -1962,7 +1973,7 @@ function setupEventListeners() {
                 const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
                 if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
 
-                if (platform === 'netflix_update') {
+                if (platform === 'netflix_update' || platform === 'disney_update') {
                     const currentAttempts = parseInt(window.clientUsedAttempts[platform]) || 0;
                     const nextCount = currentAttempts + 1;
                     await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(nextCount);

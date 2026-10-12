@@ -1313,6 +1313,11 @@
                                             style="background:linear-gradient(135deg,#0984e3,#00cec9); border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
                                             <i class="fa-solid fa-plane"></i> Acceso Temporal Netflix
                                         </button>
+                                        <button type="button" onclick="adminExecuteAction('disney_update')"
+                                            style="background:linear-gradient(135deg,#113CCF,#00d2d3); border:none; color:white; font-weight:bold; padding:10px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                            <i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar y/o
+                                            Fuera de casa
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1386,6 +1391,7 @@
                                     <option value="netflix_temp">Acceso temporal Netflix</option>
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
                                     <option value="disney">Disney+</option>
+                                    <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
                                     <option value="hbomax">HBO Max</option>
                                     <option value="prime">Prime Video</option>
                                     <option value="vix">ViX</option>
@@ -2733,6 +2739,7 @@
                         attemptBadges.push('<span style="color:#ff4d4d; font-weight:bold;">Agotado Global</span>');
                     } else if (usedData && typeof usedData === 'object') {
                         if (usedData['netflix_update']) attemptBadges.push(`<span style="color:#f39c12;">Hogar: ${usedData['netflix_update']}/2</span>`);
+                        if (usedData['disney_update']) attemptBadges.push(`<span style="color:#00d2d3;">Hogar Disney: ${usedData['disney_update']}/2</span>`);
                         if (usedData['netflix_temp']) attemptBadges.push(`<span style="color:#0984e3;">Temporal</span>`);
                         if (usedData['netflix_tv']) attemptBadges.push(`<span style="color:#2ecc71;">TV</span>`);
                         if (usedData['netflix']) attemptBadges.push(`<span style="color:#e50914;">Nflx</span>`);
@@ -2977,8 +2984,9 @@
                         if (waBtn) {
                             waBtn.style.display = 'inline-flex';
                             const platName = platform === 'netflix_update' ? 'Actualización de Hogar (Netflix)'
-                                : platform === 'netflix_temp' ? 'Acceso Temporal (Netflix)'
-                                    : platform.toUpperCase();
+                                : platform === 'disney_update' ? 'Actualización Hogar / Fuera de casa (Disney+)'
+                                    : platform === 'netflix_temp' ? 'Acceso Temporal (Netflix)'
+                                        : platform.toUpperCase();
                             window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Aquí tienes tu código para ${platName}: *${data.code}*. Ingrésalo en tu pantalla antes de 15 minutos.`;
                         }
                     }
@@ -3048,6 +3056,13 @@
                     msg += `🚨 ALERTA ROJA: Este cliente YA AGOTÓ su límite (2/2) actualizaciones de hogar.\n👉 RECOMENDACIÓN: Aplicar CAMBIO DE CUENTA para evitar que el sistema los bloquee.\n\n`;
                 } else {
                     msg += `✅ Estado de Actualizaciones Netflix: ${netflixUpdates} consumidas de 2 posibles.\n\n`;
+                }
+            } else if (platform === 'disney_update') {
+                const disneyUpdates = (usedData && typeof usedData === 'object') ? (usedData['disney_update'] || 0) : 0;
+                if (disneyUpdates >= 2) {
+                    msg += `🚨 ALERTA: Este cliente YA AGOTÓ su límite (2/2) actualizaciones de Hogar / Fuera de casa Disney+.\n\n`;
+                } else {
+                    msg += `✅ Estado de Actualizaciones Disney+: ${disneyUpdates} consumidas de 2 posibles.\n\n`;
                 }
             } else if (usedData) {
                 msg += `ℹ️ ESTADO ACTUAL: `;
@@ -3205,10 +3220,12 @@
                                     <option value="netflix_update">Actualiza tu Hogar</option>
                                     <option value="netflix_temp">Acceso temporal Netflix</option>
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
-                                    <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney+</option>
-                                    <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
-                                    <option value="prime" ${defaultPlatform === 'prime' ? 'selected' : ''}>Prime Video</option>
-                                    <option value="all" ${defaultPlatform === 'all' ? 'selected' : ''}>TODAS LAS PANTALLAS</option>
+                                     <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney+</option>
+                                     <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
+                                     <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
+                                     <option value="prime" ${defaultPlatform === 'prime' ? 'selected' : ''}>Prime Video</option>
+                                     <option value="vix">ViX</option>
+                                     <option value="all" ${defaultPlatform === 'all' ? 'selected' : ''}>TODAS LAS PANTALLAS</option>
                                 </select>
                                 <button type="button"
                                     onclick="doResetAttemptFromSearch('${m.phone}', '${m.clientName.replace(/'/g, "\\'")}', ${idx})"

@@ -241,7 +241,12 @@ app.post('/api/get-code', async (req, res) => {
                     } else if (platformLower.includes('disney')) {
                         isFromPlatform = subject.includes('disney') || fromText.includes('disney') ||
                             subject.includes('código de acceso único') || subject.includes('codigo de acceso unico') ||
-                            textContent.includes('código de acceso único para disney+') || textContent.includes('codigo de acceso unico para disney+');
+                            subject.includes('actualizar tu hogar') || subject.includes('hogar de disney') ||
+                            subject.includes('fuera de casa') ||
+                            textContent.includes('código de acceso único para disney+') || textContent.includes('codigo de acceso unico para disney+') ||
+                            textContent.includes('actualizar tu hogar') || textContent.includes('hogar de disney') ||
+                            textContent.includes('fuera de casa') ||
+                            textContent.includes('vas a actualizar tu hogar');
                     } else if (platformLower === 'vix') {
                         isFromPlatform = subject.includes('vix') || fromText.includes('vix') ||
                             subject.includes('inicia sesión en tu cuenta de vix') ||
@@ -301,6 +306,12 @@ app.post('/api/get-code', async (req, res) => {
                         } else if (platformLower.includes('disney')) {
                             // Disney+: frase clave 'Tu código de acceso único para Disney+' y extracción de código de 6 dígitos
                             const disneyPhraseKeywords = [
+                                'vas a actualizar tu hogar de disney+',
+                                '¿vas a actualizar tu hogar de disney+?',
+                                'actualizar tu hogar de disney+',
+                                'actualizar tu hogar',
+                                'hogar de disney+',
+                                'fuera de casa',
                                 'tu código de acceso único para disney+',
                                 'tu codigo de acceso unico para disney+',
                                 'código de acceso único para disney+',
