@@ -1625,12 +1625,17 @@ function setupEventListeners() {
                     global: new Set()
                 };
 
+                window.allClientActiveEmails = new Set();
                 Object.values(sales).forEach(sale => {
                     // Validar si la venta está activa
                     const isExpired = sale.expirationDate && sale.expirationDate < Date.now();
                     if (isExpired) return;
 
-                    if (sale.email) window.clientActivePlatforms.global.add(sale.email.toLowerCase().trim());
+                    if (sale.email) {
+                        const em = sale.email.toLowerCase().trim();
+                        window.clientActivePlatforms.global.add(em);
+                        window.allClientActiveEmails.add(em);
+                    }
 
                     if (sale.items && Array.isArray(sale.items)) {
                         sale.items.forEach(item => {
@@ -1645,6 +1650,7 @@ function setupEventListeners() {
                                 item.specificEmails.forEach(se => {
                                     if (se.email) {
                                         const emailL = se.email.toLowerCase().trim();
+                                        window.allClientActiveEmails.add(emailL);
                                         if (itemPlatform) {
                                             window.clientActivePlatforms[itemPlatform].add(emailL);
                                             // Si tiene Netflix normal, automáticamente habilita actualizar hogar Y acceso temporal:
@@ -1668,12 +1674,16 @@ function setupEventListeners() {
 
                 platformTabBtns.forEach(btn => {
                     const plat = btn.dataset.platform;
-                    const hasPlat = window.clientActivePlatforms[plat].size > 0;
+                    const hasPlat = window.clientActivePlatforms[plat] && window.clientActivePlatforms[plat].size > 0;
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
-                    if (hasPlat || hasGlobal) {
+
+                    // Netflix y Disney siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'netflix_update' || plat === 'netflix_temp');
+
+                    if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
-                        if (!firstValidPlatform) firstValidPlatform = btn;
+                        if (!firstValidPlatform && plat === 'netflix') firstValidPlatform = btn;
                     } else {
                         targetEl.style.display = 'none';
                     }
@@ -1681,13 +1691,10 @@ function setupEventListeners() {
 
                 if (firstValidPlatform) {
                     firstValidPlatform.click();
+                } else if (platformTabBtns[0]) {
+                    platformTabBtns[0].click();
                 } else {
                     emailSelect.innerHTML = '<option value="">-- No tienes pantallas activas --</option>';
-                    platformTabBtns.forEach(btn => {
-                        const card = btn.closest('.platform-action-card');
-                        const targetEl = card || btn;
-                        targetEl.style.display = 'none';
-                    });
                 }
 
                 // Poblar específicamente el selector de correos para Activar TV (Solo Netflix y global)
@@ -1768,7 +1775,13 @@ function setupEventListeners() {
             if (emailSelect && window.clientActivePlatforms) {
                 const specEmails = window.clientActivePlatforms[chosen] || new Set();
                 const globalEmails = window.clientActivePlatforms.global || new Set();
-                const combined = new Set([...specEmails, ...globalEmails]);
+                let combined = new Set([...specEmails, ...globalEmails]);
+
+                // Fallback: si para la plataforma no hay correos marcados específicamente,
+                // permitir cualquier correo activo de las compras del cliente:
+                if (combined.size === 0 && window.allClientActiveEmails && window.allClientActiveEmails.size > 0) {
+                    combined = new Set(window.allClientActiveEmails);
+                }
 
                 emailSelect.innerHTML = '';
                 if (combined.size > 0) {
