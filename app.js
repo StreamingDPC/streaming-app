@@ -1500,6 +1500,9 @@ function setupEventListeners() {
             if (plat === 'netflix') {
                 platName = 'Código Netflix';
                 platIcon = 'fa-satellite-dish';
+            } else if (plat === 'disney') {
+                platName = 'Código Disney';
+                platIcon = 'fa-satellite-dish';
             } else if (plat === 'netflix_update') {
                 maxUses = 2;
                 platName = 'Código Actualizar Hogar';
@@ -1529,8 +1532,8 @@ function setupEventListeners() {
         const fetchBtn = document.getElementById('fetch-code-btn');
         if (codePlatformInput && fetchBtn) {
             const chosen = codePlatformInput.value;
-            // Si es una de las 3 opciones con botón directo, mantener el inferior oculto
-            if (['netflix', 'netflix_update', 'netflix_temp'].includes(chosen)) {
+            // Si es una de las opciones con botón directo, mantener el inferior oculto
+            if (['netflix', 'disney', 'netflix_update', 'netflix_temp'].includes(chosen)) {
                 fetchBtn.style.display = 'none';
             } else {
                 fetchBtn.style.display = 'block';
@@ -1783,6 +1786,11 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
+                if (['netflix', 'disney', 'netflix_update', 'netflix_temp'].includes(chosen)) {
+                    fetchBtn.style.display = 'none';
+                } else {
+                    fetchBtn.style.display = 'block';
+                }
                 let isExhausted = false;
                 if (window.clientUsedAttempts) {
                     if (chosen === 'netflix_update') {

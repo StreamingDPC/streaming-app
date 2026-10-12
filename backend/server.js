@@ -155,6 +155,10 @@ app.post('/api/get-code', async (req, res) => {
                     } else if (platformLower === 'prime') {
                         // Prime Video / Amazon envía desde amazon.com
                         isFromPlatform = subject.includes('amazon') || fromText.includes('amazon');
+                    } else if (platformLower.includes('disney')) {
+                        isFromPlatform = subject.includes('disney') || fromText.includes('disney') ||
+                            subject.includes('código de acceso único') || subject.includes('codigo de acceso unico') ||
+                            textContent.includes('código de acceso único para disney+') || textContent.includes('codigo de acceso unico para disney+');
                     } else {
                         isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
                     }
@@ -205,9 +209,24 @@ app.post('/api/get-code', async (req, res) => {
                                 }
                             }
                         } else if (platformLower.includes('disney')) {
-                            // Disney: el correo ya fue confirmado como de Disney por isFromPlatform
-                            // (subject o from contiene 'disney'). Extraemos el 1er número de 6 dígitos.
-                            // Buscamos primero en texto plano, luego en HTML limpio.
+                            // Disney+: frase clave 'Tu código de acceso único para Disney+' y extracción de código de 6 dígitos
+                            const disneyPhraseKeywords = [
+                                'tu código de acceso único para disney+',
+                                'tu codigo de acceso unico para disney+',
+                                'código de acceso único para disney+',
+                                'codigo de acceso unico para disney+',
+                                'código de acceso único',
+                                'codigo de acceso unico',
+                                'one-time passcode for disney+',
+                                'disney+'
+                            ];
+                            const hasDisneyPhrase = disneyPhraseKeywords.some(kw =>
+                                subject.includes(kw) ||
+                                textContent.includes(kw) ||
+                                htmlContent.toLowerCase().includes(kw)
+                            );
+
+                            // Extraemos el código numérico de 6 dígitos
                             let matches = textContent.match(/\b\d{6}\b/g) || [];
                             if (matches.length === 0) {
                                 const htmlText = htmlContent.replace(/<[^>]*>/gm, ' ').toLowerCase();
@@ -215,6 +234,7 @@ app.post('/api/get-code', async (req, res) => {
                             }
                             const validCode = matches.find(m => m !== '000000');
                             if (validCode) {
+                                console.log(`[DEBUG] Código Disney+ de 6 dígitos encontrado: ${validCode}`);
                                 accountLogs.found = true;
                                 return validCode;
                             }
