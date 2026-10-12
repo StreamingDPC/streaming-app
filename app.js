@@ -2076,7 +2076,17 @@ function setupEventListeners() {
                         }
                     }
                 } else {
-                    if (titleEl) titleEl.innerText = 'Tu código de acceso es:';
+                    if (titleEl) {
+                        if (platform === 'disney_update') {
+                            titleEl.innerText = data.detectedType === 'hogar'
+                                ? 'Tu código de Actualizar Hogar Disney+:'
+                                : (data.detectedType === 'fuera_de_casa'
+                                    ? 'Tu código de Fuera de Casa Disney+:'
+                                    : 'Tu código de Disney+ es:');
+                        } else {
+                            titleEl.innerText = 'Tu código de acceso es:';
+                        }
+                    }
                     if (linkContainer) linkContainer.style.display = 'none';
                     const codeBox = document.getElementById('magic-code-box');
                     if (codeBox) codeBox.style.display = 'block';

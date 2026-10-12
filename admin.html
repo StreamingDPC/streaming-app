@@ -2976,17 +2976,39 @@
                     } else {
                         window.adminLastGeneratedCode = data.code;
                         window.adminLastGeneratedPlatform = platform;
-                        badgeEl.innerHTML = `<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-key"></i> CÓDIGO DE ${platform.toUpperCase()}</span>`;
+
+                        let badgeTitle = `CÓDIGO DE ${platform.toUpperCase()}`;
+                        let platName = platform.toUpperCase();
+                        let detailsMsg = `Obtenido de <code>${email}</code>. Válido por 15 minutos.`;
+
+                        if (platform === 'netflix_update') {
+                            badgeTitle = 'ACTUALIZACIÓN DE HOGAR (NETFLIX)';
+                            platName = 'Actualización de Hogar (Netflix)';
+                        } else if (platform === 'netflix_temp') {
+                            badgeTitle = 'ACCESO TEMPORAL (NETFLIX)';
+                            platName = 'Acceso Temporal (Netflix)';
+                        } else if (platform === 'disney_update') {
+                            if (data.detectedType === 'hogar') {
+                                badgeTitle = 'DISNEY+ (ACTUALIZAR HOGAR)';
+                                platName = 'Actualizar Hogar (Disney+)';
+                                detailsMsg = `Detectado: <strong>¿Vas a actualizar tu Hogar de Disney+?</strong> en <code>${email}</code>.`;
+                            } else if (data.detectedType === 'fuera_de_casa') {
+                                badgeTitle = 'DISNEY+ (FUERA DE CASA)';
+                                platName = 'Acceso Fuera de Casa (Disney+)';
+                                detailsMsg = `Detectado: <strong>Tu código de acceso único para Disney+ (Fuera de Casa)</strong> en <code>${email}</code>.`;
+                            } else {
+                                badgeTitle = 'DISNEY+ (HOGAR / FUERA DE CASA)';
+                                platName = 'Hogar y/o Fuera de casa (Disney+)';
+                            }
+                        }
+
+                        badgeEl.innerHTML = `<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-key"></i> ${badgeTitle}</span>`;
                         codeEl.style.color = '#2ecc71';
                         codeEl.innerText = data.code;
-                        msgEl.innerHTML = `Obtenido de <code>${email}</code>. Válido por 15 minutos.`;
+                        msgEl.innerHTML = detailsMsg;
                         if (copyBtn) copyBtn.style.display = 'inline-flex';
                         if (waBtn) {
                             waBtn.style.display = 'inline-flex';
-                            const platName = platform === 'netflix_update' ? 'Actualización de Hogar (Netflix)'
-                                : platform === 'disney_update' ? 'Actualización Hogar / Fuera de casa (Disney+)'
-                                    : platform === 'netflix_temp' ? 'Acceso Temporal (Netflix)'
-                                        : platform.toUpperCase();
                             window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Aquí tienes tu código para ${platName}: *${data.code}*. Ingrésalo en tu pantalla antes de 15 minutos.`;
                         }
                     }

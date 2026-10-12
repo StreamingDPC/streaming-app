@@ -239,14 +239,29 @@ app.post('/api/get-code', async (req, res) => {
                             subject.includes('intento de acceso a los datos de la cuenta') ||
                             textContent.includes('intento de acceso a los datos de la cuenta');
                     } else if (platformLower.includes('disney')) {
-                        isFromPlatform = subject.includes('disney') || fromText.includes('disney') ||
-                            subject.includes('código de acceso único') || subject.includes('codigo de acceso unico') ||
-                            subject.includes('actualizar tu hogar') || subject.includes('hogar de disney') ||
-                            subject.includes('fuera de casa') ||
-                            textContent.includes('código de acceso único para disney+') || textContent.includes('codigo de acceso unico para disney+') ||
-                            textContent.includes('actualizar tu hogar') || textContent.includes('hogar de disney') ||
-                            textContent.includes('fuera de casa') ||
-                            textContent.includes('vas a actualizar tu hogar');
+                        const normSub = subject.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const normTxt = textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const normFr = fromText.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                        // Búsqueda 1: ¿Vas a actualizar tu Hogar de Disney+? (Actualizar Hogar)
+                        const matchHogar = normSub.includes('vas a actualizar tu hogar') ||
+                            normSub.includes('actualizar tu hogar') ||
+                            normSub.includes('hogar de disney') ||
+                            normTxt.includes('vas a actualizar tu hogar') ||
+                            normTxt.includes('actualizar tu hogar');
+
+                        // Búsqueda 2: Tu código de acceso único para Disney+ (Fuera de casa / Acceso Único)
+                        const matchFueraCasa = normSub.includes('tu codigo de acceso unico') ||
+                            normSub.includes('codigo de acceso unico') ||
+                            normSub.includes('codigo de acceso') ||
+                            normSub.includes('one-time passcode') ||
+                            normTxt.includes('tu codigo de acceso unico') ||
+                            normTxt.includes('codigo de acceso unico') ||
+                            normTxt.includes('codigo de acceso unico para disney');
+
+                        const isDisneySender = normFr.includes('disney') || normSub.includes('disney');
+
+                        isFromPlatform = matchHogar || matchFueraCasa || isDisneySender;
                     } else if (platformLower === 'vix') {
                         isFromPlatform = subject.includes('vix') || fromText.includes('vix') ||
                             subject.includes('inicia sesión en tu cuenta de vix') ||
@@ -304,40 +319,55 @@ app.post('/api/get-code', async (req, res) => {
                                 }
                             }
                         } else if (platformLower.includes('disney')) {
-                            // Disney+: frase clave 'Tu código de acceso único para Disney+' y extracción de código de 6 dígitos
-                            const disneyPhraseKeywords = [
-                                'vas a actualizar tu hogar de disney+',
-                                '¿vas a actualizar tu hogar de disney+?',
-                                'actualizar tu hogar de disney+',
-                                'actualizar tu hogar',
-                                'hogar de disney+',
-                                'fuera de casa',
-                                'tu código de acceso único para disney+',
-                                'tu codigo de acceso unico para disney+',
-                                'código de acceso único para disney+',
-                                'codigo de acceso unico para disney+',
-                                'código de acceso único',
-                                'codigo de acceso unico',
-                                'one-time passcode for disney+',
-                                'disney+'
-                            ];
-                            const hasDisneyPhrase = disneyPhraseKeywords.some(kw =>
-                                subject.includes(kw) ||
-                                textContent.includes(kw) ||
-                                htmlContent.toLowerCase().includes(kw)
-                            );
+                            // Normalización para búsqueda exacta sin problemas de tildes o signos
+                            const normSubject = subject.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            const normText = textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                            const normFrom = fromText.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-                            // Extraemos el código numérico de 6 dígitos
-                            let matches = textContent.match(/\b\d{6}\b/g) || [];
-                            if (matches.length === 0) {
-                                const htmlText = htmlContent.replace(/<[^>]*>/gm, ' ').toLowerCase();
-                                matches = htmlText.match(/\b\d{6}\b/g) || [];
-                            }
-                            const validCode = matches.find(m => m !== '000000');
-                            if (validCode) {
-                                console.log(`[DEBUG] Código Disney+ de 6 dígitos encontrado: ${validCode}`);
-                                accountLogs.found = true;
-                                return validCode;
+                            // BÚSQUEDA 1: ¿Vas a actualizar tu Hogar de Disney+? (Si el cliente le dio a "Actualizar Hogar")
+                            const isHogarMatch = normSubject.includes('vas a actualizar tu hogar') ||
+                                normSubject.includes('actualizar tu hogar') ||
+                                normSubject.includes('hogar de disney') ||
+                                normText.includes('vas a actualizar tu hogar') ||
+                                normText.includes('actualizar tu hogar de disney');
+
+                            // BÚSQUEDA 2: Tu código de acceso único para Disney+ (Si el cliente le dio a "Fuera de Casa")
+                            const isFueraCasaMatch = normSubject.includes('tu codigo de acceso unico') ||
+                                normSubject.includes('codigo de acceso unico') ||
+                                normSubject.includes('codigo de acceso') ||
+                                normSubject.includes('one-time passcode') ||
+                                normSubject.includes('one time passcode') ||
+                                normText.includes('tu codigo de acceso unico') ||
+                                normText.includes('codigo de acceso unico') ||
+                                normText.includes('codigo de acceso unico para disney');
+
+                            const isDisneySender = normFrom.includes('disney') || normSubject.includes('disney');
+
+                            if (isHogarMatch || isFueraCasaMatch || isDisneySender) {
+                                // Extraemos el código numérico de 6 dígitos
+                                let matches = [];
+                                const subjectCodeMatch = subject.match(/\b\d{6}\b/);
+                                if (subjectCodeMatch) matches.push(subjectCodeMatch[0]);
+
+                                const textMatches = textContent.match(/\b\d{6}\b/g) || [];
+                                matches.push(...textMatches);
+
+                                if (matches.length === 0) {
+                                    const htmlText = htmlContent.replace(/<[^>]*>/gm, ' ').toLowerCase();
+                                    const htmlMatches = htmlText.match(/\b\d{6}\b/g) || [];
+                                    matches.push(...htmlMatches);
+                                }
+
+                                const validCode = matches.find(m => m !== '000000');
+                                if (validCode) {
+                                    const detected = isHogarMatch ? 'hogar' : (isFueraCasaMatch ? 'fuera_de_casa' : 'disney');
+                                    console.log(`[DEBUG] Código Disney+ de 6 dígitos encontrado (${detected}): ${validCode}`);
+                                    accountLogs.found = true;
+                                    return {
+                                        code: validCode,
+                                        detectedType: detected
+                                    };
+                                }
                             }
                         } else if (platformLower.includes('hbomax')) {
                             // HBO Max / Max: frase clave "Tu código único para HBO Max es" y extracción de 6 dígitos
@@ -499,9 +529,12 @@ app.post('/api/get-code', async (req, res) => {
         const foundCode = results.find(r => r !== null);
 
         if (foundCode) {
+            const finalCode = (typeof foundCode === 'object' && foundCode.code) ? foundCode.code : foundCode;
+            const detectedType = (typeof foundCode === 'object' && foundCode.detectedType) ? foundCode.detectedType : null;
+
             if (platform.toLowerCase() === 'vix') {
                 console.log(`[DEBUG] ViX detectado. Ejecutando enlace en segundo plano por el bot...`);
-                const vixResult = await executeVixActivation(foundCode, email);
+                const vixResult = await executeVixActivation(finalCode, email);
                 if (vixResult && vixResult.success) {
                     return res.json({
                         success: true,
@@ -518,8 +551,8 @@ app.post('/api/get-code', async (req, res) => {
                 }
             }
 
-            console.log(`[DEBUG] ÉXITO FINAL: ${foundCode}`);
-            return res.json({ success: true, code: foundCode, debugTree: debugInfo });
+            console.log(`[DEBUG] ÉXITO FINAL: ${finalCode} (tipo: ${detectedType || 'estándar'})`);
+            return res.json({ success: true, code: finalCode, detectedType: detectedType, debugTree: debugInfo });
         } else {
             const notFoundMsg = platform.toLowerCase() === 'vix'
                 ? 'Aún no hemos detectado el correo de ViX. Abre la app en tu celular, pulsa "Iniciar sesión con enlace" y luego vuelve a pulsar "Activar Celular ViX".'
