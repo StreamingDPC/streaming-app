@@ -555,8 +555,18 @@ async function doActivateVix(email, vixLink) {
         });
         chromeProc.unref();
 
-        console.log('[VIX-BOT] ⏳ Esperando 7 segundos para que ViX procese el token y sincronice el celular...');
-        await sleep(7000);
+        console.log('[VIX-BOT] ⏳ Esperando 8 segundos para que ViX procese el token y sincronice el celular...');
+        await sleep(8000);
+
+        // Cerrar automáticamente la ventana de ViX para que no quede abierta
+        console.log('[VIX-BOT] 🚪 Cerrando ventana de ViX para mantener limpio tu escritorio...');
+        try {
+            const { exec } = require('child_process');
+            const psCmd = `Get-Process chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -match 'ViX' } | ForEach-Object { $_.CloseMainWindow() }`;
+            exec(`powershell -NoProfile -Command "${psCmd}"`);
+        } catch (closeErr) {
+            console.warn('[VIX-BOT] No se pudo cerrar la ventana automáticamente:', closeErr.message);
+        }
 
         console.log('[VIX-BOT] 🎉 ¡Enlace ejecutado con éxito en Chrome! Dispositivo ViX activado.');
         return {
