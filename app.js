@@ -1646,20 +1646,46 @@ function setupEventListeners() {
                             else if (itemName.includes('hbo') || itemName.includes('max')) itemPlatform = 'hbomax';
                             else if (itemName.includes('prime')) itemPlatform = 'prime';
 
+                            if (item.email) {
+                                const itemEmailL = item.email.toLowerCase().trim();
+                                window.allClientActiveEmails.add(itemEmailL);
+                                if (itemPlatform) {
+                                    window.clientActivePlatforms[itemPlatform].add(itemEmailL);
+                                    if (itemPlatform === 'netflix') {
+                                        window.clientActivePlatforms['netflix_update'].add(itemEmailL);
+                                        window.clientActivePlatforms['netflix_temp'].add(itemEmailL);
+                                    }
+                                } else {
+                                    window.clientActivePlatforms.global.add(itemEmailL);
+                                }
+                            }
+
                             if (item.specificEmails && Array.isArray(item.specificEmails)) {
                                 item.specificEmails.forEach(se => {
                                     if (se.email) {
                                         const emailL = se.email.toLowerCase().trim();
                                         window.allClientActiveEmails.add(emailL);
-                                        if (itemPlatform) {
-                                            window.clientActivePlatforms[itemPlatform].add(emailL);
-                                            // Si tiene Netflix normal, automáticamente habilita actualizar hogar Y acceso temporal:
-                                            if (itemPlatform === 'netflix') {
+
+                                        // 1º Identificar plataforma propia del correo (crítico para COMBOS)
+                                        let effPlat = null;
+                                        const sePlat = (se.platform || '').toLowerCase();
+                                        if (sePlat.includes('netflix')) effPlat = 'netflix';
+                                        else if (sePlat.includes('disney')) effPlat = 'disney';
+                                        else if (sePlat.includes('hbo') || sePlat.includes('max')) effPlat = 'hbomax';
+                                        else if (sePlat.includes('prime') || sePlat.includes('amazon')) effPlat = 'prime';
+
+                                        // 2º Si el objeto no traía platform explícita, heredar de la plataforma del item
+                                        if (!effPlat) effPlat = itemPlatform;
+
+                                        if (effPlat) {
+                                            window.clientActivePlatforms[effPlat].add(emailL);
+                                            if (effPlat === 'netflix') {
                                                 window.clientActivePlatforms['netflix_update'].add(emailL);
                                                 window.clientActivePlatforms['netflix_temp'].add(emailL);
                                             }
+                                        } else {
+                                            window.clientActivePlatforms.global.add(emailL);
                                         }
-                                        else window.clientActivePlatforms.global.add(emailL);
                                     }
                                 });
                             }
