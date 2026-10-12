@@ -193,6 +193,9 @@ function init() {
         if (codeNavBtn) codeNavBtn.style.display = 'inline-flex';
         const vendBtn = document.getElementById('open-vendedores-btn');
         if (vendBtn) vendBtn.style.display = 'none';
+        if (window.startCodeAttemptsLiveSync) {
+            window.startCodeAttemptsLiveSync(clientPhoneLoggedIn);
+        }
     }
 }
 
@@ -1125,6 +1128,9 @@ function setupEventListeners() {
             // Success Access
             localStorage.setItem('clientPhone', windowTempClientPhone);
             clientPhoneLoggedIn = windowTempClientPhone;
+            if (window.startCodeAttemptsLiveSync) {
+                window.startCodeAttemptsLiveSync(clientPhoneLoggedIn);
+            }
             // Mostrar botón "Obtener Código" y ocultar "Vendedores" al iniciar sesión
             const codeNavBtn = document.getElementById('open-code-btn');
             if (codeNavBtn) codeNavBtn.style.display = 'inline-flex';
@@ -1164,6 +1170,11 @@ function setupEventListeners() {
 
     if (logoutClientBtn) {
         logoutClientBtn.addEventListener('click', () => {
+            if (window.stopCodeAttemptsLiveSync) {
+                window.stopCodeAttemptsLiveSync();
+            }
+            window.clientUsedAttempts = {};
+            if (window.updateCodeCountersUI) window.updateCodeCountersUI();
             localStorage.removeItem('clientPhone');
             clientPhoneLoggedIn = '';
             // Ocultar "Obtener Código" y restaurar "Vendedores" al cerrar sesión
@@ -1348,11 +1359,66 @@ function setupEventListeners() {
     }
 
     // ==========================================
-    // SISTEMA SEGURO DE CÓDIGOS DE ACCESO
+    // SISTEMA SEGURO DE CÓDIGOS DE ACCESO (LIVE SYNC)
     // ==========================================
 
+    let _codeAttemptsRefPrimary = null;
+    let _codeAttemptsListenerPrimary = null;
+    let _codeAttemptsRefClean = null;
+    let _codeAttemptsListenerClean = null;
+
+    window.startCodeAttemptsLiveSync = function (phone) {
+        if (!phone || typeof db === 'undefined') return;
+        window.stopCodeAttemptsLiveSync();
+
+        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(phone) : phone;
+
+        function handleData(val) {
+            if (val === true) {
+                val = { netflix: true, disney: true, hbomax: true, prime: true };
+            }
+            if (val && typeof val === 'object') {
+                window.clientUsedAttempts = Object.assign(window.clientUsedAttempts || {}, val);
+            } else if (!window.clientUsedAttempts) {
+                window.clientUsedAttempts = {};
+            }
+            if (window.updateCodeCountersUI) {
+                window.updateCodeCountersUI();
+            }
+        }
+
+        // 1. Escuchar nodo primario con .on('value') para tiempo real
+        _codeAttemptsRefPrimary = db.ref(`clientProfiles/${phone}/codeAttemptUsed`);
+        _codeAttemptsListenerPrimary = _codeAttemptsRefPrimary.on('value', snap => {
+            const val = snap.val();
+            if (val) handleData(val);
+        });
+
+        // 2. Si hay variante limpia sin prefijo 57, escuchar también
+        if (cleanPhone && cleanPhone !== phone) {
+            _codeAttemptsRefClean = db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed`);
+            _codeAttemptsListenerClean = _codeAttemptsRefClean.on('value', snap => {
+                const val = snap.val();
+                if (val) handleData(val);
+            });
+        }
+    };
+
+    window.stopCodeAttemptsLiveSync = function () {
+        if (_codeAttemptsRefPrimary && _codeAttemptsListenerPrimary) {
+            _codeAttemptsRefPrimary.off('value', _codeAttemptsListenerPrimary);
+            _codeAttemptsRefPrimary = null;
+            _codeAttemptsListenerPrimary = null;
+        }
+        if (_codeAttemptsRefClean && _codeAttemptsListenerClean) {
+            _codeAttemptsRefClean.off('value', _codeAttemptsListenerClean);
+            _codeAttemptsRefClean = null;
+            _codeAttemptsListenerClean = null;
+        }
+    };
+
     window.updateCodeCountersUI = function () {
-        if (!window.clientUsedAttempts) return;
+        if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
 
         function updateBtn(plat, icon, name, maxUses) {
             const btn = document.querySelector(`.platform-tab-btn[data-platform="${plat}"]`);
@@ -1366,6 +1432,11 @@ function setupEventListeners() {
                 if (rem < 0) rem = 0;
 
                 btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+                if (rem <= 0) {
+                    btn.style.opacity = '0.6';
+                } else {
+                    btn.style.opacity = '1';
+                }
             }
         }
 
@@ -1376,6 +1447,7 @@ function setupEventListeners() {
         updateBtn('netflix_update', '🏠', 'Actualiza tu Hogar con Netflix', 2);
         updateBtn('netflix_temp', '✈️', 'Acceso temporal con Netflix CEL O PC', 1);
 
+        // Actualizar botón de Smart TV
         const tvBtn = document.getElementById('show-tv-login-btn');
         if (tvBtn) {
             let tvUsed = window.clientUsedAttempts['netflix_tv'];
@@ -1406,6 +1478,36 @@ function setupEventListeners() {
                 }
             }
         }
+
+        // Reactividad en vivo: bloquear o desbloquear botón de búsqueda según la plataforma activa
+        const codePlatformInput = document.getElementById('code-platform');
+        const fetchBtn = document.getElementById('fetch-code-btn');
+        if (codePlatformInput && fetchBtn) {
+            const chosen = codePlatformInput.value;
+            if (chosen) {
+                let isExhausted = false;
+                if (chosen === 'netflix_update') {
+                    const updatesUsed = parseInt(window.clientUsedAttempts[chosen]) || 0;
+                    if (updatesUsed >= 2) isExhausted = true;
+                } else if (window.clientUsedAttempts[chosen] === true || (typeof window.clientUsedAttempts[chosen] === 'number' && window.clientUsedAttempts[chosen] >= 1)) {
+                    isExhausted = true;
+                }
+
+                if (isExhausted) {
+                    fetchBtn.disabled = true;
+                    fetchBtn.innerHTML = chosen === 'netflix_update'
+                        ? '<i class="fa-solid fa-lock"></i> Límite de Actualizaciones superado (2/2)'
+                        : '<i class="fa-solid fa-lock"></i> Intento de esta plataforma agotado';
+                    fetchBtn.style.opacity = '0.5';
+                    fetchBtn.style.cursor = 'not-allowed';
+                } else {
+                    fetchBtn.disabled = false;
+                    fetchBtn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Buscar mi Código';
+                    fetchBtn.style.opacity = '1';
+                    fetchBtn.style.cursor = 'pointer';
+                }
+            }
+        }
     };
 
     // Función para inicializar el modal de código con las restricciones correctas
@@ -1425,6 +1527,11 @@ function setupEventListeners() {
         if (!clientPhoneLoggedIn) {
             noSession.style.display = 'block';
             return;
+        }
+
+        // Iniciar Live Sync permanente si aún no está corriendo
+        if (window.startCodeAttemptsLiveSync) {
+            window.startCodeAttemptsLiveSync(clientPhoneLoggedIn);
         }
 
         // 2. RECUPERAR INTENTOS USADOS EN FIREBASE (AHORA POR PLATAFORMA)
