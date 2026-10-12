@@ -1479,25 +1479,64 @@ function setupEventListeners() {
             }
         }
 
-        // Reactividad en vivo: bloquear o desbloquear botón de búsqueda según la plataforma activa
+        // Actualizar botones de acción directa bajo cada servicio (Netflix, Hogar, Acceso Temporal)
+        const directButtons = document.querySelectorAll('.direct-fetch-code-btn');
+        directButtons.forEach(dBtn => {
+            const plat = dBtn.dataset.platform;
+            let used = window.clientUsedAttempts[plat];
+            let numUsed = 0;
+            if (used === true) numUsed = 1;
+            else if (typeof used === 'number') numUsed = used;
+
+            let maxUses = 1;
+            let platName = 'Código';
+            let platIcon = 'fa-satellite-dish';
+
+            if (plat === 'netflix') {
+                platName = 'Código Netflix';
+                platIcon = 'fa-satellite-dish';
+            } else if (plat === 'netflix_update') {
+                maxUses = 2;
+                platName = 'Código Actualizar Hogar';
+                platIcon = 'fa-house-chimney';
+            } else if (plat === 'netflix_temp') {
+                platName = 'Código Acceso Temporal';
+                platIcon = 'fa-plane-departure';
+            }
+
+            let rem = maxUses - numUsed;
+            if (rem <= 0) {
+                dBtn.disabled = true;
+                dBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ${plat === 'netflix_update' ? 'Actualizaciones agotadas (2/2)' : 'Intento agotado (1/1)'}`;
+                dBtn.style.opacity = '0.5';
+                dBtn.style.cursor = 'not-allowed';
+                dBtn.style.boxShadow = 'none';
+            } else {
+                dBtn.disabled = false;
+                dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
+                dBtn.style.opacity = '1';
+                dBtn.style.cursor = 'pointer';
+            }
+        });
+
+        // Reactividad en vivo: bloquear o desbloquear botón de búsqueda inferior si está visible
         const codePlatformInput = document.getElementById('code-platform');
         const fetchBtn = document.getElementById('fetch-code-btn');
         if (codePlatformInput && fetchBtn) {
             const chosen = codePlatformInput.value;
-            if (chosen) {
+            // Si es una de las 3 opciones con botón directo, mantener el inferior oculto
+            if (['netflix', 'netflix_update', 'netflix_temp'].includes(chosen)) {
+                fetchBtn.style.display = 'none';
+            } else {
+                fetchBtn.style.display = 'block';
                 let isExhausted = false;
-                if (chosen === 'netflix_update') {
-                    const updatesUsed = parseInt(window.clientUsedAttempts[chosen]) || 0;
-                    if (updatesUsed >= 2) isExhausted = true;
-                } else if (window.clientUsedAttempts[chosen] === true || (typeof window.clientUsedAttempts[chosen] === 'number' && window.clientUsedAttempts[chosen] >= 1)) {
+                if (window.clientUsedAttempts[chosen] === true || (typeof window.clientUsedAttempts[chosen] === 'number' && window.clientUsedAttempts[chosen] >= 1)) {
                     isExhausted = true;
                 }
 
                 if (isExhausted) {
                     fetchBtn.disabled = true;
-                    fetchBtn.innerHTML = chosen === 'netflix_update'
-                        ? '<i class="fa-solid fa-lock"></i> Límite de Actualizaciones superado (2/2)'
-                        : '<i class="fa-solid fa-lock"></i> Intento de esta plataforma agotado';
+                    fetchBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de esta plataforma agotado';
                     fetchBtn.style.opacity = '0.5';
                     fetchBtn.style.cursor = 'not-allowed';
                 } else {
@@ -1626,11 +1665,13 @@ function setupEventListeners() {
                 platformTabBtns.forEach(btn => {
                     const plat = btn.dataset.platform;
                     const hasPlat = window.clientActivePlatforms[plat].size > 0;
+                    const card = btn.closest('.platform-action-card');
+                    const targetEl = card || btn;
                     if (hasPlat || hasGlobal) {
-                        btn.style.display = 'flex';
+                        targetEl.style.display = 'flex';
                         if (!firstValidPlatform) firstValidPlatform = btn;
                     } else {
-                        btn.style.display = 'none';
+                        targetEl.style.display = 'none';
                     }
                 });
 
@@ -1638,7 +1679,11 @@ function setupEventListeners() {
                     firstValidPlatform.click();
                 } else {
                     emailSelect.innerHTML = '<option value="">-- No tienes pantallas activas --</option>';
-                    platformTabBtns.forEach(btn => btn.style.display = 'none');
+                    platformTabBtns.forEach(btn => {
+                        const card = btn.closest('.platform-action-card');
+                        const targetEl = card || btn;
+                        targetEl.style.display = 'none';
+                    });
                 }
 
                 // Poblar específicamente el selector de correos para Activar TV (Solo Netflix y global)
@@ -1780,140 +1825,203 @@ function setupEventListeners() {
         });
     });
 
-    // Code Fetch Logic — con sistema de intento único
-    if (fetchCodeBtn) {
-        fetchCodeBtn.addEventListener('click', async () => {
-            const emailSelect = document.getElementById('code-email');
-            const email = emailSelect ? emailSelect.value.trim() : '';
-            const platform = document.getElementById('code-platform').value;
+    // Lógica Centralizada de Solicitud de Código (Tanto para botón general como botones directos)
+    async function executeFetchCode(platform, triggerBtn) {
+        const emailSelect = document.getElementById('code-email');
+        const email = emailSelect ? emailSelect.value.trim() : '';
 
-            if (!email) return alert('Selecciona el correo de tu cuenta.');
-            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión para solicitar un código.');
+        if (!email) {
+            alert('Por favor selecciona el correo de tu cuenta arriba.');
+            return;
+        }
 
-            // Guardar intento ANTES de llamar al servidor (así si falla la conexión, no consume el intento)
-            // Solo se marca como usado si el código es EXITOSO (ver más abajo)
+        if (!clientPhoneLoggedIn) {
+            alert('Debes iniciar sesión para solicitar un código.');
+            return;
+        }
 
-            // 1. Mostrar estado de carga y ocultar error/resultado
-            document.getElementById('code-loading').style.display = 'block';
-            document.getElementById('code-result').style.display = 'none';
-            document.getElementById('code-error').style.display = 'none';
-            fetchCodeBtn.style.display = 'none';
-
-            try {
-                const serverUrl = "https://streaming-backend-ce1u.onrender.com/api/get-code";
-                const response = await fetch(serverUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, platform })
-                });
-                const data = await response.json();
-
-                if (data.success && data.code) {
-                    // ✅ ÉXITO: Marcar el intento de ESTA PLATAFORMA como USADO en Firebase
-                    if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
-
-                    if (platform === 'netflix_update') {
-                        const currentAttempts = parseInt(window.clientUsedAttempts[platform]) || 0;
-                        const nextCount = currentAttempts + 1;
-                        await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(nextCount);
-                        window.clientUsedAttempts[platform] = nextCount;
-                    } else {
-                        await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(true);
-                        window.clientUsedAttempts[platform] = true;
-                    }
-
-                    if (window.updateCodeCountersUI) window.updateCodeCountersUI();
-
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeHistory`).push({
-                        code: data.code,
-                        email: email,
-                        platform: platform,
-                        timestamp: Date.now()
-                    });
-
-                    document.getElementById('code-loading').style.display = 'none';
-                    const codeResultOverlay = document.getElementById('code-result');
-                    if (codeResultOverlay) codeResultOverlay.style.display = 'flex';
-
-                    const codeVal = data.code.toString().trim();
-                    const titleEl = document.getElementById('code-result-title');
-                    const magicCodeEl = document.getElementById('the-magic-code');
-                    const linkContainer = document.getElementById('the-magic-link-container');
-                    const linkBtn = document.getElementById('the-magic-link-btn');
-
-                    // Si el código que trajo es un enlace (empieza con http)
-                    if (codeVal.startsWith('http://') || codeVal.startsWith('https://')) {
-                        if (magicCodeEl) magicCodeEl.style.display = 'none';
-                        const copyBtn = document.getElementById('copy-magic-code-btn');
-                        if (copyBtn) copyBtn.style.display = 'none';
-                        const codeBox = document.getElementById('magic-code-box');
-                        if (codeBox) codeBox.style.display = 'none';
-                        if (linkContainer) linkContainer.style.display = 'block';
-                        if (linkBtn) {
-                            linkBtn.href = codeVal;
-                            linkBtn.target = '_blank';
-                        }
-                        if (platform === 'netflix_temp') {
-                            if (titleEl) titleEl.innerText = 'Tu enlace de código temporal:';
-                            if (linkBtn) linkBtn.innerHTML = '<i class="fa-solid fa-mobile-screen-button"></i> Clic aquí → Ver mi Código en Netflix';
-                            const existingNote = document.getElementById('temp-access-note');
-                            if (!existingNote) {
-                                const note = document.createElement('p');
-                                note.id = 'temp-access-note';
-                                note.style.cssText = 'font-size:0.78rem; color:#aaa; margin-top:0.8rem; background:rgba(229,9,20,0.08); border:1px solid rgba(229,9,20,0.3); border-radius:8px; padding:8px 12px; text-align:left;';
-                                note.innerHTML = '<i class="fa-solid fa-circle-info" style="color:#E50914;"></i> <strong style="color:white;">¿Cómo funciona?</strong> Al dar clic se abrirá la página de Netflix. Allí verás un código de 4 dígitos en pantalla. Úsalo para acceder desde tu dispositivo. El enlace vence en <strong style="color:#f39c12;">15 minutos</strong>.';
-                                const noteContainer = document.getElementById('floating-code-notes') || document.getElementById('code-result');
-                                if (noteContainer) noteContainer.appendChild(note);
-                            }
-                        } else {
-                            if (titleEl) titleEl.innerText = 'Confirmación requerida:';
-                            if (linkBtn) linkBtn.innerHTML = '<i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización';
-                        }
-                    } else {
-                        if (titleEl) titleEl.innerText = 'Tu código de acceso es:';
-                        if (linkContainer) linkContainer.style.display = 'none';
-                        const codeBox = document.getElementById('magic-code-box');
-                        if (codeBox) codeBox.style.display = 'block';
-                        const copyBtn = document.getElementById('copy-magic-code-btn');
-                        if (copyBtn) copyBtn.style.display = 'inline-flex';
-                        if (magicCodeEl) {
-                            magicCodeEl.style.display = 'block';
-                            magicCodeEl.innerText = codeVal;
-                        }
-                    }
-
-                    // No mostrar el botón de nuevo — ya usó su intento
-                } else {
-                    // ❌ Código no encontrado: NO consumir el intento
-                    document.getElementById('code-loading').style.display = 'none';
-                    document.getElementById('code-error').style.display = 'block';
-                    fetchCodeBtn.style.display = 'block'; // Puede reintentar la búsqueda (correo aún no llegó)
-
-                    let msg = data.error || "Código no encontrado. Intenta enviarlo nuevamente desde tu TV.";
-                    if (data.debugTree && data.debugTree.length > 0) {
-                        msg += `<div style="margin-top:10px;font-size:0.8rem;text-align:left;background:rgba(0,0,0,0.5);padding:5px;border-radius:8px;">`;
-                        msg += `<p style="margin-bottom:5px;font-weight:bold;">Trazabilidad del escáner:</p>`;
-                        data.debugTree.forEach(acc => {
-                            msg += `<div style="margin-bottom:5px;"><b style="color:#d8b4fe;">${acc.email}</b> - Escaneados: ${acc.scanned}`;
-                            if (acc.error) msg += ` <span style="color:red;">[Error: ${acc.error}]</span>`;
-                            if (acc.subjects && acc.subjects.length > 0) {
-                                msg += `<ul style="margin:3px 0 0 15px;color:#aaa;font-size:0.75rem;">`;
-                                acc.subjects.slice(0, 3).forEach(sub => { msg += `<li>${sub}</li>`; });
-                                if (acc.subjects.length > 3) msg += `<li>... y ${acc.subjects.length - 3} más</li>`;
-                                msg += `</ul>`;
-                            }
-                            msg += `</div>`;
-                        });
-                        msg += `</div>`;
-                    }
-                    document.getElementById('error-msg').innerHTML = msg;
-                }
-            } catch (err) {
-                document.getElementById('code-loading').style.display = 'none';
-                document.getElementById('code-error').style.display = 'block';
-                document.getElementById('error-msg').innerText = "Error de conexión con el servidor. Intenta de nuevo.";
-                fetchCodeBtn.style.display = 'block';
+        // Validar si el intento YA fue consumido
+        let isExhausted = false;
+        if (window.clientUsedAttempts) {
+            if (platform === 'netflix_update') {
+                const updatesUsed = parseInt(window.clientUsedAttempts[platform]) || 0;
+                if (updatesUsed >= 2) isExhausted = true;
+            } else if (window.clientUsedAttempts[platform] === true || (typeof window.clientUsedAttempts[platform] === 'number' && window.clientUsedAttempts[platform] >= 1)) {
+                isExhausted = true;
             }
+        }
+
+        if (isExhausted) {
+            if (platform === 'netflix_update') {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Límite de Actualización Alcanzado',
+                        html: '<span style="color:#aaa;">Ya has utilizado tus 2 intentos de actualización de hogar (solo se permite 1 cliente por hogar).</span><br><br><strong style="color:white;">Por favor, solicita a tu vendedor un CAMBIO DE CUENTA para evitar que pierdas el acceso.</strong>',
+                        confirmButtonColor: '#E50914',
+                        background: '#1a1a1a',
+                        color: '#fff'
+                    });
+                } else {
+                    alert('Atención: Ya has utilizado tus 2 intentos de actualización de hogar.');
+                }
+            } else {
+                alert('Ya has utilizado el intento disponible para esta plataforma.');
+            }
+            return;
+        }
+
+        // 1. Mostrar estado de carga y ocultar error/resultado
+        const loadingEl = document.getElementById('code-loading');
+        const resultEl = document.getElementById('code-result');
+        const errorEl = document.getElementById('code-error');
+        if (loadingEl) loadingEl.style.display = 'block';
+        if (resultEl) resultEl.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'none';
+
+        let originalBtnHtml = '';
+        if (triggerBtn) {
+            originalBtnHtml = triggerBtn.innerHTML;
+            triggerBtn.disabled = true;
+            triggerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando código...';
+        }
+
+        try {
+            const serverUrl = "https://streaming-backend-ce1u.onrender.com/api/get-code";
+            const response = await fetch(serverUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, platform })
+            });
+            const data = await response.json();
+
+            if (data.success && data.code) {
+                // ✅ ÉXITO: Registrar en Firebase y marcar intento usado
+                const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+                if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
+
+                if (platform === 'netflix_update') {
+                    const currentAttempts = parseInt(window.clientUsedAttempts[platform]) || 0;
+                    const nextCount = currentAttempts + 1;
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(nextCount);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/${platform}`).set(nextCount);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/${platform}`).set(nextCount);
+                    }
+                    window.clientUsedAttempts[platform] = nextCount;
+                } else {
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/${platform}`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/${platform}`).set(true);
+                    }
+                    window.clientUsedAttempts[platform] = true;
+                }
+
+                if (window.updateCodeCountersUI) window.updateCodeCountersUI();
+
+                await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeHistory`).push({
+                    code: data.code,
+                    email: email,
+                    platform: platform,
+                    timestamp: Date.now()
+                });
+
+                if (loadingEl) loadingEl.style.display = 'none';
+                const codeResultOverlay = document.getElementById('code-result');
+                if (codeResultOverlay) codeResultOverlay.style.display = 'flex';
+
+                const codeVal = data.code.toString().trim();
+                const titleEl = document.getElementById('code-result-title');
+                const magicCodeEl = document.getElementById('the-magic-code');
+                const linkContainer = document.getElementById('the-magic-link-container');
+                const linkBtn = document.getElementById('the-magic-link-btn');
+
+                if (codeVal.startsWith('http://') || codeVal.startsWith('https://')) {
+                    if (magicCodeEl) magicCodeEl.style.display = 'none';
+                    const copyBtn = document.getElementById('copy-magic-code-btn');
+                    if (copyBtn) copyBtn.style.display = 'none';
+                    const codeBox = document.getElementById('magic-code-box');
+                    if (codeBox) codeBox.style.display = 'none';
+
+                    if (linkContainer) linkContainer.style.display = 'block';
+                    if (linkBtn) {
+                        linkBtn.href = codeVal;
+                        linkBtn.target = '_blank';
+                    }
+                    if (platform === 'netflix_temp') {
+                        if (titleEl) titleEl.innerText = 'Tu enlace de código temporal:';
+                        if (linkBtn) linkBtn.innerHTML = '<i class="fa-solid fa-mobile-screen-button"></i> Clic aquí → Ver mi Código en Netflix';
+                        const existingNote = document.getElementById('temp-access-note');
+                        if (!existingNote) {
+                            const note = document.createElement('p');
+                            note.id = 'temp-access-note';
+                            note.style.cssText = 'font-size:0.78rem; color:#aaa; margin-top:0.8rem; background:rgba(229,9,20,0.08); border:1px solid rgba(229,9,20,0.3); border-radius:8px; padding:8px 12px; text-align:left;';
+                            note.innerHTML = '<i class="fa-solid fa-circle-info" style="color:#E50914;"></i> <strong style="color:white;">¿Cómo funciona?</strong> Al dar clic se abrirá la página de Netflix. Allí verás un código de 4 dígitos en pantalla. Úsalo para acceder desde tu dispositivo. El enlace vence en <strong style="color:#f39c12;">15 minutos</strong>.';
+                            const noteContainer = document.getElementById('floating-code-notes') || document.getElementById('code-result');
+                            if (noteContainer) noteContainer.appendChild(note);
+                        }
+                    } else {
+                        if (titleEl) titleEl.innerText = 'Confirmación requerida:';
+                        if (linkBtn) linkBtn.innerHTML = '<i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización';
+                    }
+                } else {
+                    if (titleEl) titleEl.innerText = 'Tu código de acceso es:';
+                    if (linkContainer) linkContainer.style.display = 'none';
+                    const codeBox = document.getElementById('magic-code-box');
+                    if (codeBox) codeBox.style.display = 'block';
+                    const copyBtn = document.getElementById('copy-magic-code-btn');
+                    if (copyBtn) copyBtn.style.display = 'inline-flex';
+                    if (magicCodeEl) {
+                        magicCodeEl.style.display = 'block';
+                        magicCodeEl.innerText = codeVal;
+                    }
+                }
+            } else {
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (errorEl) errorEl.style.display = 'block';
+                let msg = data.error || "Código no encontrado. Intenta solicitarlo nuevamente.";
+                document.getElementById('error-msg').innerHTML = msg;
+            }
+        } catch (err) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) errorEl.style.display = 'block';
+            document.getElementById('error-msg').innerText = "Error de conexión con el servidor. Intenta de nuevo.";
+        } finally {
+            if (triggerBtn) {
+                setTimeout(() => {
+                    if (window.updateCodeCountersUI) window.updateCodeCountersUI();
+                    else if (originalBtnHtml) triggerBtn.innerHTML = originalBtnHtml;
+                }, 800);
+            }
+        }
+    }
+
+    // Eventos para los botones directos bajo Netflix, Actualiza Hogar y Acceso Temporal
+    document.querySelectorAll('.direct-fetch-code-btn').forEach(dBtn => {
+        dBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const plat = dBtn.dataset.platform;
+            const codePlatformInput = document.getElementById('code-platform');
+            if (codePlatformInput) codePlatformInput.value = plat;
+
+            // También activar visualmente el tab asociado
+            const tabBtn = document.querySelector(`.platform-tab-btn[data-platform="${plat}"]`);
+            if (tabBtn) tabBtn.click();
+
+            executeFetchCode(plat, dBtn);
+        });
+    });
+
+    // Code Fetch Logic para botón tradicional (si aplica a otras plataformas)
+    if (fetchCodeBtn) {
+        fetchCodeBtn.addEventListener('click', () => {
+            const platform = document.getElementById('code-platform').value;
+            executeFetchCode(platform, fetchCodeBtn);
         });
     }
 

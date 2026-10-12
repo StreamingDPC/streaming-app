@@ -344,14 +344,36 @@
                         </ul>
                     </div>
 
+                    <!-- Selector de Correo de la Cuenta en la parte superior -->
+                    <div
+                        style="margin-bottom: 1.2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.9rem 1rem;">
+                        <label
+                            style="display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.88rem; color: #eee;">
+                            <i class="fa-solid fa-envelope" style="color: #E50914;"></i> Correo de tu cuenta:
+                        </label>
+                        <select id="code-email" class="input-modern"
+                            style="font-size: 0.92rem; padding: 10px 12px; width: 100%;">
+                            <option value="">-- Cargando tus cuentas... --</option>
+                        </select>
+                    </div>
+
                     <div style="margin-bottom: 1.2rem;">
                         <label style="display: block; margin-bottom: 0.7rem; font-weight: 600;">Códigos de Inicio de
                             Sesión: CEL O PC:</label>
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 0.6rem;" id="platform-tabs">
-                            <button type="button" class="platform-tab-btn active-platform" data-platform="netflix"
-                                style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid #E50914; background:rgba(229,9,20,0.15); color:white; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s;">
-                                <span style="font-size:1.1rem;">🎬</span> Netflix (1 vez)
-                            </button>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 0.8rem;" id="platform-tabs">
+                            <!-- Netflix con botón de Obtener Código directo abajo -->
+                            <div class="platform-action-card" data-platform-container="netflix"
+                                style="display:flex; flex-direction:column; gap:6px;">
+                                <button type="button" class="platform-tab-btn active-platform" data-platform="netflix"
+                                    style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid #E50914; background:rgba(229,9,20,0.15); color:white; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
+                                    <span style="font-size:1.1rem;">🎬</span> Netflix (1 vez)
+                                </button>
+                                <button type="button" class="direct-fetch-code-btn" data-platform="netflix"
+                                    style="background: linear-gradient(135deg, #E50914, #B81D24); border:none; color:white; font-weight:bold; padding:11px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(229,9,20,0.3); transition:all 0.2s;">
+                                    <i class="fa-solid fa-satellite-dish"></i> Obtener Código Netflix
+                                </button>
+                            </div>
+
                             <button type="button" class="platform-tab-btn" data-platform="disney"
                                 style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(0,90,214,0.1); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s;">
                                 <span style="font-size:1.1rem;">🏰</span> Disney+ (1 vez)
@@ -369,15 +391,33 @@
                         <label
                             style="display: block; margin-top: 1rem; margin-bottom: 0.7rem; font-weight: 600;">Actualizaciones
                             de Red / Hogar:</label>
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 0.6rem;">
-                            <button type="button" class="platform-tab-btn" data-platform="netflix_update"
-                                style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(229,9,20,0.1); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s;">
-                                <span style="font-size:1.1rem;">🏠</span> Actualiza tu Hogar con Netflix (2 veces)
-                            </button>
-                            <button type="button" class="platform-tab-btn" data-platform="netflix_temp"
-                                style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(229,9,20,0.1); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s;">
-                                <span style="font-size:1.1rem;">✈️</span> Acceso temporal con Netflix CEL O PC (1 vez)
-                            </button>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 0.8rem;">
+                            <!-- Actualiza tu Hogar con botón de Obtener Código directo abajo -->
+                            <div class="platform-action-card" data-platform-container="netflix_update"
+                                style="display:flex; flex-direction:column; gap:6px;">
+                                <button type="button" class="platform-tab-btn" data-platform="netflix_update"
+                                    style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(229,9,20,0.1); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
+                                    <span style="font-size:1.1rem;">🏠</span> Actualiza tu Hogar con Netflix (2 veces)
+                                </button>
+                                <button type="button" class="direct-fetch-code-btn" data-platform="netflix_update"
+                                    style="background: linear-gradient(135deg, #f39c12, #e67e22); border:none; color:white; font-weight:bold; padding:11px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(243,156,18,0.3); transition:all 0.2s;">
+                                    <i class="fa-solid fa-house-chimney"></i> Obtener Código Actualizar Hogar
+                                </button>
+                            </div>
+
+                            <!-- Acceso temporal con botón de Obtener Código directo abajo -->
+                            <div class="platform-action-card" data-platform-container="netflix_temp"
+                                style="display:flex; flex-direction:column; gap:6px;">
+                                <button type="button" class="platform-tab-btn" data-platform="netflix_temp"
+                                    style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(229,9,20,0.1); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
+                                    <span style="font-size:1.1rem;">✈️</span> Acceso temporal con Netflix CEL O PC (1
+                                    vez)
+                                </button>
+                                <button type="button" class="direct-fetch-code-btn" data-platform="netflix_temp"
+                                    style="background: linear-gradient(135deg, #00A8E1, #0077b6); border:none; color:white; font-weight:bold; padding:11px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(0,168,225,0.3); transition:all 0.2s;">
+                                    <i class="fa-solid fa-plane-departure"></i> Obtener Código Acceso Temporal
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Campo oculto que guarda la plataforma activa -->
@@ -493,16 +533,9 @@
                         </div>
                     </div>
 
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Correo de tu
-                            cuenta:</label>
-                        <select id="code-email" class="input-modern">
-                            <option value="">-- Cargando tus cuentas... --</option>
-                        </select>
-                    </div>
-
+                    <!-- Botón genérico (solo para otras plataformas como Disney/HBO/Prime) -->
                     <button id="fetch-code-btn" class="checkout-btn"
-                        style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));">
+                        style="display: none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));">
                         <i class="fa-solid fa-satellite-dish"></i> Buscar mi Código
                     </button>
 
@@ -944,7 +977,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <!-- Lógica Principal -->
-    <script src="app.js?v=3.8.21"></script>
+    <script src="app.js?v=3.8.22"></script>
     <!-- CRM / Respuestas Selector Modal -->
     <div id="crm-selector-modal" class="modal" style="display:none; z-index: 5000;">
         <div class="modal-content"
