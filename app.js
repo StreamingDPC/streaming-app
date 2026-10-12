@@ -1386,6 +1386,25 @@ function setupEventListeners() {
             let rem = 1 - numTv;
             if (rem < 0) rem = 0;
             tvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+
+            const actBtn = document.getElementById('activate-tv-btn');
+            if (rem <= 0) {
+                tvBtn.style.opacity = '0.6';
+                if (actBtn) {
+                    actBtn.disabled = true;
+                    actBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Smart TV agotado (1/1)';
+                    actBtn.style.opacity = '0.5';
+                    actBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                tvBtn.style.opacity = '1';
+                if (actBtn) {
+                    actBtn.disabled = false;
+                    actBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar TV';
+                    actBtn.style.opacity = '1';
+                    actBtn.style.cursor = 'pointer';
+                }
+            }
         }
     };
 
@@ -1409,7 +1428,7 @@ function setupEventListeners() {
         }
 
         // 2. RECUPERAR INTENTOS USADOS EN FIREBASE (AHORA POR PLATAFORMA)
-        const attemptSnap = await db.ref(`clientProfiles / ${clientPhoneLoggedIn}/codeAttemptUsed`).once('value');
+        const attemptSnap = await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed`).once('value');
         window.clientUsedAttempts = attemptSnap.val() || {};
         // Si era true (sistema viejo), lo convertimos a objeto preventivo.
         if (window.clientUsedAttempts === true) {
@@ -1766,7 +1785,8 @@ function setupEventListeners() {
 
     if (showTvBtn && tvPanel) {
         showTvBtn.addEventListener('click', () => {
-            if (window.clientUsedAttempts && window.clientUsedAttempts['netflix_tv'] === true) {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || (typeof window.clientUsedAttempts['netflix_tv'] === 'number' && window.clientUsedAttempts['netflix_tv'] >= 1));
+            if (isTvUsed) {
                 alert('⚠️ Ya usaste tu intento (1 vez) para activar Smart TV.');
                 return;
             }
@@ -1786,6 +1806,11 @@ function setupEventListeners() {
 
     if (activateTvBtn) {
         activateTvBtn.addEventListener('click', async () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || (typeof window.clientUsedAttempts['netflix_tv'] === 'number' && window.clientUsedAttempts['netflix_tv'] >= 1));
+            if (isTvUsed) {
+                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Smart TV.');
+            }
+
             const tvCode = document.getElementById('tv-code-input').value.trim();
             const emailSelect = document.getElementById('tv-email-select');
             const email = emailSelect ? emailSelect.value.trim() : '';
