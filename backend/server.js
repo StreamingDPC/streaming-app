@@ -165,6 +165,13 @@ app.post('/api/get-code', async (req, res) => {
                         isFromPlatform = subject.includes('disney') || fromText.includes('disney') ||
                             subject.includes('código de acceso único') || subject.includes('codigo de acceso unico') ||
                             textContent.includes('código de acceso único para disney+') || textContent.includes('codigo de acceso unico para disney+');
+                    } else if (platformLower === 'vix') {
+                        isFromPlatform = subject.includes('vix') || fromText.includes('vix') ||
+                            subject.includes('inicia sesión en tu cuenta de vix') ||
+                            subject.includes('inicia sesion en tu cuenta de vix') ||
+                            textContent.includes('inicia sesión en tu cuenta de vix') ||
+                            textContent.includes('inicia sesion en tu cuenta de vix') ||
+                            textContent.includes('cuenta de vix');
                     } else {
                         isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
                     }
@@ -309,6 +316,37 @@ app.post('/api/get-code', async (req, res) => {
                                 console.log(`[DEBUG] Código Prime Video de 6 dígitos encontrado: ${validCode}`);
                                 accountLogs.found = true;
                                 return validCode;
+                            }
+                        } else if (platformLower.includes('vix')) {
+                            // ViX: Enlace en el botón 'Iniciar sesión' para activar directamente
+                            const $ = cheerio.load(htmlContent);
+                            let vixLink = null;
+
+                            // 1. Buscar enlaces cuyo texto sea "Iniciar sesión" o variantes
+                            $('a').each((j, el) => {
+                                const text = $(el).text().toLowerCase().trim();
+                                const href = $(el).attr('href');
+                                if (href && (text.includes('iniciar sesión') || text.includes('iniciar sesion') || text.includes('acceder'))) {
+                                    vixLink = href;
+                                    return false;
+                                }
+                            });
+
+                            // 2. Si no lo encuentra por texto, buscar enlaces a vix.com con tokens / click tracking
+                            if (!vixLink) {
+                                $('a').each((j, el) => {
+                                    const href = $(el).attr('href');
+                                    if (href && (href.includes('vix.com') || href.includes('vix')) && !href.includes('unsubscribe') && !href.includes('terms') && !href.includes('privacy')) {
+                                        vixLink = href;
+                                        return false;
+                                    }
+                                });
+                            }
+
+                            if (vixLink) {
+                                console.log(`[DEBUG] Enlace de acceso a ViX encontrado: ${vixLink}`);
+                                accountLogs.found = true;
+                                return vixLink;
                             }
                         } else if (platformLower.includes('logincode')) {
                             // Busca el texto de los correos de inicio de sesión en el texto, HTML o ASUNTO

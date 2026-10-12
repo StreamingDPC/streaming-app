@@ -1509,6 +1509,9 @@ function setupEventListeners() {
             } else if (plat === 'prime') {
                 platName = 'Código Prime Video';
                 platIcon = 'fa-satellite-dish';
+            } else if (plat === 'vix') {
+                platName = 'Enlace ViX';
+                platIcon = 'fa-satellite-dish';
             } else if (plat === 'netflix_update') {
                 maxUses = 2;
                 platName = 'Código Actualizar Hogar';
@@ -1539,7 +1542,7 @@ function setupEventListeners() {
         if (codePlatformInput && fetchBtn) {
             const chosen = codePlatformInput.value;
             // Si es una de las opciones con botón directo, mantener el inferior oculto
-            if (['netflix', 'disney', 'hbomax', 'prime', 'netflix_update', 'netflix_temp'].includes(chosen)) {
+            if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp'].includes(chosen)) {
                 fetchBtn.style.display = 'none';
             } else {
                 fetchBtn.style.display = 'block';
@@ -1623,11 +1626,12 @@ function setupEventListeners() {
                 // Mapear plataformas activas y sus correos
                 window.clientActivePlatforms = {
                     netflix: new Set(),
-                    netflix_update: new Set(),
-                    netflix_temp: new Set(),
                     disney: new Set(),
                     hbomax: new Set(),
                     prime: new Set(),
+                    vix: new Set(),
+                    netflix_update: new Set(),
+                    netflix_temp: new Set(),
                     global: new Set()
                 };
 
@@ -1651,6 +1655,7 @@ function setupEventListeners() {
                             else if (itemName.includes('disney')) itemPlatform = 'disney';
                             else if (itemName.includes('hbo') || itemName.includes('max')) itemPlatform = 'hbomax';
                             else if (itemName.includes('prime')) itemPlatform = 'prime';
+                            else if (itemName.includes('vix')) itemPlatform = 'vix';
 
                             if (item.email) {
                                 const itemEmailL = item.email.toLowerCase().trim();
@@ -1679,6 +1684,7 @@ function setupEventListeners() {
                                         else if (sePlat.includes('disney')) effPlat = 'disney';
                                         else if (sePlat.includes('hbo') || sePlat.includes('max')) effPlat = 'hbomax';
                                         else if (sePlat.includes('prime') || sePlat.includes('amazon')) effPlat = 'prime';
+                                        else if (sePlat.includes('vix')) effPlat = 'vix';
 
                                         // 2º Si el objeto no traía platform explícita, heredar de la plataforma del item
                                         if (!effPlat) effPlat = itemPlatform;
@@ -1710,8 +1716,8 @@ function setupEventListeners() {
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max y Prime Video siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'netflix_update' || plat === 'netflix_temp');
+                    // Netflix, Disney, HBO Max, Prime Video y ViX siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp');
 
                     if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
@@ -1831,7 +1837,7 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
-                if (['netflix', 'disney', 'hbomax', 'prime', 'netflix_update', 'netflix_temp'].includes(chosen)) {
+                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp'].includes(chosen)) {
                     fetchBtn.style.display = 'none';
                 } else {
                     fetchBtn.style.display = 'block';
@@ -2019,9 +2025,20 @@ function setupEventListeners() {
                             const noteContainer = document.getElementById('floating-code-notes') || document.getElementById('code-result');
                             if (noteContainer) noteContainer.appendChild(note);
                         }
+                    } else if (platform === 'vix') {
+                        if (titleEl) titleEl.innerText = 'Activa tu cuenta de ViX:';
+                        if (linkBtn) {
+                            linkBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Clic aquí para activar';
+                            linkBtn.style.background = 'linear-gradient(135deg, #FF5B00, #C83800)';
+                            linkBtn.style.boxShadow = '0 6px 20px rgba(255,91,0,0.45)';
+                        }
                     } else {
                         if (titleEl) titleEl.innerText = 'Confirmación requerida:';
-                        if (linkBtn) linkBtn.innerHTML = '<i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización';
+                        if (linkBtn) {
+                            linkBtn.innerHTML = '<i class="fa-solid fa-house-circle-check"></i> Clic aquí para Aceptar Actualización';
+                            linkBtn.style.background = 'linear-gradient(135deg, #E50914, #B81D24)';
+                            linkBtn.style.boxShadow = '0 6px 20px rgba(229,9,20,0.45)';
+                        }
                     }
                 } else {
                     if (titleEl) titleEl.innerText = 'Tu código de acceso es:';
