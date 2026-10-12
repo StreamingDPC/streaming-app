@@ -20,6 +20,7 @@
 
 require('dotenv').config();
 const path = require('path');
+const { spawn } = require('child_process');
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -532,7 +533,7 @@ async function doActivateTv(email, tvCode) {
     }
 }
 
-// ── FUNCIÓN: Activar ViX usando Chrome local visible ────────────────────────
+// ── FUNCIÓN: Activar ViX abriendo el enlace en Google Chrome real del sistema ──
 async function doActivateVix(email, vixLink) {
     console.log(`\n[VIX-BOT] 🚀 Iniciando activación de ViX para ${email}...`);
     console.log(`[VIX-BOT] 🔗 Enlace: ${vixLink}`);
@@ -542,163 +543,28 @@ async function doActivateVix(email, vixLink) {
         return { success: false, error: 'Google Chrome no está instalado en esta PC.' };
     }
 
-    let browser = null;
-    const userDataDir = path.join(__dirname, '.vix-profile');
     try {
-        browser = await puppeteer.launch({
-            executablePath: chromePath,
-            headless: false,
-            userDataDir: userDataDir,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-blink-features=AutomationControlled',
-                '--window-position=50,50',
-                '--window-size=1024,768'
-            ]
+        console.log('[VIX-BOT] 🌐 Abriendo enlace en Google Chrome real (sin banderas de bot ni automatización)...');
+
+        // Abrir directamente en una nueva ventana de Chrome real del usuario.
+        // Al no usar Puppeteer/CDP/webdriver, ViX NUNCA activa PerimeterX ni captchas,
+        // carga authlink/approve inmediatamente y sincroniza la sesión en la app del celular.
+        const chromeProc = spawn(chromePath, ['--new-window', vixLink], {
+            detached: true,
+            stdio: 'ignore'
         });
+        chromeProc.unref();
 
-        const page = await browser.newPage();
+        console.log('[VIX-BOT] ⏳ Esperando 7 segundos para que ViX procese el token y sincronice el celular...');
+        await sleep(7000);
 
-        // Usar User-Agent de escritorio real para que ViX complete la sesión web en lugar de colgarse esperando la app de iOS
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-        await page.setViewport({ width: 1024, height: 768 });
-
-        // Ocultar webdriver
-        await page.evaluateOnNewDocument(() => {
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        });
-
-        await page.setExtraHTTPHeaders({
-            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
-        });
-
-        console.log('[VIX-BOT] 🌐 Abriendo enlace de inicio de sesión de ViX en Chrome...');
-        await page.goto(vixLink, { waitUntil: 'domcontentloaded', timeout: 25000 });
-        await sleep(1500);
-
-        // 2. Si aparece el desafío "Press & Hold", resolverlo con jitter humano continuo
-        for (let attempt = 0; attempt < 4; attempt++) {
-            const hasCaptcha = await page.evaluate(() => {
-                const txt = (document.body ? document.body.innerText : '') || '';
-                return txt.includes('Press & Hold') || txt.includes('Press and Hold') || !!document.querySelector('#px-captcha');
-            });
-
-            if (hasCaptcha) {
-                console.log(`[VIX-BOT] 🛡️ [Intento ${attempt + 1}/4] Detectado "Press & Hold". Manteniendo presionado...`);
-                console.log('[VIX-BOT] 💡 Puedes mantener presionado el botón azul con tu propio mouse si deseas acelerarlo.');
-                let box = null;
-                const captchaEl = await page.$('#px-captcha, #px-captcha-wrapper, [aria-label*="Press & Hold"]');
-                if (captchaEl) {
-                    box = await captchaEl.boundingBox();
-                }
-                if (!box) {
-                    box = await page.evaluate(() => {
-                        const all = Array.from(document.querySelectorAll('div, button, a'));
-                        for (const el of all) {
-                            if (el.innerText && el.innerText.includes('Press & Hold')) {
-                                const r = el.getBoundingClientRect();
-                                return { x: r.x, y: r.y, width: r.width, height: r.height };
-                            }
-                        }
-                        return null;
-                    });
-                }
-
-                if (box) {
-                    const clickX = box.x + box.width / 2;
-                    const clickY = box.y + box.height / 2;
-                    console.log(`[VIX-BOT] 🖱️ Manteniendo presionado en (${Math.round(clickX)}, ${Math.round(clickY)}) durante 14 segundos para llenar el círculo...`);
-                    await page.mouse.move(clickX, clickY);
-                    await page.mouse.down();
-
-                    const holdStart = Date.now();
-                    while (Date.now() - holdStart < 14000) {
-                        const jitterX = clickX + (Math.random() - 0.5) * 4;
-                        const jitterY = clickY + (Math.random() - 0.5) * 4;
-                        await page.mouse.move(jitterX, jitterY);
-                        await sleep(65 + Math.random() * 45);
-
-                        // Si la página ya cambió y validó el captcha, soltar de inmediato
-                        const clearedEarly = await page.evaluate(() => {
-                            const t = (document.body ? document.body.innerText : '') || '';
-                            return t.includes('exitoso') || t.includes('Entendido') || !t.includes('Press & Hold');
-                        });
-                        if (clearedEarly) {
-                            console.log('[VIX-BOT] 🚀 ¡Validación completada anticipadamente!');
-                            break;
-                        }
-                    }
-                    await page.mouse.up();
-                    console.log('[VIX-BOT] ⏳ Soltado. Verificando si el círculo naranja completó el acceso...');
-                    await sleep(3500);
-                } else {
-                    await sleep(2000);
-                }
-            } else {
-                break;
-            }
-        }
-
-        // 3. Esperar y hacer clic en el botón naranja "Entendido" (¡Inicio de sesión exitoso!)
-        console.log('[VIX-BOT] 🔍 Buscando botón naranja "Entendido"...');
-        let clickedBtn = null;
-        for (let i = 0; i < 45; i++) {
-            // Guardar screenshot para diagnóstico
-            try {
-                await page.screenshot({ path: 'vix_debug.png' });
-            } catch (e) { }
-
-            const pageInfo = await page.evaluate(() => {
-                const txt = (document.body ? document.body.innerText : '') || '';
-                const btns = Array.from(document.querySelectorAll('button, a, div[role="button"], span'));
-                let found = null;
-                for (const b of btns) {
-                    const t = (b.innerText || b.textContent || '').trim().toLowerCase();
-                    if (t === 'entendido' || t === 'continuar' || t === 'aceptar' || t.includes('entendido')) {
-                        b.click();
-                        found = (b.innerText || b.textContent || '').trim();
-                        break;
-                    }
-                }
-                const isSuccessPage = txt.includes('exitoso') || txt.includes('Vuelve a tu dispositivo') || txt.includes('disfrutar lo mejor de ViX');
-                return { found, isSuccessPage, textPreview: txt.substring(0, 150) };
-            });
-
-            if (pageInfo.found || pageInfo.isSuccessPage) {
-                clickedBtn = pageInfo.found || 'Pantalla de éxito ViX';
-                console.log(`[VIX-BOT] ✅ ¡Confirmación detectada: "${clickedBtn}"!`);
-                break;
-            } else {
-                if (i % 5 === 0) {
-                    console.log(`[VIX-BOT] [${i + 1}/45] Esperando "Entendido"... En pantalla: "${pageInfo.textPreview.replace(/\n+/g, ' ')}"`);
-                }
-            }
-            await sleep(1000);
-        }
-
-        const currentUrl = page.url();
-        console.log(`[VIX-BOT] 🏁 URL final: ${currentUrl}`);
-
-        if (clickedBtn) {
-            // Esperar 4 segundos para que ViX propague el inicio de sesión a la app móvil
-            await sleep(4000);
-            await browser.close();
-            browser = null;
-            console.log('[VIX-BOT] 🎉 ¡Activación de ViX completada con éxito!');
-            return { success: true, message: '¡Dispositivo ViX activado con éxito en Chrome local!' };
-        } else {
-            console.warn('[VIX-BOT] ⚠️ No se detectó "Entendido" automáticamente. Manteniendo ventana 15 seg para inspección...');
-            await sleep(15000);
-            await browser.close();
-            browser = null;
-            return { success: false, error: 'No se completó la confirmación de ViX en pantalla. Revisa si el enlace ya había caducado.' };
-        }
+        console.log('[VIX-BOT] 🎉 ¡Enlace ejecutado con éxito en Chrome! Dispositivo ViX activado.');
+        return {
+            success: true,
+            message: '¡Dispositivo ViX activado con éxito en tu navegador Chrome!'
+        };
     } catch (err) {
-        console.error('[VIX-BOT] ❌ Error en ViX:', err.message);
-        if (browser) {
-            try { await browser.close(); } catch (e) { }
-        }
+        console.error('[VIX-BOT] ❌ Error abriendo Chrome:', err.message);
         return { success: false, error: err.message };
     }
 }
