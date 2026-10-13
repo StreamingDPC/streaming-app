@@ -492,15 +492,16 @@
                         <label
                             style="display: block; margin-top: 1rem; margin-bottom: 0.7rem; font-weight: 600;">Activar
                             Dispositivo (Smart TV):</label>
-                        <button id="show-tv-login-btn" type="button"
-                            style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(60,60,60,0.2); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
-                            <span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (1 vez)
-                        </button>
-                    </div>
-
-                    <!-- Panel TV: aparece al dar clic -->
-                    <div id="tv-login-panel"
-                        style="display:none; margin-bottom:1.2rem; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:1.2rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                            <!-- Botón Netflix TV -->
+                            <div>
+                                <button id="show-tv-login-btn" type="button"
+                                    style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(60,60,60,0.2); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
+                                    <span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (1 vez)
+                                </button>
+                                <!-- Panel TV: aparece al dar clic -->
+                                <div id="tv-login-panel"
+                                    style="display:none; margin-top:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:1.2rem;">
                         <p style="font-size:0.85rem; color:#aaa; margin-bottom:1rem;">
                             <i class="fa-solid fa-circle-info" style="color:#f39c12;"></i>
                             En tu Smart TV selecciona <strong style="color:white;">"Usar teléfono"</strong> y
@@ -595,6 +596,22 @@
                                 activar. Verifica el código e intenta de nuevo.</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Botón Iniciar sesión Disney en TV -->
+                <div class="platform-action-card" data-platform-container="disney_tv"
+                    style="display:flex; flex-direction:column; gap:6px;">
+                    <button type="button" class="platform-tab-btn" data-platform="disney_tv"
+                        style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(0,90,214,0.1); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
+                        <span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV (1 vez)
+                    </button>
+                    <button type="button" class="direct-fetch-code-btn" data-platform="disney_tv"
+                        style="background: linear-gradient(135deg, #005AD6, #113CCF); border:none; color:white; font-weight:bold; padding:11px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(0,90,214,0.3); transition:all 0.2s;">
+                        <i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV
+                    </button>
+                </div>
+            </div>
+        </div>
 
                     <!-- Botón genérico (solo para otras plataformas como Disney/HBO/Prime) -->
                     <button id="fetch-code-btn" class="checkout-btn"
@@ -1040,7 +1057,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <!-- Lógica Principal -->
-    <script src="app.js?v=3.8.31"></script>
+    <script src="app.js?v=3.8.32"></script>
     <!-- CRM / Respuestas Selector Modal -->
     <div id="crm-selector-modal" class="modal" style="display:none; z-index: 5000;">
         <div class="modal-content"

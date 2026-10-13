@@ -257,18 +257,23 @@ app.post('/api/get-code', async (req, res) => {
                             normTxt.includes('vas a actualizar tu hogar') ||
                             normTxt.includes('actualizar tu hogar');
 
-                        // Búsqueda 2: Tu código de acceso único para Disney+ (Fuera de casa / Acceso Único)
+                        // Búsqueda 2: Tu código de acceso único para Disney+ (Fuera de casa / Acceso Único / Disney TV)
                         const matchFueraCasa = normSub.includes('tu codigo de acceso unico') ||
                             normSub.includes('codigo de acceso unico') ||
                             normSub.includes('codigo de acceso') ||
                             normSub.includes('one-time passcode') ||
+                            normSub.includes('one time passcode') ||
                             normTxt.includes('tu codigo de acceso unico') ||
                             normTxt.includes('codigo de acceso unico') ||
                             normTxt.includes('codigo de acceso unico para disney');
 
                         const isDisneySender = normFr.includes('disney') || normSub.includes('disney');
 
-                        isFromPlatform = matchHogar || matchFueraCasa || isDisneySender;
+                        if (platformLower === 'disney_tv') {
+                            isFromPlatform = matchFueraCasa || (isDisneySender && (normSub.includes('codigo') || normTxt.includes('codigo')));
+                        } else {
+                            isFromPlatform = matchHogar || matchFueraCasa || isDisneySender;
+                        }
                     } else if (platformLower === 'vix') {
                         isFromPlatform = subject.includes('vix') || fromText.includes('vix') ||
                             subject.includes('inicia sesión en tu cuenta de vix') ||
@@ -338,7 +343,7 @@ app.post('/api/get-code', async (req, res) => {
                                 normText.includes('vas a actualizar tu hogar') ||
                                 normText.includes('actualizar tu hogar de disney');
 
-                            // BÚSQUEDA 2: Tu código de acceso único para Disney+ (Si el cliente le dio a "Fuera de Casa")
+                            // BÚSQUEDA 2: Tu código de acceso único para Disney+ (Si el cliente le dio a "Fuera de Casa" o "Disney TV")
                             const isFueraCasaMatch = normSubject.includes('tu codigo de acceso unico') ||
                                 normSubject.includes('codigo de acceso unico') ||
                                 normSubject.includes('codigo de acceso') ||
@@ -350,7 +355,11 @@ app.post('/api/get-code', async (req, res) => {
 
                             const isDisneySender = normFrom.includes('disney') || normSubject.includes('disney');
 
-                            if (isHogarMatch || isFueraCasaMatch || isDisneySender) {
+                            const isMatch = platformLower === 'disney_tv'
+                                ? (isFueraCasaMatch || (isDisneySender && (normSubject.includes('codigo') || normText.includes('codigo'))))
+                                : (isHogarMatch || isFueraCasaMatch || isDisneySender);
+
+                            if (isMatch) {
                                 // Extraemos el código numérico de 6 dígitos
                                 let matches = [];
                                 const subjectCodeMatch = subject.match(/\b\d{6}\b/);
@@ -367,7 +376,9 @@ app.post('/api/get-code', async (req, res) => {
 
                                 const validCode = matches.find(m => m !== '000000');
                                 if (validCode) {
-                                    const detected = isHogarMatch ? 'hogar' : (isFueraCasaMatch ? 'fuera_de_casa' : 'disney');
+                                    const detected = platformLower === 'disney_tv'
+                                        ? 'disney_tv'
+                                        : (isHogarMatch ? 'hogar' : (isFueraCasaMatch ? 'fuera_de_casa' : 'disney'));
                                     console.log(`[DEBUG] Código Disney+ de 6 dígitos encontrado (${detected}): ${validCode}`);
                                     accountLogs.found = true;
                                     return {

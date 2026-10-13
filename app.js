@@ -1449,8 +1449,12 @@ function setupEventListeners() {
         updateBtn('disney', '🏰', 'Disney+', 1);
         updateBtn('hbomax', '📺', 'HBO Max', 1);
         updateBtn('prime', '📦', 'Prime Video', 1);
+        updateBtn('vix', '🔥', 'ViX', 1);
         updateBtn('netflix_update', '🏠', 'Actualiza tu Hogar con Netflix', 2);
         updateBtn('netflix_temp', '✈️', 'Acceso temporal con Netflix CEL O PC', 1);
+        updateBtn('disney_update', '🏰', 'Actualiza hogar con Disney', 2);
+        updateBtn('hbomax_update', '🟣', 'Fuera de casa HBO Max', 2);
+        updateBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV', 1);
 
         // Actualizar botón de Smart TV
         const tvBtn = document.getElementById('show-tv-login-btn');
@@ -1524,6 +1528,10 @@ function setupEventListeners() {
                 maxUses = 2;
                 platName = 'Código Fuera de Casa HBO Max';
                 platIcon = 'fa-house-user';
+            } else if (plat === 'disney_tv') {
+                maxUses = 1;
+                platName = 'Iniciar sesión Disney en TV';
+                platIcon = 'fa-tv';
             } else if (plat === 'netflix_temp') {
                 platName = 'Código Acceso Temporal';
                 platIcon = 'fa-plane-departure';
@@ -1544,6 +1552,8 @@ function setupEventListeners() {
                     dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar y/o Fuera de casa`;
                 } else if (plat === 'hbomax_update') {
                     dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obten codigo fuera de casa Hbo Max`;
+                } else if (plat === 'disney_tv') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV`;
                 } else {
                     dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
                 }
@@ -1648,6 +1658,9 @@ function setupEventListeners() {
                     vix: new Set(),
                     netflix_update: new Set(),
                     netflix_temp: new Set(),
+                    disney_update: new Set(),
+                    hbomax_update: new Set(),
+                    disney_tv: new Set(),
                     global: new Set()
                 };
 
@@ -1682,6 +1695,13 @@ function setupEventListeners() {
                                         window.clientActivePlatforms['netflix_update'].add(itemEmailL);
                                         window.clientActivePlatforms['netflix_temp'].add(itemEmailL);
                                     }
+                                    if (itemPlatform === 'disney') {
+                                        window.clientActivePlatforms['disney_update'].add(itemEmailL);
+                                        window.clientActivePlatforms['disney_tv'].add(itemEmailL);
+                                    }
+                                    if (itemPlatform === 'hbomax') {
+                                        window.clientActivePlatforms['hbomax_update'].add(itemEmailL);
+                                    }
                                 } else {
                                     window.clientActivePlatforms.global.add(itemEmailL);
                                 }
@@ -1711,6 +1731,13 @@ function setupEventListeners() {
                                                 window.clientActivePlatforms['netflix_update'].add(emailL);
                                                 window.clientActivePlatforms['netflix_temp'].add(emailL);
                                             }
+                                            if (effPlat === 'disney') {
+                                                window.clientActivePlatforms['disney_update'].add(emailL);
+                                                window.clientActivePlatforms['disney_tv'].add(emailL);
+                                            }
+                                            if (effPlat === 'hbomax') {
+                                                window.clientActivePlatforms['hbomax_update'].add(emailL);
+                                            }
                                         } else {
                                             window.clientActivePlatforms.global.add(emailL);
                                         }
@@ -1732,8 +1759,8 @@ function setupEventListeners() {
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max, Prime Video y ViX siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp');
+                    // Netflix, Disney, HBO Max, Prime Video, ViX y Disney TV siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv');
 
                     if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
@@ -1800,8 +1827,12 @@ function setupEventListeners() {
         netflix_update: { border: '#E50914', bg: 'rgba(229,9,20,0.18)', color: 'white' },
         netflix_temp: { border: '#E50914', bg: 'rgba(229,9,20,0.18)', color: 'white' },
         disney: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
+        disney_update: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
+        disney_tv: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
         hbomax: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
-        prime: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' }
+        hbomax_update: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
+        prime: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
+        vix: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' }
     };
     const platformTabBtns = document.querySelectorAll('.platform-tab-btn');
     const codePlatformInput = document.getElementById('code-platform');
@@ -1853,7 +1884,7 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
-                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp'].includes(chosen)) {
+                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv'].includes(chosen)) {
                     fetchBtn.style.display = 'none';
                 } else {
                     fetchBtn.style.display = 'block';
@@ -2090,6 +2121,8 @@ function setupEventListeners() {
                                 : (data.detectedType === 'fuera_de_casa'
                                     ? 'Tu código de Fuera de Casa Disney+:'
                                     : 'Tu código de Disney+ es:');
+                        } else if (platform === 'disney_tv') {
+                            titleEl.innerText = 'Tu código de Inicio de Sesión Disney+ en TV:';
                         } else if (platform === 'hbomax_update') {
                             titleEl.innerText = 'Tu código Fuera de Casa HBO Max:';
                         } else {

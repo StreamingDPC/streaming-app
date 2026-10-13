@@ -1331,13 +1331,19 @@
                                         style="font-size:0.8rem; color:#aaa; font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
                                         📺 Activar Dispositivo (Smart TV):
                                     </div>
-                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                                         <input type="text" id="admin-console-tv-code"
                                             placeholder="Ingresa el código que da el televisor (Ej: 1234-5678)"
                                             style="flex:2; min-width:220px; padding:10px 12px; border-radius:8px; border:1px solid rgba(46,204,113,0.5); background:rgba(0,0,0,0.7); color:white; font-size:0.9rem;">
                                         <button type="button" onclick="adminExecuteAction('netflix_tv')"
                                             style="flex:1; min-width:180px; background:linear-gradient(135deg,#2ecc71,#27ae60); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px;">
-                                            <i class="fa-solid fa-tv"></i> Activar Smart TV
+                                            <i class="fa-solid fa-tv"></i> Activar Smart TV (Netflix)
+                                        </button>
+                                    </div>
+                                    <div style="display:grid; grid-template-columns:1fr; gap:8px;">
+                                        <button type="button" onclick="adminExecuteAction('disney_tv')"
+                                            style="background:linear-gradient(135deg,#005AD6,#113CCF); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(0,90,214,0.3);">
+                                            <i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV (6 dígitos)
                                         </button>
                                     </div>
                                 </div>
@@ -1396,6 +1402,7 @@
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
                                     <option value="disney">Disney+</option>
                                     <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
+                                    <option value="disney_tv">Iniciar sesión Disney en TV</option>
                                     <option value="hbomax">HBO Max</option>
                                     <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
                                     <option value="prime">Prime Video</option>
@@ -2747,6 +2754,7 @@
                         if (usedData['disney_update']) attemptBadges.push(`<span style="color:#00d2d3;">Hogar Disney: ${usedData['disney_update']}/2</span>`);
                         if (usedData['netflix_temp']) attemptBadges.push(`<span style="color:#0984e3;">Temporal</span>`);
                         if (usedData['netflix_tv']) attemptBadges.push(`<span style="color:#2ecc71;">TV</span>`);
+                        if (usedData['disney_tv']) attemptBadges.push(`<span style="color:#005AD6;">TV Disn</span>`);
                         if (usedData['netflix']) attemptBadges.push(`<span style="color:#e50914;">Nflx</span>`);
                         if (usedData['disney']) attemptBadges.push(`<span style="color:#113ccf;">Disn</span>`);
                         if (usedData['hbomax']) attemptBadges.push(`<span style="color:#6c5ce7;">Max</span>`);
@@ -3006,6 +3014,10 @@
                                 badgeTitle = 'DISNEY+ (HOGAR / FUERA DE CASA)';
                                 platName = 'Hogar y/o Fuera de casa (Disney+)';
                             }
+                        } else if (platform === 'disney_tv') {
+                            badgeTitle = 'DISNEY+ (INICIAR SESIÓN EN TV)';
+                            platName = 'Iniciar sesión Disney en TV';
+                            detailsMsg = `Detectado: <strong>Tu código de acceso único para Disney+ (TV)</strong> en <code>${email}</code>.`;
                         } else if (platform === 'hbomax_update') {
                             badgeTitle = 'HBO MAX (FUERA DE CASA)';
                             platName = 'Fuera de Casa (HBO Max)';
@@ -3231,6 +3243,7 @@
                             if (netflixUpdates > 0) badges.push(`<span style="color:${netflixUpdates >= 2 ? '#ff4d4d' : '#f39c12'}; font-weight:bold;">🏠 Act. Hogar: ${netflixUpdates}/2</span>`);
                             if (usedData['netflix_temp'] === true) badges.push(`<span style="color:#e74c3c;">✈️ Acc. Temporal</span>`);
                             if (usedData['netflix_tv'] === true) badges.push(`<span style="color:#2ecc71;">📺 TV Act.</span>`);
+                            if (usedData['disney_tv'] === true) badges.push(`<span style="color:#005AD6;">📺 TV Disn</span>`);
                             if (usedData['netflix'] === true) badges.push(`<span style="color:#e74c3c;">🎬 Nflx</span>`);
                             if (usedData['disney_update']) badges.push(`<span style="color:#00d2d3; font-weight:bold;">🏰 Hogar Disney: ${usedData['disney_update']}/2</span>`);
                             if (usedData['hbomax_update']) badges.push(`<span style="color:#a29bfe; font-weight:bold;">📺 Fuera Casa Max: ${usedData['hbomax_update']}/2</span>`);
@@ -3262,6 +3275,7 @@
                                     <option value="netflix_temp">Acceso temporal Netflix</option>
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
                                     <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney+</option>
+                                    <option value="disney_tv">Iniciar sesión Disney en TV</option>
                                     <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
                                     <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
                                     <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
