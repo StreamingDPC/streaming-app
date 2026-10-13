@@ -1418,6 +1418,14 @@ app.listen(PORT, async () => {
     await registerNgrokUrl();
 });
 
+// ── Protección contra caídas por excepciones no capturadas ────────────────
+process.on('uncaughtException', (err) => {
+    console.error('[BOT] ⚠️ Excepción no capturada (proceso preservado):', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[BOT] ⚠️ Promesa no manejada (proceso preservado):', reason?.message || reason);
+});
+
 // ── Limpiar URL de Firebase al cerrar ─────────────────────────────────────
 process.on('SIGINT', async () => { await clearBotUrl(); process.exit(0); });
 process.on('SIGTERM', async () => { await clearBotUrl(); process.exit(0); });
