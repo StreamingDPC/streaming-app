@@ -1456,6 +1456,7 @@ function setupEventListeners() {
         updateBtn('hbomax_update', '🟣', 'Fuera de casa HBO Max', 2);
         updateBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV', 1);
         updateBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
+        updateBtn('prime_tv', '📺', 'Iniciar sesión Prime Video en TV', 1);
 
         // Actualizar botón de Smart TV
         const tvBtn = document.getElementById('show-tv-login-btn');
@@ -1517,6 +1518,38 @@ function setupEventListeners() {
                     actHboBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar HBO Max en TV';
                     actHboBtn.style.opacity = '1';
                     actHboBtn.style.cursor = 'pointer';
+                }
+            }
+        }
+
+        // Actualizar botón de Prime Video Smart TV
+        const primeTvBtn = document.getElementById('show-prime-tv-login-btn');
+        if (primeTvBtn) {
+            let tvUsed = window.clientUsedAttempts['prime_tv'];
+            let numTv = 0;
+            if (tvUsed === true) numTv = 1;
+            else if (typeof tvUsed === 'number') numTv = tvUsed;
+
+            let rem = 1 - numTv;
+            if (rem < 0) rem = 0;
+            primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+
+            const actPrimeBtn = document.getElementById('activate-prime-tv-btn');
+            if (rem <= 0) {
+                primeTvBtn.style.opacity = '0.6';
+                if (actPrimeBtn) {
+                    actPrimeBtn.disabled = true;
+                    actPrimeBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Prime Video TV agotado (1/1)';
+                    actPrimeBtn.style.opacity = '0.5';
+                    actPrimeBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                primeTvBtn.style.opacity = '1';
+                if (actPrimeBtn) {
+                    actPrimeBtn.disabled = false;
+                    actPrimeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Prime en TV';
+                    actPrimeBtn.style.opacity = '1';
+                    actPrimeBtn.style.cursor = 'pointer';
                 }
             }
         }
@@ -1695,6 +1728,7 @@ function setupEventListeners() {
                     hbomax_update: new Set(),
                     disney_tv: new Set(),
                     hbomax_tv: new Set(),
+                    prime_tv: new Set(),
                     global: new Set()
                 };
 
@@ -1737,6 +1771,9 @@ function setupEventListeners() {
                                         window.clientActivePlatforms['hbomax_update'].add(itemEmailL);
                                         window.clientActivePlatforms['hbomax_tv'].add(itemEmailL);
                                     }
+                                    if (itemPlatform === 'prime') {
+                                        window.clientActivePlatforms['prime_tv'].add(itemEmailL);
+                                    }
                                 } else {
                                     window.clientActivePlatforms.global.add(itemEmailL);
                                 }
@@ -1774,6 +1811,9 @@ function setupEventListeners() {
                                                 window.clientActivePlatforms['hbomax_update'].add(emailL);
                                                 window.clientActivePlatforms['hbomax_tv'].add(emailL);
                                             }
+                                            if (effPlat === 'prime') {
+                                                window.clientActivePlatforms['prime_tv'].add(emailL);
+                                            }
                                         } else {
                                             window.clientActivePlatforms.global.add(emailL);
                                         }
@@ -1795,8 +1835,8 @@ function setupEventListeners() {
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max, Prime Video, ViX, Disney TV y HBO Max TV siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'hbomax_tv');
+                    // Netflix, Disney, HBO Max, Prime Video, ViX, Disney TV, HBO Max TV y Prime TV siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'hbomax_tv' || plat === 'prime_tv');
 
                     if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
@@ -1851,6 +1891,25 @@ function setupEventListeners() {
                         hboTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas HBO Max --</option>';
                     }
                 }
+
+                // Poblar específicamente el selector de correos para Activar Prime Video TV (Solo Prime y global)
+                const primeTvEmailSelect = document.getElementById('prime-tv-email-select');
+                if (primeTvEmailSelect && window.clientActivePlatforms) {
+                    const primeEmails = window.clientActivePlatforms.prime || new Set();
+                    const globEmails = window.clientActivePlatforms.global || new Set();
+                    const combined = new Set([...primeEmails, ...globEmails]);
+
+                    primeTvEmailSelect.innerHTML = '';
+                    if (combined.size > 0) {
+                        combined.forEach(em => {
+                            const opt = document.createElement('option');
+                            opt.value = opt.textContent = em;
+                            primeTvEmailSelect.appendChild(opt);
+                        });
+                    } else {
+                        primeTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas Prime Video --</option>';
+                    }
+                }
             } catch (e) {
                 emailSelect.innerHTML = '<option value="">-- Error al cargar cuentas --</option>';
             }
@@ -1887,6 +1946,7 @@ function setupEventListeners() {
         hbomax: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
         hbomax_update: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
         hbomax_tv: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
+        prime_tv: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
         prime: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
         vix: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' }
     };
@@ -1940,7 +2000,7 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
-                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'hbomax_tv'].includes(chosen)) {
+                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'hbomax_tv', 'prime_tv'].includes(chosen)) {
                     fetchBtn.style.display = 'none';
                 } else {
                     fetchBtn.style.display = 'block';
@@ -2678,6 +2738,193 @@ function setupEventListeners() {
                         activateHboTvBtn.disabled = false;
                         activateHboTvBtn.style.opacity = '1';
                         activateHboTvBtn.style.cursor = 'pointer';
+                    }
+                }, 1500);
+            }
+        });
+    }
+
+    // ACTIVACIÓN SMART TV — PRIME VIDEO
+    const showPrimeTvBtn = document.getElementById('show-prime-tv-login-btn');
+    const primeTvPanel = document.getElementById('prime-tv-login-panel');
+    const activatePrimeTvBtn = document.getElementById('activate-prime-tv-btn');
+
+    if (showPrimeTvBtn && primeTvPanel) {
+        showPrimeTvBtn.addEventListener('click', () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || (typeof window.clientUsedAttempts['prime_tv'] === 'number' && window.clientUsedAttempts['prime_tv'] >= 1));
+            if (isTvUsed) {
+                alert('⚠️ Ya usaste tu intento (1 vez) para activar Prime Video en TV.');
+                return;
+            }
+
+            const isOpen = primeTvPanel.style.display !== 'none';
+            primeTvPanel.style.display = isOpen ? 'none' : 'block';
+            showPrimeTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#00A8E1';
+            showPrimeTvBtn.style.color = isOpen ? '#aaa' : 'white';
+            showPrimeTvBtn.style.background = isOpen ? 'rgba(0,168,225,0.1)' : 'rgba(0,168,225,0.25)';
+            if (!isOpen) {
+                document.getElementById('prime-tv-activation-loading').style.display = 'none';
+                document.getElementById('prime-tv-activation-result').style.display = 'none';
+                document.getElementById('prime-tv-activation-error').style.display = 'none';
+            }
+        });
+    }
+
+    if (activatePrimeTvBtn) {
+        activatePrimeTvBtn.addEventListener('click', async () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || (typeof window.clientUsedAttempts['prime_tv'] === 'number' && window.clientUsedAttempts['prime_tv'] >= 1));
+            if (isTvUsed) {
+                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Prime Video en TV.');
+            }
+
+            const tvCode = (document.getElementById('prime-tv-code-input').value || '').trim().toUpperCase();
+            const emailSelect = document.getElementById('prime-tv-email-select');
+            const email = emailSelect ? emailSelect.value.trim() : '';
+
+            if (!tvCode || tvCode.length < 5) return alert('⚠️ Ingresa el código que aparece en tu TV (ej: HQ2W4Z).');
+            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!email) return alert('Selecciona el correo de tu cuenta Prime Video.');
+
+            // Bloquear botón temporalmente
+            const originalBtnText = activatePrimeTvBtn.innerHTML;
+            activatePrimeTvBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando TV...';
+            activatePrimeTvBtn.disabled = true;
+            document.getElementById('prime-tv-activation-loading').style.display = 'block';
+            document.getElementById('prime-tv-activation-result').style.display = 'none';
+            document.getElementById('prime-tv-activation-error').style.display = 'none';
+
+            // Iniciar interfaz de cuenta regresiva y fases de proceso
+            let totalSeconds = 45;
+            let secondsRemaining = totalSeconds;
+            const timerEl = document.getElementById('prime-tv-countdown-timer');
+            const progressEl = document.getElementById('prime-tv-progress-bar');
+            const phaseEl = document.getElementById('prime-tv-status-phase');
+            const queueNoticeEl = document.getElementById('prime-tv-queue-notice');
+
+            if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+            if (progressEl) progressEl.style.width = '5%';
+            if (queueNoticeEl) queueNoticeEl.style.display = 'none';
+            if (phaseEl) phaseEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando al sistema...';
+
+            let countdownInterval = setInterval(() => {
+                if (secondsRemaining > 1) {
+                    secondsRemaining--;
+                    if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+                    const percent = Math.min(95, Math.round(((totalSeconds - secondsRemaining) / totalSeconds) * 100));
+                    if (progressEl) progressEl.style.width = `${percent}%`;
+
+                    if (phaseEl) {
+                        if (percent < 25) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-network-wired"></i> Conectando con Prime Video...';
+                        } else if (percent < 50) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-key"></i> Iniciando sesión en cuenta...';
+                        } else if (percent < 75) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-tv"></i> Ingresando código de tu televisor...';
+                        } else {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Finalizando registro...';
+                        }
+                    }
+                }
+            }, 1000);
+
+            try {
+                // Seleccionar botUrl (ngrok -> local -> render)
+                const RENDER_URL = 'https://streaming-backend-ce1u.onrender.com';
+                let botUrl = RENDER_URL;
+                let usingLocal = false;
+
+                let ngrokUrl = null;
+                try {
+                    const snap = await db.ref('config/botUrl').once('value');
+                    ngrokUrl = snap.val();
+                } catch (e) { }
+
+                if (ngrokUrl) {
+                    botUrl = ngrokUrl;
+                    usingLocal = true;
+                } else {
+                    try {
+                        const localCheck = await Promise.race([
+                            fetch('http://localhost:3099/status'),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+                        ]);
+                        if (localCheck.ok) {
+                            botUrl = 'http://localhost:3099';
+                            usingLocal = true;
+                        }
+                    } catch (e) { }
+                }
+
+                // Llamar al endpoint del bot
+                const response = await fetch(`${botUrl}/api/activate-prime-tv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                });
+                const data = await response.json();
+
+                clearInterval(countdownInterval);
+                if (progressEl) progressEl.style.width = '100%';
+                document.getElementById('prime-tv-activation-loading').style.display = 'none';
+
+                if (data.success) {
+                    // Registrar en Firebase y consumir intento
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'prime_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/prime_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/prime_tv`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/prime_tv`).set(true);
+                    }
+
+                    if (window.clientUsedAttempts) {
+                        window.clientUsedAttempts['prime_tv'] = true;
+                        if (window.updateCodeCountersUI) window.updateCodeCountersUI();
+                    }
+
+                    // Mostrar éxito en color verde
+                    const resultDiv = document.getElementById('prime-tv-activation-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(46,204,113,0.1)';
+                    resultDiv.style.borderColor = '#2ecc71';
+                    const icon = document.getElementById('prime-tv-activation-icon');
+                    if (icon) { icon.className = 'fa-solid fa-circle-check'; icon.style.color = '#2ecc71'; }
+                    const msg = document.getElementById('prime-tv-activation-msg');
+                    if (msg) { msg.style.color = '#2ecc71'; msg.innerText = '¡TV Registrada Exitosamente!'; }
+                    const desc = document.getElementById('prime-tv-activation-desc');
+                    if (desc) { desc.innerHTML = '¡El dispositivo se registró correctamente en tu cuenta de Prime Video! Ya puedes disfrutar en tu TV.'; }
+                } else {
+                    document.getElementById('prime-tv-activation-error').style.display = 'block';
+                    let errorHtml = data.error || 'Código inválido o expirado. Verifica el código en tu TV.';
+                    if (data.screenshot) {
+                        errorHtml += `<br><br><span style="font-size:0.75rem; color:#aaa;">Captura de lo que ve el bot:</span><br><img src="${data.screenshot}" style="max-width:100%; border-radius:8px; margin-top:8px; border:1px solid rgba(255,255,255,0.2);">`;
+                    }
+                    document.getElementById('prime-tv-error-msg').innerHTML = errorHtml;
+                }
+
+            } catch (err) {
+                clearInterval(countdownInterval);
+                document.getElementById('prime-tv-activation-loading').style.display = 'none';
+                document.getElementById('prime-tv-activation-error').style.display = 'block';
+                document.getElementById('prime-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
+            } finally {
+                setTimeout(() => {
+                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || window.clientUsedAttempts['prime_tv'] >= 1);
+                    if (isTvUsedNow) {
+                        activatePrimeTvBtn.disabled = true;
+                        activatePrimeTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Prime Video TV agotado (1/1)';
+                        activatePrimeTvBtn.style.opacity = '0.5';
+                        activatePrimeTvBtn.style.cursor = 'not-allowed';
+                    } else {
+                        activatePrimeTvBtn.innerHTML = originalBtnText;
+                        activatePrimeTvBtn.disabled = false;
+                        activatePrimeTvBtn.style.opacity = '1';
+                        activatePrimeTvBtn.style.cursor = 'pointer';
                     }
                 }, 1500);
             }

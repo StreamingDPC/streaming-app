@@ -158,6 +158,66 @@ async function findNetflixPassword(targetEmail) {
     return null;
 }
 
+// ── Función reutilizable: buscar contraseña de Prime Video en Firebase ─────
+async function findPrimePassword(targetEmail) {
+    const email = targetEmail.toLowerCase().trim();
+
+    // 1. Buscar en clientSales
+    try {
+        const resp = await axios.get(`${FIREBASE_DB_URL}/clientSales.json`);
+        const data = resp.data;
+        if (data) {
+            for (const phone of Object.keys(data)) {
+                const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
+                for (const sale of salesArr) {
+                    if (!sale?.items) continue;
+                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+                    for (const item of items) {
+                        if (!item?.specificEmails) continue;
+                        const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                        for (const s of screens) {
+                            const isPrime = s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'));
+                            if (s?.email?.toLowerCase().trim() === email && isPrime && s?.pass) {
+                                console.log(`[BOT-PRIME] ✅ Pass encontrado en clientSales (${phone})`);
+                                return s.pass.trim();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { console.warn('[BOT-PRIME] clientSales error:', e.message); }
+
+    // 2. Buscar en sellerSales
+    try {
+        const resp = await axios.get(`${FIREBASE_DB_URL}/sellerSales.json`);
+        const data = resp.data;
+        if (data) {
+            for (const seller of Object.keys(data)) {
+                const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
+                for (const sale of salesArr) {
+                    if (!sale?.items) continue;
+                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+                    for (const item of items) {
+                        if (!item?.specificEmails) continue;
+                        const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                        for (const s of screens) {
+                            const isPrime = s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'));
+                            if (s?.email?.toLowerCase().trim() === email && isPrime && s?.pass) {
+                                console.log(`[BOT-PRIME] ✅ Pass encontrado en sellerSales (${seller})`);
+                                return s.pass.trim();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { console.warn('[BOT-PRIME] sellerSales error:', e.message); }
+
+    return null;
+}
+
+
 
 
 // ── Cola de Activación Concurrente ─────────────────────────────────────────
@@ -188,6 +248,10 @@ async function processQueue() {
             if (item.platform === 'hbomax_tv') {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno HBO Max TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
                 const result = await doActivateHboTv(item.email, item.tvCode);
+                item.resolve(result);
+            } else if (item.platform === 'prime_tv') {
+                console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Prime Video TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
+                const result = await doActivatePrimeTv(item.email, item.tvCode);
                 item.resolve(result);
             } else {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Netflix TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
@@ -255,6 +319,32 @@ app.post('/api/activate-hbomax-tv', async (req, res) => {
         });
     }
 });
+
+// ── ENDPOINT: Activar Prime Video TV ───────────────────────────────────────
+app.post('/api/activate-prime-tv', async (req, res) => {
+    const { email, tvCode } = req.body;
+
+    if (!email || !tvCode) {
+        return res.status(400).json({ success: false, error: 'Email y código de TV son requeridos.' });
+    }
+
+    const queuePromise = new Promise((resolve, reject) => {
+        activationQueue.push({ platform: 'prime_tv', email, tvCode, resolve, reject, time: Date.now() });
+    });
+
+    processQueue();
+
+    try {
+        const result = await queuePromise;
+        return res.json(result);
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            error: err.message || 'Error en la activación de Prime Video en el bot local.'
+        });
+    }
+});
+
 
 // ── LÓGICA DE ACTIVACIÓN CON CHROME (Segundo Plano) ────────────────────────
 async function doActivateTv(email, tvCode) {
@@ -948,6 +1038,308 @@ async function doActivateHboTv(email, tvCode) {
         }
 
         const payload = { success: false, error: 'Error del bot de HBO Max: ' + err.message };
+        if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
+        return payload;
+    }
+}
+
+// ── FUNCIÓN: Activar Prime Video TV (primevideo.com/mytv) ───────────────────
+async function doActivatePrimeTv(email, tvCode) {
+    let browser = null;
+    let chromeProc = null;
+    try {
+        console.log(`\n[BOT-PRIME] ════════════════════════════════════`);
+        console.log(`[BOT-PRIME] Registrando TV en Prime Video: ${email} → código: ${tvCode}`);
+
+        // 1. Buscar contraseña en Firebase
+        const primePass = await findPrimePassword(email);
+        if (!primePass) {
+            return {
+                success: false,
+                error: `No se encontró la contraseña de Prime Video para ${email}. Verifica que esté configurada en la venta.`
+            };
+        }
+        console.log(`[BOT-PRIME] 🔑 Contraseña lista (oculta). Iniciando Chrome en segundo plano...`);
+
+        const chromePath = getChromePath();
+        if (!chromePath) {
+            return {
+                success: false,
+                error: 'Google Chrome no está instalado en esta PC. Instala Chrome e intenta de nuevo.'
+            };
+        }
+
+        const cdpPort = 9340;
+        const profileDir = path.join(process.env.USERPROFILE || 'C:\\Users\\Default', '.gemini', 'prime_bot_profile');
+
+        console.log(`[BOT-PRIME] 🚀 Iniciando Chrome genuino (CDP port ${cdpPort})...`);
+        chromeProc = spawn(chromePath, [
+            `--remote-debugging-port=${cdpPort}`,
+            `--user-data-dir=${profileDir}`,
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--window-position=50,50',
+            '--window-size=1280,800',
+            'about:blank'
+        ]);
+
+        let endpoint = null;
+        for (let i = 0; i < 20; i++) {
+            await sleep(500);
+            try {
+                const resp = await axios.get(`http://127.0.0.1:${cdpPort}/json/version`);
+                if (resp.data && resp.data.webSocketDebuggerUrl) {
+                    endpoint = resp.data.webSocketDebuggerUrl;
+                    break;
+                }
+            } catch (e) { }
+        }
+
+        if (!endpoint) {
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return { success: false, error: 'No se pudo iniciar Chrome para Prime Video.' };
+        }
+
+        browser = await puppeteer.connect({ browserWSEndpoint: endpoint });
+        const pages = await browser.pages();
+        const page = pages[0] || await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+
+        // 2. Navegar a https://www.primevideo.com/mytv
+        console.log('[BOT-PRIME] 🌐 Navegando a https://www.primevideo.com/mytv...');
+        await page.goto('https://www.primevideo.com/mytv', { waitUntil: 'domcontentloaded', timeout: 35000 });
+        await sleep(3000);
+
+        // Aceptar cookies / consent modal si aparece
+        try {
+            await page.evaluate(() => {
+                const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+                const cBtn = btns.find(b => {
+                    const t = (b.innerText || b.value || '').toLowerCase();
+                    return t.includes('aceptar cookies') || t.includes('accept cookies') || t.includes('agree');
+                });
+                if (cBtn) cBtn.click();
+            });
+        } catch (e) { }
+
+        // 3. Paso de Email (si no ha iniciado sesión)
+        let emailInput = await page.$('#ap_email, input[type="email"], input[name="email"]');
+        if (emailInput) {
+            console.log(`[BOT-PRIME] ✉️ Ingresando correo electrónico: ${email}`);
+            await emailInput.click({ clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await emailInput.type(email, { delay: 40 });
+            await sleep(500);
+
+            // Clic en Continuar
+            console.log('[BOT-PRIME] ➡️ Clic en Continuar...');
+            const contBtn = await page.$('#continue, input#continue, button#continue, input[type="submit"]');
+            if (contBtn) {
+                await contBtn.click();
+            } else {
+                await page.keyboard.press('Enter');
+            }
+            await sleep(3000);
+        }
+
+        // 4. Paso de Contraseña
+        let passInput = await page.$('#ap_password, input[type="password"], input[name="password"]');
+        if (passInput) {
+            console.log('[BOT-PRIME] 🔑 Ingresando contraseña...');
+            await passInput.click({ clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await passInput.type(primePass, { delay: 40 });
+            await sleep(500);
+
+            // Clic en Iniciar sesión
+            console.log('[BOT-PRIME] 🚀 Clic en Iniciar sesión...');
+            const signBtn = await page.$('#signInSubmit, input#signInSubmit, button#signInSubmit, input[type="submit"]');
+            if (signBtn) {
+                await signBtn.click();
+            } else {
+                await page.keyboard.press('Enter');
+            }
+            await sleep(5000);
+        }
+
+        // 5. Verificar si hay verificación en dos pasos (OTP) o alerta de seguridad
+        const check2fa = await page.evaluate(() => {
+            const txt = (document.body.innerText || '').toLowerCase();
+            if (txt.includes('verificación en dos pasos') || txt.includes('two-step verification') || txt.includes('introduce el código') || txt.includes('enter otp')) {
+                return true;
+            }
+            return false;
+        });
+
+        if (check2fa) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: 'Amazon solicitó verificación en dos pasos (OTP). Solicita autorización temporal.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        // 6. Esperar la pantalla de registro de dispositivo (/mytv o /ontv/code)
+        console.log('[BOT-PRIME] 📺 Esperando formulario de registro de TV...');
+        let codeInputReady = false;
+        for (let wait = 0; wait < 15; wait++) {
+            const curUrl = page.url();
+            if (curUrl.includes('/mytv') || curUrl.includes('/ontv/code') || curUrl.includes('code')) {
+                const inp = await page.$('#av-cbl-code, input[name="code"], input[placeholder*="HQ2W4Z"], input[type="text"]');
+                if (inp) {
+                    codeInputReady = true;
+                    break;
+                }
+            }
+            await sleep(1500);
+        }
+
+        if (!codeInputReady) {
+            if (!page.url().includes('code')) {
+                console.log('[BOT-PRIME] 🔄 Redirigiendo a https://www.primevideo.com/mytv...');
+                await page.goto('https://www.primevideo.com/mytv', { waitUntil: 'domcontentloaded', timeout: 30000 });
+                await sleep(3500);
+            }
+        }
+
+        // 7. Escribir el código del televisor
+        const cleanTvCode = tvCode.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+        console.log(`[BOT-PRIME] 🔢 Ingresando código de registro: ${cleanTvCode}`);
+
+        const inputFound = await page.evaluate((codeToType) => {
+            const inp = document.querySelector('#av-cbl-code, input[name="code"], input[placeholder*="HQ2W4Z"], input[type="text"]');
+            if (inp) {
+                inp.focus();
+                inp.value = '';
+                return true;
+            }
+            return false;
+        }, cleanTvCode);
+
+        if (!inputFound) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: 'Prime Video no mostró la casilla para ingresar el código de registro.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        await page.keyboard.type(cleanTvCode, { delay: 100 });
+        await sleep(800);
+
+        // 8. Clic en "Registrar dispositivo"
+        console.log('[BOT-PRIME] 🔘 Clic en "Registrar dispositivo"...');
+        const clickedRegister = await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+            for (const b of btns) {
+                const txt = (b.innerText || b.value || '').toLowerCase().trim();
+                if (txt.includes('registrar dispositivo') || txt.includes('register device') || txt.includes('registrar')) {
+                    b.click();
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (!clickedRegister) {
+            await page.keyboard.press('Enter');
+        }
+        await sleep(5000);
+
+        // 9. Verificar confirmación de éxito o error
+        console.log('[BOT-PRIME] ⏳ Verificando confirmación de registro...');
+        let isSuccess = false;
+        let isError = false;
+        let errorMsgDetail = '';
+
+        for (let wait = 0; wait < 6; wait++) {
+            const pageText = await page.evaluate(() => (document.body.innerText || '').toLowerCase());
+            if (pageText.includes('se registró correctamente') ||
+                pageText.includes('se registro correctamente') ||
+                pageText.includes('ya está registrado') ||
+                pageText.includes('ya esta registrado') ||
+                pageText.includes('registrado correctamente') ||
+                pageText.includes('registered successfully') ||
+                pageText.includes('device registered')) {
+                isSuccess = true;
+                break;
+            }
+
+            if (pageText.includes('no coincide') ||
+                pageText.includes('no válido') ||
+                pageText.includes('no valido') ||
+                pageText.includes('inválido') ||
+                pageText.includes('invalido') ||
+                pageText.includes('no se puede registrar') ||
+                pageText.includes('código no es válido') ||
+                pageText.includes('invalid code') ||
+                pageText.includes('comprueba el código')) {
+                isError = true;
+                errorMsgDetail = 'El código ingresado no es válido o ya expiró en tu Smart TV. Genera un nuevo código en el televisor.';
+                break;
+            }
+            await sleep(2000);
+        }
+
+        if (isError) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: errorMsgDetail,
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        // 10. Cerrar sesión y limpiar cookies (como solicitado: "y despues de eso cerrar sesion para que no quede abierto")
+        console.log('[BOT-PRIME] 🧹 Limpiando y cerrando sesión de Prime Video...');
+        try {
+            const client = await page.target().createCDPSession();
+            await client.send('Network.clearBrowserCookies');
+            await client.send('Network.clearBrowserCache');
+            console.log('[BOT-PRIME] 🧼 Cookies y caché limpiados vía CDP.');
+        } catch (e) { }
+
+        try {
+            await page.goto('https://www.primevideo.com/signout', { waitUntil: 'domcontentloaded', timeout: 8000 }).catch(() => { });
+        } catch (e) { }
+
+        await browser.disconnect();
+        browser = null;
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
+            chromeProc = null;
+        }
+
+        console.log('[BOT-PRIME] 🎉 ¡Dispositivo registrado con éxito en Prime Video!');
+        return {
+            success: true,
+            message: '¡El dispositivo se registró correctamente en tu cuenta de Prime Video! Ya puedes disfrutar en tu TV.'
+        };
+
+    } catch (err) {
+        console.error('[BOT-PRIME] ❌ Error:', err.message);
+
+        let screenshot = null;
+        if (browser) {
+            try {
+                const pages = await browser.pages();
+                if (pages.length > 0) screenshot = await pages[0].screenshot({ encoding: 'base64' });
+                await browser.disconnect();
+            } catch (e) { }
+        }
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
+        }
+
+        const payload = { success: false, error: 'Error del bot de Prime Video: ' + err.message };
         if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
         return payload;
     }

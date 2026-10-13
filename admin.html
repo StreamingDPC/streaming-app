@@ -1340,7 +1340,7 @@
                                             <i class="fa-solid fa-tv"></i> Activar Smart TV (Netflix)
                                         </button>
                                     </div>
-                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
                                         <button type="button" onclick="adminExecuteAction('disney_tv')"
                                             style="background:linear-gradient(135deg,#005AD6,#113CCF); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(0,90,214,0.3);">
                                             <i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV (6 dígitos)
@@ -1348,6 +1348,10 @@
                                         <button type="button" onclick="adminExecuteAction('hbomax_tv')"
                                             style="background:linear-gradient(135deg,#8A2BE2,#4b0082); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(138,43,226,0.3);">
                                             <i class="fa-solid fa-tv"></i> Iniciar sesión HBO Max en TV (6 dígitos)
+                                        </button>
+                                        <button type="button" onclick="adminExecuteAction('prime_tv')"
+                                            style="background:linear-gradient(135deg,#00A8E1,#0077b6); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(0,168,225,0.3);">
+                                            <i class="fa-solid fa-tv"></i> Iniciar sesión Prime Video en TV
                                         </button>
                                     </div>
                                 </div>
@@ -1410,6 +1414,7 @@
                                     <option value="hbomax">HBO Max</option>
                                     <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
                                     <option value="hbomax_tv">Iniciar sesión HBO Max en TV</option>
+                                    <option value="prime_tv">Iniciar sesión Prime Video en TV</option>
                                     <option value="prime">Prime Video</option>
                                     <option value="vix">ViX</option>
                                 </select>
@@ -2761,6 +2766,7 @@
                         if (usedData['netflix_tv']) attemptBadges.push(`<span style="color:#2ecc71;">TV</span>`);
                         if (usedData['disney_tv']) attemptBadges.push(`<span style="color:#005AD6;">TV Disn</span>`);
                         if (usedData['hbomax_tv']) attemptBadges.push(`<span style="color:#8A2BE2;">TV Max</span>`);
+                        if (usedData['prime_tv']) attemptBadges.push(`<span style="color:#00A8E1;">TV Prime</span>`);
                         if (usedData['netflix']) attemptBadges.push(`<span style="color:#e50914;">Nflx</span>`);
                         if (usedData['disney']) attemptBadges.push(`<span style="color:#113ccf;">Disn</span>`);
                         if (usedData['hbomax']) attemptBadges.push(`<span style="color:#6c5ce7;">Max</span>`);
@@ -2893,8 +2899,8 @@
             spinner.style.display = 'block';
             content.style.display = 'none';
 
-            // CASO ESPECIAL: Smart TV (Netflix y HBO Max)
-            if (platform === 'netflix_tv' || platform === 'hbomax_tv') {
+            // CASO ESPECIAL: Smart TV (Netflix, HBO Max y Prime Video)
+            if (platform === 'netflix_tv' || platform === 'hbomax_tv' || platform === 'prime_tv') {
                 const tvInput = document.getElementById('admin-console-tv-code');
                 const tvCode = tvInput ? tvInput.value.trim() : '';
                 if (!tvCode) {
@@ -2903,8 +2909,15 @@
                     return;
                 }
 
-                const serviceName = platform === 'hbomax_tv' ? 'HBO Max' : 'Netflix';
-                const endpoint = platform === 'hbomax_tv' ? '/api/activate-hbomax-tv' : '/api/activate-tv';
+                let serviceName = 'Netflix';
+                let endpoint = '/api/activate-tv';
+                if (platform === 'hbomax_tv') {
+                    serviceName = 'HBO Max';
+                    endpoint = '/api/activate-hbomax-tv';
+                } else if (platform === 'prime_tv') {
+                    serviceName = 'Prime Video';
+                    endpoint = '/api/activate-prime-tv';
+                }
 
                 if (statusText) statusText.innerText = `Conectando con el bot de ${serviceName} TV e iniciando sesión...`;
 
@@ -3254,6 +3267,7 @@
                             if (usedData['netflix_tv'] === true) badges.push(`<span style="color:#2ecc71;">📺 TV Act.</span>`);
                             if (usedData['disney_tv'] === true) badges.push(`<span style="color:#005AD6;">📺 TV Disn</span>`);
                             if (usedData['hbomax_tv'] === true) badges.push(`<span style="color:#8A2BE2;">📺 TV Max</span>`);
+                            if (usedData['prime_tv'] === true) badges.push(`<span style="color:#00A8E1;">📺 TV Prime</span>`);
                             if (usedData['netflix'] === true) badges.push(`<span style="color:#e74c3c;">🎬 Nflx</span>`);
                             if (usedData['disney_update']) badges.push(`<span style="color:#00d2d3; font-weight:bold;">🏰 Hogar Disney: ${usedData['disney_update']}/2</span>`);
                             if (usedData['hbomax_update']) badges.push(`<span style="color:#a29bfe; font-weight:bold;">📺 Fuera Casa Max: ${usedData['hbomax_update']}/2</span>`);
@@ -3290,6 +3304,7 @@
                                     <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
                                     <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
                                     <option value="hbomax_tv">Iniciar sesión HBO Max en TV</option>
+                                    <option value="prime_tv">Iniciar sesión Prime Video en TV</option>
                                     <option value="prime" ${defaultPlatform === 'prime' ? 'selected' : ''}>Prime Video</option>
                                     <option value="vix">ViX</option>
                                     <option value="all" ${defaultPlatform === 'all' ? 'selected' : ''}>TODAS LAS PANTALLAS</option>
