@@ -281,6 +281,14 @@ app.post('/api/get-code', async (req, res) => {
                             textContent.includes('inicia sesión en tu cuenta de vix') ||
                             textContent.includes('inicia sesion en tu cuenta de vix') ||
                             textContent.includes('cuenta de vix');
+                    } else if (platformLower.includes('hbo') || platformLower.includes('max')) {
+                        const normSub = subject.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                        const normTxt = textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                        const normFr = fromText.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                        isFromPlatform = normSub.includes('hbo') || normSub.includes('max') ||
+                            normFr.includes('hbo') || normFr.includes('max') ||
+                            normTxt.includes('hbo') || normTxt.includes('max') ||
+                            normSub.includes('codigo') || normTxt.includes('codigo');
                     } else {
                         isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
                     }
@@ -449,9 +457,13 @@ app.post('/api/get-code', async (req, res) => {
                             }
                             const validCode = matches.find(m => m !== '000000');
                             if (validCode) {
-                                console.log(`[DEBUG] Código HBO Max de 6 dígitos encontrado: ${validCode}`);
+                                const detected = platformLower === 'hbomax_tv' ? 'hbomax_tv' : (platformLower.includes('update') ? 'fuera_de_casa' : 'hbomax');
+                                console.log(`[DEBUG] Código HBO Max de 6 dígitos encontrado (${detected}): ${validCode}`);
                                 accountLogs.found = true;
-                                return validCode;
+                                return {
+                                    code: validCode,
+                                    detectedType: detected
+                                };
                             }
                         } else if (platformLower.includes('prime')) {
                             // Prime Video / Amazon: frase clave "Intento de acceso a los datos de la cuenta" y código de 6 dígitos

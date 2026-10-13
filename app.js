@@ -1455,6 +1455,7 @@ function setupEventListeners() {
         updateBtn('disney_update', '🏰', 'Actualiza hogar con Disney', 2);
         updateBtn('hbomax_update', '🟣', 'Fuera de casa HBO Max', 2);
         updateBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV', 1);
+        updateBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
 
         // Actualizar botón de Smart TV
         const tvBtn = document.getElementById('show-tv-login-btn');
@@ -1484,6 +1485,38 @@ function setupEventListeners() {
                     actBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar TV';
                     actBtn.style.opacity = '1';
                     actBtn.style.cursor = 'pointer';
+                }
+            }
+        }
+
+        // Actualizar botón de HBO Max Smart TV
+        const hboTvBtn = document.getElementById('show-hbo-tv-login-btn');
+        if (hboTvBtn) {
+            let tvUsed = window.clientUsedAttempts['hbomax_tv'];
+            let numTv = 0;
+            if (tvUsed === true) numTv = 1;
+            else if (typeof tvUsed === 'number') numTv = tvUsed;
+
+            let rem = 1 - numTv;
+            if (rem < 0) rem = 0;
+            hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+
+            const actHboBtn = document.getElementById('activate-hbo-tv-btn');
+            if (rem <= 0) {
+                hboTvBtn.style.opacity = '0.6';
+                if (actHboBtn) {
+                    actHboBtn.disabled = true;
+                    actHboBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de HBO Max TV agotado (1/1)';
+                    actHboBtn.style.opacity = '0.5';
+                    actHboBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                hboTvBtn.style.opacity = '1';
+                if (actHboBtn) {
+                    actHboBtn.disabled = false;
+                    actHboBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar HBO Max en TV';
+                    actHboBtn.style.opacity = '1';
+                    actHboBtn.style.cursor = 'pointer';
                 }
             }
         }
@@ -1661,6 +1694,7 @@ function setupEventListeners() {
                     disney_update: new Set(),
                     hbomax_update: new Set(),
                     disney_tv: new Set(),
+                    hbomax_tv: new Set(),
                     global: new Set()
                 };
 
@@ -1701,6 +1735,7 @@ function setupEventListeners() {
                                     }
                                     if (itemPlatform === 'hbomax') {
                                         window.clientActivePlatforms['hbomax_update'].add(itemEmailL);
+                                        window.clientActivePlatforms['hbomax_tv'].add(itemEmailL);
                                     }
                                 } else {
                                     window.clientActivePlatforms.global.add(itemEmailL);
@@ -1737,6 +1772,7 @@ function setupEventListeners() {
                                             }
                                             if (effPlat === 'hbomax') {
                                                 window.clientActivePlatforms['hbomax_update'].add(emailL);
+                                                window.clientActivePlatforms['hbomax_tv'].add(emailL);
                                             }
                                         } else {
                                             window.clientActivePlatforms.global.add(emailL);
@@ -1759,8 +1795,8 @@ function setupEventListeners() {
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max, Prime Video, ViX y Disney TV siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv');
+                    // Netflix, Disney, HBO Max, Prime Video, ViX, Disney TV y HBO Max TV siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'hbomax_tv');
 
                     if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
@@ -1794,6 +1830,25 @@ function setupEventListeners() {
                         });
                     } else {
                         tvEmailSelect.innerHTML = '<option value="">-- Sin cuentas Netflix --</option>';
+                    }
+                }
+
+                // Poblar específicamente el selector de correos para Activar HBO Max TV (Solo HBO Max y global)
+                const hboTvEmailSelect = document.getElementById('hbo-tv-email-select');
+                if (hboTvEmailSelect && window.clientActivePlatforms) {
+                    const hboEmails = window.clientActivePlatforms.hbomax || new Set();
+                    const globEmails = window.clientActivePlatforms.global || new Set();
+                    const combined = new Set([...hboEmails, ...globEmails]);
+
+                    hboTvEmailSelect.innerHTML = '';
+                    if (combined.size > 0) {
+                        combined.forEach(em => {
+                            const opt = document.createElement('option');
+                            opt.value = opt.textContent = em;
+                            hboTvEmailSelect.appendChild(opt);
+                        });
+                    } else {
+                        hboTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas HBO Max --</option>';
                     }
                 }
             } catch (e) {
@@ -1831,6 +1886,7 @@ function setupEventListeners() {
         disney_tv: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
         hbomax: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
         hbomax_update: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
+        hbomax_tv: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
         prime: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
         vix: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' }
     };
@@ -1884,7 +1940,7 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
-                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv'].includes(chosen)) {
+                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'hbomax_tv'].includes(chosen)) {
                     fetchBtn.style.display = 'none';
                 } else {
                     fetchBtn.style.display = 'block';
@@ -2431,6 +2487,197 @@ function setupEventListeners() {
                         activateTvBtn.disabled = false;
                         activateTvBtn.style.opacity = '1';
                         activateTvBtn.style.cursor = 'pointer';
+                    }
+                }, 1500);
+            }
+        });
+    }
+
+    // ============================================
+    // ACTIVAR HBO MAX EN TV (auth.hbomax.com/link)
+    // ============================================
+    const showHboTvBtn = document.getElementById('show-hbo-tv-login-btn');
+    const hboTvPanel = document.getElementById('hbo-tv-login-panel');
+    const activateHboTvBtn = document.getElementById('activate-hbo-tv-btn');
+
+    if (showHboTvBtn && hboTvPanel) {
+        showHboTvBtn.addEventListener('click', () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || (typeof window.clientUsedAttempts['hbomax_tv'] === 'number' && window.clientUsedAttempts['hbomax_tv'] >= 1));
+            if (isTvUsed) {
+                alert('⚠️ Ya usaste tu intento (1 vez) para activar HBO Max en TV.');
+                return;
+            }
+
+            const isOpen = hboTvPanel.style.display !== 'none';
+            hboTvPanel.style.display = isOpen ? 'none' : 'block';
+            showHboTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#8A2BE2';
+            showHboTvBtn.style.color = isOpen ? '#aaa' : 'white';
+            showHboTvBtn.style.background = isOpen ? 'rgba(138,43,226,0.1)' : 'rgba(138,43,226,0.25)';
+            if (!isOpen) {
+                document.getElementById('hbo-tv-activation-loading').style.display = 'none';
+                document.getElementById('hbo-tv-activation-result').style.display = 'none';
+                document.getElementById('hbo-tv-activation-error').style.display = 'none';
+            }
+        });
+    }
+
+    if (activateHboTvBtn) {
+        activateHboTvBtn.addEventListener('click', async () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || (typeof window.clientUsedAttempts['hbomax_tv'] === 'number' && window.clientUsedAttempts['hbomax_tv'] >= 1));
+            if (isTvUsed) {
+                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar HBO Max en TV.');
+            }
+
+            const tvCode = (document.getElementById('hbo-tv-code-input').value || '').trim().toUpperCase();
+            const emailSelect = document.getElementById('hbo-tv-email-select');
+            const email = emailSelect ? emailSelect.value.trim() : '';
+
+            if (!tvCode || tvCode.length < 6) return alert('⚠️ Ingresa el código de 6 dígitos que aparece en tu TV.');
+            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!email) return alert('Selecciona el correo de tu cuenta HBO Max.');
+
+            // Bloquear botón temporalmente
+            const originalBtnText = activateHboTvBtn.innerHTML;
+            activateHboTvBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Activando HBO Max...';
+            activateHboTvBtn.disabled = true;
+            document.getElementById('hbo-tv-activation-loading').style.display = 'block';
+            document.getElementById('hbo-tv-activation-result').style.display = 'none';
+            document.getElementById('hbo-tv-activation-error').style.display = 'none';
+
+            // Iniciar interfaz de cuenta regresiva y fases de proceso
+            let totalSeconds = 45;
+            let secondsRemaining = totalSeconds;
+            const timerEl = document.getElementById('hbo-tv-countdown-timer');
+            const progressEl = document.getElementById('hbo-tv-progress-bar');
+            const phaseEl = document.getElementById('hbo-tv-status-phase');
+            const queueNoticeEl = document.getElementById('hbo-tv-queue-notice');
+
+            if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+            if (progressEl) progressEl.style.width = '5%';
+            if (queueNoticeEl) queueNoticeEl.style.display = 'none';
+            if (phaseEl) phaseEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando al sistema...';
+
+            let countdownInterval = setInterval(() => {
+                if (secondsRemaining > 1) {
+                    secondsRemaining--;
+                    if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+                    const percent = Math.min(95, Math.round(((totalSeconds - secondsRemaining) / totalSeconds) * 100));
+                    if (progressEl) progressEl.style.width = `${percent}%`;
+
+                    if (phaseEl) {
+                        if (percent < 20) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-network-wired"></i> Conectando con HBO Max...';
+                        } else if (percent < 40) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-tv"></i> Ingresando código de tu televisor...';
+                        } else if (percent < 65) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-envelope"></i> Solicitando código a tu correo...';
+                        } else if (percent < 85) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-key"></i> Validando código de acceso...';
+                        } else {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Finalizando vinculación...';
+                        }
+                    }
+                }
+            }, 1000);
+
+            try {
+                // Seleccionar botUrl (ngrok -> local -> render)
+                const RENDER_URL = 'https://streaming-backend-ce1u.onrender.com';
+                let botUrl = RENDER_URL;
+                let usingLocal = false;
+
+                let ngrokUrl = null;
+                try {
+                    const snap = await db.ref('config/botUrl').once('value');
+                    ngrokUrl = snap.val();
+                } catch (e) { }
+
+                if (ngrokUrl) {
+                    botUrl = ngrokUrl;
+                    usingLocal = true;
+                } else {
+                    try {
+                        const localCheck = await Promise.race([
+                            fetch('http://localhost:3099/status'),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+                        ]);
+                        if (localCheck.ok) {
+                            botUrl = 'http://localhost:3099';
+                            usingLocal = true;
+                        }
+                    } catch (e) { }
+                }
+
+                // Llamar al endpoint del bot
+                const response = await fetch(`${botUrl}/api/activate-hbomax-tv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                });
+                const data = await response.json();
+
+                clearInterval(countdownInterval);
+                if (progressEl) progressEl.style.width = '100%';
+                document.getElementById('hbo-tv-activation-loading').style.display = 'none';
+
+                if (data.success) {
+                    // Registrar en Firebase y consumir intento
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'hbomax_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/hbomax_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/hbomax_tv`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/hbomax_tv`).set(true);
+                    }
+
+                    if (window.clientUsedAttempts) {
+                        window.clientUsedAttempts['hbomax_tv'] = true;
+                        if (window.updateCodeCountersUI) window.updateCodeCountersUI();
+                    }
+
+                    // Mostrar éxito en color verde
+                    const resultDiv = document.getElementById('hbo-tv-activation-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(46,204,113,0.1)';
+                    resultDiv.style.borderColor = '#2ecc71';
+                    const icon = document.getElementById('hbo-tv-activation-icon');
+                    if (icon) { icon.className = 'fa-solid fa-circle-check'; icon.style.color = '#2ecc71'; }
+                    const msg = document.getElementById('hbo-tv-activation-msg');
+                    if (msg) { msg.style.color = '#2ecc71'; msg.innerText = '¡TV Activada Exitosamente!'; }
+                    const desc = document.getElementById('hbo-tv-activation-desc');
+                    if (desc) { desc.innerHTML = '¡Iniciaste sesión y tu televisor se actualizará automáticamente!'; }
+                } else {
+                    document.getElementById('hbo-tv-activation-error').style.display = 'block';
+                    let errorHtml = data.error || 'Código inválido o expirado. Verifica el código en tu TV.';
+                    if (data.screenshot) {
+                        errorHtml += `<br><br><span style="font-size:0.75rem; color:#aaa;">Captura de lo que ve el bot:</span><br><img src="${data.screenshot}" style="max-width:100%; border-radius:8px; margin-top:8px; border:1px solid rgba(255,255,255,0.2);">`;
+                    }
+                    document.getElementById('hbo-tv-error-msg').innerHTML = errorHtml;
+                }
+
+            } catch (err) {
+                clearInterval(countdownInterval);
+                document.getElementById('hbo-tv-activation-loading').style.display = 'none';
+                document.getElementById('hbo-tv-activation-error').style.display = 'block';
+                document.getElementById('hbo-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
+            } finally {
+                setTimeout(() => {
+                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || window.clientUsedAttempts['hbomax_tv'] >= 1);
+                    if (isTvUsedNow) {
+                        activateHboTvBtn.disabled = true;
+                        activateHboTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de HBO Max TV agotado (1/1)';
+                        activateHboTvBtn.style.opacity = '0.5';
+                        activateHboTvBtn.style.cursor = 'not-allowed';
+                    } else {
+                        activateHboTvBtn.innerHTML = originalBtnText;
+                        activateHboTvBtn.disabled = false;
+                        activateHboTvBtn.style.opacity = '1';
+                        activateHboTvBtn.style.cursor = 'pointer';
                     }
                 }, 1500);
             }

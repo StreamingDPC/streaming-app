@@ -185,9 +185,15 @@ async function processQueue() {
     while (activationQueue.length > 0) {
         const item = activationQueue[0];
         try {
-            console.log(`\n[BOT-QUEUE] ⏳ Procesando turno: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
-            const result = await doActivateTv(item.email, item.tvCode);
-            item.resolve(result);
+            if (item.platform === 'hbomax_tv') {
+                console.log(`\n[BOT-QUEUE] ⏳ Procesando turno HBO Max TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
+                const result = await doActivateHboTv(item.email, item.tvCode);
+                item.resolve(result);
+            } else {
+                console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Netflix TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
+                const result = await doActivateTv(item.email, item.tvCode);
+                item.resolve(result);
+            }
         } catch (err) {
             item.reject(err);
         } finally {
@@ -198,7 +204,7 @@ async function processQueue() {
     isProcessingQueue = false;
 }
 
-// ── ENDPOINT PRINCIPAL: Activar TV (Pasa por la cola ordenada) ──────────────
+// ── ENDPOINT PRINCIPAL: Activar Netflix TV (Pasa por la cola ordenada) ──────
 app.post('/api/activate-tv', async (req, res) => {
     const { email, tvCode } = req.body;
 
@@ -208,7 +214,7 @@ app.post('/api/activate-tv', async (req, res) => {
 
     // Colocar en la cola de espera para evitar colisiones
     const queuePromise = new Promise((resolve, reject) => {
-        activationQueue.push({ email, tvCode, resolve, reject, time: Date.now() });
+        activationQueue.push({ platform: 'netflix_tv', email, tvCode, resolve, reject, time: Date.now() });
     });
 
     // Iniciar procesamiento en background si no estaba corriendo
@@ -221,6 +227,31 @@ app.post('/api/activate-tv', async (req, res) => {
         return res.status(500).json({
             success: false,
             error: err.message || 'Error en la activación del bot local.'
+        });
+    }
+});
+
+// ── ENDPOINT: Activar HBO Max TV ───────────────────────────────────────────
+app.post('/api/activate-hbomax-tv', async (req, res) => {
+    const { email, tvCode } = req.body;
+
+    if (!email || !tvCode) {
+        return res.status(400).json({ success: false, error: 'Email y código de TV son requeridos.' });
+    }
+
+    const queuePromise = new Promise((resolve, reject) => {
+        activationQueue.push({ platform: 'hbomax_tv', email, tvCode, resolve, reject, time: Date.now() });
+    });
+
+    processQueue();
+
+    try {
+        const result = await queuePromise;
+        return res.json(result);
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            error: err.message || 'Error en la activación de HBO Max en el bot local.'
         });
     }
 });
@@ -514,6 +545,385 @@ async function doActivateTv(email, tvCode) {
         }
 
         const payload = { success: false, error: 'Error del bot local: ' + err.message };
+        if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
+        return payload;
+    }
+}
+
+// ── FUNCIÓN: Activar HBO Max TV (auth.hbomax.com/link?flow=connectDeviceSignIn) ──
+async function doActivateHboTv(email, tvCode) {
+    let browser = null;
+    try {
+        console.log(`\n[BOT-HBO] ════════════════════════════════════`);
+        console.log(`[BOT-HBO] Activando HBO Max en TV: ${email} → código: ${tvCode}`);
+
+        const chromePath = getChromePath();
+        if (!chromePath) {
+            return {
+                success: false,
+                error: 'Google Chrome no está instalado en esta PC. Instala Chrome e intenta de nuevo.'
+            };
+        }
+
+        browser = await puppeteer.launch({
+            executablePath: chromePath,
+            headless: false,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-background-timer-throttling',
+                '--disable-renderer-backgrounding',
+                '--window-position=50,50',
+                '--window-size=1100,750'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1280, height: 800 });
+
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        });
+
+        // 1. Navegar a auth.hbomax.com/link?flow=connectDeviceSignIn
+        console.log('[BOT-HBO] 🌐 Navegando a auth.hbomax.com/link?flow=connectDeviceSignIn...');
+        await page.goto('https://auth.hbomax.com/link?flow=connectDeviceSignIn', { waitUntil: 'domcontentloaded', timeout: 35000 });
+        await sleep(3500);
+
+        // Aceptar banner de cookies si aparece
+        await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button'));
+            const cBtn = btns.find(b => {
+                const t = (b.innerText || '').toLowerCase();
+                return t.includes('accept all') || t.includes('aceptar') || b.getAttribute('data-testid') === 'consent-modal-button-0';
+            });
+            if (cBtn) cBtn.click();
+        });
+        await sleep(1500);
+
+        // 2. Ingresar código del televisor (6 caracteres)
+        const cleanTvCode = tvCode.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+        console.log(`[BOT-HBO] 🔢 Escribiendo código de TV: ${cleanTvCode}`);
+
+        const focusedTvCode = await page.evaluate(() => {
+            function findInput(root) {
+                const f0 = root.querySelector('#activationCode-field-0, [data-testid*="single_input_0"], input[type="text"]');
+                if (f0) return f0;
+                const all = Array.from(root.querySelectorAll('*'));
+                for (const el of all) {
+                    if (el.shadowRoot) {
+                        const res = findInput(el.shadowRoot);
+                        if (res) return res;
+                    }
+                }
+                return null;
+            }
+            const inp = findInput(document);
+            if (inp) {
+                inp.focus();
+                return true;
+            }
+            return false;
+        });
+
+        await page.keyboard.type(cleanTvCode, { delay: 120 });
+        await sleep(800);
+
+        // Clic en Siguiente / Next
+        console.log('[BOT-HBO] ➡️ Clic en botón Siguiente...');
+        const clickedNext = await page.evaluate(() => {
+            function findBtn(root) {
+                const btn = root.querySelector('button[type="submit"], [data-testid*="submit_button"]');
+                if (btn) return btn;
+                const all = Array.from(root.querySelectorAll('*'));
+                for (const el of all) {
+                    if (el.shadowRoot) {
+                        const res = findBtn(el.shadowRoot);
+                        if (res) return res;
+                    }
+                }
+                return null;
+            }
+            const b = findBtn(document);
+            if (b) {
+                b.click();
+                return true;
+            }
+            return false;
+        });
+        if (!clickedNext) {
+            await page.keyboard.press('Enter');
+        }
+        await sleep(4000);
+
+        // Verificar si el código no coincide o expiró
+        const tvCodeError = await page.evaluate(() => {
+            const txt = (document.body.innerText || '').toLowerCase();
+            if (txt.includes("doesn't match") || txt.includes('no coincide') || txt.includes('inválido') || txt.includes('incorrecto') || txt.includes('must be at least')) {
+                return true;
+            }
+            return false;
+        });
+        if (tvCodeError) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            return {
+                success: false,
+                error: 'El código ingresado no coincide o expiró en tu TV. Genera un nuevo código en tu televisor e intenta nuevamente.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        // 3. Ingresar el correo electrónico
+        console.log(`[BOT-HBO] ✉️ Ingresando correo electrónico: ${email}`);
+        let emailReady = false;
+        for (let wait = 0; wait < 10; wait++) {
+            emailReady = await page.evaluate(() => {
+                function searchEmail(root) {
+                    const inp = root.querySelector('#sign-in-phoneEmail-input, [data-testid*="phoneEmailInput"], input[type="email"], input[name="phoneEmail"]');
+                    if (inp) return inp;
+                    const all = Array.from(root.querySelectorAll('*'));
+                    for (const el of all) {
+                        if (el.shadowRoot) {
+                            const res = searchEmail(el.shadowRoot);
+                            if (res) return res;
+                        }
+                    }
+                    return null;
+                }
+                const inp = searchEmail(document);
+                if (inp) {
+                    inp.focus();
+                    return true;
+                }
+                return false;
+            });
+            if (emailReady) break;
+            await sleep(1500);
+        }
+
+        if (!emailReady) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            return {
+                success: false,
+                error: 'HBO Max no cargó el campo de correo electrónico.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        await page.keyboard.type(email, { delay: 80 });
+        await sleep(600);
+
+        // Clic en Continuar
+        console.log('[BOT-HBO] 🔄 Clic en Continuar correo...');
+        const clickedContinue = await page.evaluate(() => {
+            function searchContinue(root) {
+                const btn = root.querySelector('button[data-testid="gisdk.gi-sign-in.continue_button"], button[type="submit"]');
+                if (btn) return btn;
+                const all = Array.from(root.querySelectorAll('*'));
+                for (const el of all) {
+                    if (el.shadowRoot) {
+                        const res = searchContinue(el.shadowRoot);
+                        if (res) return res;
+                    }
+                }
+                return null;
+            }
+            const b = searchContinue(document);
+            if (b) {
+                b.click();
+                return true;
+            }
+            return false;
+        });
+        if (!clickedContinue) {
+            await page.keyboard.press('Enter');
+        }
+        await sleep(4000);
+
+        // 4. Clic en "Obtener código de un solo uso"
+        console.log('[BOT-HBO] 🔘 Buscando opción "Obtener código de un solo uso"...');
+        let clickedOtpBtn = false;
+        for (let wait = 0; wait < 10; wait++) {
+            clickedOtpBtn = await page.evaluate(() => {
+                function searchOtp(root) {
+                    const btns = Array.from(root.querySelectorAll('button, a, [role="button"]'));
+                    for (const b of btns) {
+                        const txt = (b.innerText || b.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        if (txt.includes('obtener codigo de un solo uso') || txt.includes('un solo uso') || txt.includes('one-time code') || txt.includes('one time code')) {
+                            b.click();
+                            return true;
+                        }
+                    }
+                    const all = Array.from(root.querySelectorAll('*'));
+                    for (const el of all) {
+                        if (el.shadowRoot) {
+                            const res = searchOtp(el.shadowRoot);
+                            if (res) return res;
+                        }
+                    }
+                    return false;
+                }
+                return searchOtp(document);
+            });
+            if (clickedOtpBtn) {
+                console.log('[BOT-HBO] ✅ Clic en "Obtener código de un solo uso" ejecutado.');
+                break;
+            }
+            await sleep(1500);
+        }
+
+        if (!clickedOtpBtn) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            return {
+                success: false,
+                error: 'No se encontró el botón "Obtener código de un solo uso" en HBO Max.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+        await sleep(4000);
+
+        // 5. Leer código OTP (6 dígitos) enviado al correo
+        console.log('[BOT-HBO] 📨 Solicitando al backend el código de acceso (6 dígitos)...');
+        let loginCode = null;
+        const BACKEND_URL = 'https://streaming-backend-ce1u.onrender.com';
+
+        for (let attempt = 1; attempt <= 10; attempt++) {
+            try {
+                console.log(`[BOT-HBO] 🔍 Intento ${attempt}/10 de lectura del correo (${email})...`);
+                const codeResp = await axios.post(`${BACKEND_URL}/api/get-code`, {
+                    email: email,
+                    platform: 'hbomax_tv'
+                }, { timeout: 15000 });
+
+                if (codeResp.data && codeResp.data.code) {
+                    const raw = codeResp.data.code.toString().replace(/\D/g, '');
+                    if (raw.length >= 6) {
+                        loginCode = raw.substring(0, 6);
+                        console.log(`[BOT-HBO] ✅ Código OTP recibido: ${loginCode}`);
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.log(`[BOT-HBO] ⚠️ Intento ${attempt} falló: ${e.message}`);
+            }
+            if (attempt < 10) {
+                await sleep(5000);
+            }
+        }
+
+        if (!loginCode) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            return {
+                success: false,
+                error: 'No se pudo leer el código de acceso de HBO Max del correo. Inténtalo de nuevo en 1 minuto.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        // 6. Escribir el código OTP en las 6 casillas
+        console.log(`[BOT-HBO] ⌨️ Ingresando código OTP en las casillas: ${loginCode}`);
+        await page.evaluate(() => {
+            function searchOtpField(root) {
+                const f0 = root.querySelector('#activationCode-field-0, [data-testid*="single_input_0"], input[type="text"], input[type="tel"]');
+                if (f0) return f0;
+                const all = Array.from(root.querySelectorAll('*'));
+                for (const el of all) {
+                    if (el.shadowRoot) {
+                        const res = searchOtpField(el.shadowRoot);
+                        if (res) return res;
+                    }
+                }
+                return null;
+            }
+            const inp = searchOtpField(document);
+            if (inp) inp.focus();
+        });
+        await page.keyboard.type(loginCode, { delay: 120 });
+        await sleep(800);
+
+        // Clic en Enviar
+        console.log('[BOT-HBO] 🚀 Clic en Enviar código OTP...');
+        await page.evaluate(() => {
+            function searchSubmit(root) {
+                const btns = Array.from(root.querySelectorAll('button, input[type="submit"]'));
+                for (const b of btns) {
+                    const txt = (b.innerText || b.value || '').toLowerCase().trim();
+                    if (txt === 'enviar' || txt === 'submit' || txt.includes('enviar')) {
+                        b.click();
+                        return true;
+                    }
+                }
+                const all = Array.from(root.querySelectorAll('*'));
+                for (const el of all) {
+                    if (el.shadowRoot) {
+                        const res = searchSubmit(el.shadowRoot);
+                        if (res) return res;
+                    }
+                }
+                return false;
+            }
+            return searchSubmit(document);
+        });
+        await sleep(5000);
+
+        // 7. Esperar pantalla de confirmación ("¡Ya está todo listo!")
+        console.log('[BOT-HBO] ⏳ Esperando confirmación de activación...');
+        let confirmed = false;
+        for (let wait = 0; wait < 6; wait++) {
+            const pageText = await page.evaluate(() => (document.body.innerText || '').toLowerCase());
+            if (pageText.includes('ya esta todo listo') || pageText.includes('ya está todo listo') ||
+                pageText.includes('televisor se actualizara') || pageText.includes('todo listo') ||
+                pageText.includes('all set') || pageText.includes('ready')) {
+                confirmed = true;
+                break;
+            }
+            await sleep(2000);
+        }
+        console.log(`[BOT-HBO] Estado: ${confirmed ? '¡Confirmado por HBO Max!' : 'Finalizado'}`);
+
+        // 8. Cerrar sesión y limpiar cookies (como solicitado: "y quedo listo ahora cerrar sesion")
+        console.log('[BOT-HBO] 🧹 Cerrando y limpiando sesión de HBO Max...');
+        try {
+            const client = await page.target().createCDPSession();
+            await client.send('Network.clearBrowserCookies');
+            await client.send('Network.clearBrowserCache');
+            console.log('[BOT-HBO] 🧼 Cookies y caché limpiados.');
+        } catch (e) { }
+
+        try {
+            await page.goto('https://auth.hbomax.com/logout', { waitUntil: 'networkidle2', timeout: 8000 }).catch(() => { });
+        } catch (e) { }
+
+        await browser.close();
+        browser = null;
+
+        console.log('[BOT-HBO] 🎉 ¡Activación de HBO Max TV completada con éxito!');
+        return {
+            success: true,
+            message: '¡HBO Max activado con éxito en tu Smart TV! Tu televisor se actualizará automáticamente.'
+        };
+
+    } catch (err) {
+        console.error('[BOT-HBO] ❌ Error:', err.message);
+
+        let screenshot = null;
+        if (browser) {
+            try {
+                const pages = await browser.pages();
+                if (pages.length > 0) screenshot = await pages[0].screenshot({ encoding: 'base64' });
+                await browser.close();
+            } catch (e) { }
+        }
+
+        const payload = { success: false, error: 'Error del bot de HBO Max: ' + err.message };
         if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
         return payload;
     }
