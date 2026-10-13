@@ -1611,7 +1611,7 @@ async function doActivateCrunchyrollTv(email, tvCode) {
             await sleep(500);
         }
 
-        // 7. Clic en "ACCEDER"
+        // 7. Clic en "ACCEDER" en pantalla SSO
         console.log('[BOT-CRUNCHY] 🚀 Clic en ACCEDER...');
         const clickedLogin = await page.evaluate(() => {
             const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
@@ -1628,42 +1628,92 @@ async function doActivateCrunchyrollTv(email, tvCode) {
         if (!clickedLogin) {
             await page.keyboard.press('Enter');
         }
-        await sleep(5000);
+        await sleep(3500);
 
-        // 8. Verificar confirmación de éxito o error
+        // 8. Verificar si SSO rechazó la contraseña
+        const isBadCredentials = await page.evaluate(() => {
+            const txt = (document.body.innerText || '').toLowerCase();
+            return txt.includes('combinación incorrecta') || txt.includes('contraseña incorrecta') || txt.includes('incorrect password');
+        });
+        if (isBadCredentials) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: 'Crunchyroll indicó que el correo o la contraseña son incorrectos. Verifica las credenciales en la venta.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        // 9. Esperar regreso a la pantalla de activación de Crunchyroll
+        console.log('[BOT-CRUNCHY] ⏳ Esperando regreso a pantalla de activación...');
+        for (let wait = 0; wait < 15; wait++) {
+            const curUrl = page.url();
+            if (!curUrl.includes('sso.crunchyroll.com') && !curUrl.includes('/login')) {
+                break;
+            }
+            await sleep(1000);
+        }
+        await sleep(3000);
+
+        // Si por alguna razón estamos en otra página o el código no está, asegurar que el código esté en las casillas
+        const boxesCount = await page.$$eval('input[id^="Code-input-"]', inputs => inputs.length).catch(() => 0);
+        if (boxesCount > 0) {
+            const firstVal = await page.$eval('#Code-input-0', el => el.value).catch(() => '');
+            if (!firstVal) {
+                console.log(`[BOT-CRUNCHY] 🔢 Re-ingresando código de TV: ${cleanTvCode}`);
+                for (let i = 0; i < 6; i++) {
+                    const input = await page.$(`#Code-input-${i}`);
+                    if (input) {
+                        await input.focus();
+                        await page.keyboard.type(cleanTvCode[i] || '');
+                        await sleep(80);
+                    }
+                }
+                await sleep(800);
+            }
+        }
+
+        // 10. CLIC CRÍTICO: Clic en el botón naranja "ACTIVAR" final (Activemos tu dispositivo)
+        console.log('[BOT-CRUNCHY] 🔘 Clic en el botón final "ACTIVAR" para vincular el televisor...');
+        let clickedFinalActivate = false;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            clickedFinalActivate = await page.evaluate(() => {
+                const btn = document.querySelector('.activate-button') ||
+                    Array.from(document.querySelectorAll('button, input[type="submit"]')).find(b => {
+                        const txt = (b.innerText || b.value || '').trim().toUpperCase();
+                        return txt === 'ACTIVAR' || txt.includes('ACTIVAR');
+                    });
+                if (btn && !btn.disabled) {
+                    btn.click();
+                    return true;
+                }
+                return false;
+            });
+            if (clickedFinalActivate) break;
+            await sleep(1000);
+        }
+        console.log(`[BOT-CRUNCHY] Clic en botón ACTIVAR final: ${clickedFinalActivate ? '✅ ÉXITO' : '⚠️ No encontrado'}`);
+        await sleep(4000);
+
+        // 11. Verificar confirmación de éxito o error
         console.log('[BOT-CRUNCHY] ⏳ Verificando confirmación de activación...');
-        let isSuccess = false;
         let isError = false;
         let errorMsgDetail = '';
 
-        for (let wait = 0; wait < 8; wait++) {
-            const curUrl = page.url();
+        for (let wait = 0; wait < 6; wait++) {
             const pageText = await page.evaluate(() => (document.body.innerText || '').toLowerCase());
-
-            if (pageText.includes('éxito') ||
-                pageText.includes('exito') ||
-                pageText.includes('activado') ||
-                pageText.includes('dispositivo activado') ||
-                pageText.includes('enlazado') ||
-                pageText.includes('todo listo') ||
-                pageText.includes('disfruta') ||
-                curUrl.includes('/activate/success') ||
-                (curUrl.includes('crunchyroll.com') && !curUrl.includes('login') && !curUrl.includes('sso'))) {
-                isSuccess = true;
-                break;
-            }
-
-            if (pageText.includes('combinación incorrecta') ||
-                pageText.includes('contraseña incorrecta') ||
-                pageText.includes('incorrect password') ||
-                pageText.includes('código no es válido') ||
+            if (pageText.includes('código no es válido') ||
                 pageText.includes('código incorrecto') ||
-                pageText.includes('invalid code')) {
+                pageText.includes('invalid code') ||
+                pageText.includes('ha caducado') ||
+                pageText.includes('código ha expirado')) {
                 isError = true;
-                errorMsgDetail = 'Crunchyroll indicó datos incorrectos o código no válido.';
+                errorMsgDetail = 'El código de activación ingresado no es válido o ha expirado en tu TV.';
                 break;
             }
-            await sleep(2000);
+            await sleep(1500);
         }
 
         if (isError) {
@@ -1677,7 +1727,7 @@ async function doActivateCrunchyrollTv(email, tvCode) {
             };
         }
 
-        // 9. Cerrar sesión y limpiar cookies (como solicitado: "y al activarse cerrar sesion")
+        // 12. Cerrar sesión y limpiar cookies (como solicitado: "y al final diera clic en activar y cerrar sesion para que active")
         console.log('[BOT-CRUNCHY] 🧹 Limpiando y cerrando sesión de Crunchyroll...');
         try {
             const client = await page.target().createCDPSession();
@@ -1688,6 +1738,7 @@ async function doActivateCrunchyrollTv(email, tvCode) {
 
         try {
             await page.goto('https://www.crunchyroll.com/es/logout', { waitUntil: 'domcontentloaded', timeout: 8000 }).catch(() => { });
+            console.log('[BOT-CRUNCHY] 🚪 Sesión cerrada correctamente en Crunchyroll.');
         } catch (e) { }
 
         await browser.disconnect();
