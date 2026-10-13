@@ -1343,7 +1343,11 @@
                                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
                                         <button type="button" onclick="adminExecuteAction('disney_tv')"
                                             style="background:linear-gradient(135deg,#005AD6,#113CCF); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(0,90,214,0.3);">
-                                            <i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV (6 dígitos)
+                                            <i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV (con email)
+                                        </button>
+                                        <button type="button" onclick="adminExecuteAction('disney_code_tv')"
+                                            style="background:linear-gradient(135deg,#005AD6,#002d72); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(0,90,214,0.3);">
+                                            <i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV (8 dígitos)
                                         </button>
                                         <button type="button" onclick="adminExecuteAction('hbomax_tv')"
                                             style="background:linear-gradient(135deg,#8A2BE2,#4b0082); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(138,43,226,0.3);">
@@ -1414,7 +1418,8 @@
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
                                     <option value="disney">Disney+</option>
                                     <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
-                                    <option value="disney_tv">Iniciar sesión Disney en TV</option>
+                                    <option value="disney_tv">Iniciar sesión Disney en TV (con email)</option>
+                                    <option value="disney_code_tv">Iniciar sesión Disney en TV (con código)</option>
                                     <option value="hbomax">HBO Max</option>
                                     <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
                                     <option value="hbomax_tv">Iniciar sesión HBO Max en TV</option>
@@ -2771,6 +2776,7 @@
                         if (usedData['netflix_temp']) attemptBadges.push(`<span style="color:#0984e3;">Temporal</span>`);
                         if (usedData['netflix_tv']) attemptBadges.push(`<span style="color:#2ecc71;">TV</span>`);
                         if (usedData['disney_tv']) attemptBadges.push(`<span style="color:#005AD6;">TV Disn</span>`);
+                        if (usedData['disney_code_tv']) attemptBadges.push(`<span style="color:#005AD6;">TV Disn (Cód)</span>`);
                         if (usedData['hbomax_tv']) attemptBadges.push(`<span style="color:#8A2BE2;">TV Max</span>`);
                         if (usedData['prime_tv']) attemptBadges.push(`<span style="color:#00A8E1;">TV Prime</span>`);
                         if (usedData['crunchyroll_tv']) attemptBadges.push(`<span style="color:#F47521;">TV Crunchy</span>`);
@@ -2906,8 +2912,8 @@
             spinner.style.display = 'block';
             content.style.display = 'none';
 
-            // CASO ESPECIAL: Smart TV (Netflix, HBO Max, Prime Video y Crunchyroll)
-            if (platform === 'netflix_tv' || platform === 'hbomax_tv' || platform === 'prime_tv' || platform === 'crunchyroll_tv') {
+            // CASO ESPECIAL: Smart TV (Netflix, HBO Max, Prime Video, Crunchyroll y Disney+)
+            if (platform === 'netflix_tv' || platform === 'hbomax_tv' || platform === 'prime_tv' || platform === 'crunchyroll_tv' || platform === 'disney_code_tv') {
                 const tvInput = document.getElementById('admin-console-tv-code');
                 const tvCode = tvInput ? tvInput.value.trim() : '';
                 if (!tvCode) {
@@ -2927,6 +2933,9 @@
                 } else if (platform === 'crunchyroll_tv') {
                     serviceName = 'Crunchyroll';
                     endpoint = '/api/activate-crunchyroll-tv';
+                } else if (platform === 'disney_code_tv') {
+                    serviceName = 'Disney+';
+                    endpoint = '/api/activate-disney-tv';
                 }
 
                 if (statusText) statusText.innerText = `Conectando con el bot de ${serviceName} TV e iniciando sesión...`;
@@ -3276,6 +3285,7 @@
                             if (usedData['netflix_temp'] === true) badges.push(`<span style="color:#e74c3c;">✈️ Acc. Temporal</span>`);
                             if (usedData['netflix_tv'] === true) badges.push(`<span style="color:#2ecc71;">📺 TV Act.</span>`);
                             if (usedData['disney_tv'] === true) badges.push(`<span style="color:#005AD6;">📺 TV Disn</span>`);
+                            if (usedData['disney_code_tv'] === true) badges.push(`<span style="color:#005AD6;">📺 TV Disn (Cód)</span>`);
                             if (usedData['hbomax_tv'] === true) badges.push(`<span style="color:#8A2BE2;">📺 TV Max</span>`);
                             if (usedData['prime_tv'] === true) badges.push(`<span style="color:#00A8E1;">📺 TV Prime</span>`);
                             if (usedData['crunchyroll_tv'] === true) badges.push(`<span style="color:#F47521;">📺 TV Crunchy</span>`);
@@ -3310,7 +3320,8 @@
                                     <option value="netflix_temp">Acceso temporal Netflix</option>
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
                                     <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney+</option>
-                                    <option value="disney_tv">Iniciar sesión Disney en TV</option>
+                                    <option value="disney_tv">Iniciar sesión Disney en TV (con email)</option>
+                                    <option value="disney_code_tv">Iniciar sesión Disney en TV (con código)</option>
                                     <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
                                     <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
                                     <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>

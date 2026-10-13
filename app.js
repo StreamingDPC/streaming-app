@@ -1454,7 +1454,8 @@ function setupEventListeners() {
         updateBtn('netflix_temp', '✈️', 'Acceso temporal con Netflix CEL O PC', 1);
         updateBtn('disney_update', '🏰', 'Actualiza hogar con Disney', 2);
         updateBtn('hbomax_update', '🟣', 'Fuera de casa HBO Max', 2);
-        updateBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV', 1);
+        updateBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV con email', 1);
+        updateBtn('disney_code_tv', '🏰', 'Iniciar sesión Disney en TV con código', 1);
         updateBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
         updateBtn('prime_tv', '📺', 'Iniciar sesión Prime Video en TV', 1);
         updateBtn('crunchyroll_tv', '📺', 'Iniciar sesión Crunchyroll en TV', 1);
@@ -1587,6 +1588,38 @@ function setupEventListeners() {
             }
         }
 
+        // Actualizar botón de Disney+ Smart TV con código
+        const disneyCodeTvBtn = document.getElementById('show-disney-code-tv-login-btn');
+        if (disneyCodeTvBtn) {
+            let tvUsed = window.clientUsedAttempts['disney_code_tv'];
+            let numTv = 0;
+            if (tvUsed === true) numTv = 1;
+            else if (typeof tvUsed === 'number') numTv = tvUsed;
+
+            let rem = 1 - numTv;
+            if (rem < 0) rem = 0;
+            disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+
+            const actDisneyCodeBtn = document.getElementById('activate-disney-code-tv-btn');
+            if (rem <= 0) {
+                disneyCodeTvBtn.style.opacity = '0.6';
+                if (actDisneyCodeBtn) {
+                    actDisneyCodeBtn.disabled = true;
+                    actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Disney TV con código agotado (1/1)';
+                    actDisneyCodeBtn.style.opacity = '0.5';
+                    actDisneyCodeBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                disneyCodeTvBtn.style.opacity = '1';
+                if (actDisneyCodeBtn) {
+                    actDisneyCodeBtn.disabled = false;
+                    actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Disney en TV';
+                    actDisneyCodeBtn.style.opacity = '1';
+                    actDisneyCodeBtn.style.cursor = 'pointer';
+                }
+            }
+        }
+
         // Actualizar botones de acción directa bajo cada servicio (Netflix, Hogar, Acceso Temporal)
         const directButtons = document.querySelectorAll('.direct-fetch-code-btn');
         directButtons.forEach(dBtn => {
@@ -1629,8 +1662,8 @@ function setupEventListeners() {
                 platIcon = 'fa-house-user';
             } else if (plat === 'disney_tv') {
                 maxUses = 1;
-                platName = 'Iniciar sesión Disney en TV';
-                platIcon = 'fa-tv';
+                platName = 'Iniciar sesión Disney en TV con email';
+                platIcon = 'fa-envelope';
             } else if (plat === 'netflix_temp') {
                 platName = 'Código Acceso Temporal';
                 platIcon = 'fa-plane-departure';
@@ -1652,7 +1685,7 @@ function setupEventListeners() {
                 } else if (plat === 'hbomax_update') {
                     dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obten codigo fuera de casa Hbo Max`;
                 } else if (plat === 'disney_tv') {
-                    dBtn.innerHTML = `<i class="fa-solid fa-tv"></i> Iniciar sesión Disney en TV`;
+                    dBtn.innerHTML = `<i class="fa-solid fa-envelope"></i> Iniciar sesión Disney en TV con email`;
                 } else {
                     dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
                 }
@@ -1761,6 +1794,7 @@ function setupEventListeners() {
                     disney_update: new Set(),
                     hbomax_update: new Set(),
                     disney_tv: new Set(),
+                    disney_code_tv: new Set(),
                     hbomax_tv: new Set(),
                     prime_tv: new Set(),
                     crunchyroll_tv: new Set(),
@@ -1802,6 +1836,7 @@ function setupEventListeners() {
                                     if (itemPlatform === 'disney') {
                                         window.clientActivePlatforms['disney_update'].add(itemEmailL);
                                         window.clientActivePlatforms['disney_tv'].add(itemEmailL);
+                                        window.clientActivePlatforms['disney_code_tv'].add(itemEmailL);
                                     }
                                     if (itemPlatform === 'hbomax') {
                                         window.clientActivePlatforms['hbomax_update'].add(itemEmailL);
@@ -1846,6 +1881,7 @@ function setupEventListeners() {
                                             if (effPlat === 'disney') {
                                                 window.clientActivePlatforms['disney_update'].add(emailL);
                                                 window.clientActivePlatforms['disney_tv'].add(emailL);
+                                                window.clientActivePlatforms['disney_code_tv'].add(emailL);
                                             }
                                             if (effPlat === 'hbomax') {
                                                 window.clientActivePlatforms['hbomax_update'].add(emailL);
@@ -1878,8 +1914,8 @@ function setupEventListeners() {
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max, Prime Video, ViX, Crunchyroll, Disney TV, HBO Max TV, Prime TV y Crunchyroll TV siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'crunchyroll' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'hbomax_tv' || plat === 'prime_tv' || plat === 'crunchyroll_tv');
+                    // Netflix, Disney, HBO Max, Prime Video, ViX, Crunchyroll, Disney TV, Disney TV con código, HBO Max TV, Prime TV y Crunchyroll TV siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'crunchyroll' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'disney_code_tv' || plat === 'hbomax_tv' || plat === 'prime_tv' || plat === 'crunchyroll_tv');
 
                     if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
@@ -1972,6 +2008,25 @@ function setupEventListeners() {
                         crunchyTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas Crunchyroll --</option>';
                     }
                 }
+
+                // Poblar específicamente el selector de correos para Activar Disney TV con código (Solo Disney y global)
+                const disneyCodeTvEmailSelect = document.getElementById('disney-code-tv-email-select');
+                if (disneyCodeTvEmailSelect && window.clientActivePlatforms) {
+                    const disneyEmails = window.clientActivePlatforms.disney || new Set();
+                    const globEmails = window.clientActivePlatforms.global || new Set();
+                    const combined = new Set([...disneyEmails, ...globEmails]);
+
+                    disneyCodeTvEmailSelect.innerHTML = '';
+                    if (combined.size > 0) {
+                        combined.forEach(em => {
+                            const opt = document.createElement('option');
+                            opt.value = opt.textContent = em;
+                            disneyCodeTvEmailSelect.appendChild(opt);
+                        });
+                    } else {
+                        disneyCodeTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas Disney+ --</option>';
+                    }
+                }
             } catch (e) {
                 emailSelect.innerHTML = '<option value="">-- Error al cargar cuentas --</option>';
             }
@@ -2005,6 +2060,7 @@ function setupEventListeners() {
         disney: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
         disney_update: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
         disney_tv: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
+        disney_code_tv: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
         hbomax: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
         hbomax_update: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
         hbomax_tv: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
@@ -2064,7 +2120,7 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
-                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'crunchyroll', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'hbomax_tv', 'prime_tv', 'crunchyroll_tv'].includes(chosen)) {
+                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'crunchyroll', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'disney_code_tv', 'hbomax_tv', 'prime_tv', 'crunchyroll_tv'].includes(chosen)) {
                     fetchBtn.style.display = 'none';
                 } else {
                     fetchBtn.style.display = 'block';
@@ -3176,6 +3232,193 @@ function setupEventListeners() {
                         activateCrunchyTvBtn.disabled = false;
                         activateCrunchyTvBtn.style.opacity = '1';
                         activateCrunchyTvBtn.style.cursor = 'pointer';
+                    }
+                }, 1500);
+            }
+        });
+    }
+
+    // ACTIVACIÓN SMART TV — DISNEY+ CON CÓDIGO
+    const showDisneyCodeTvBtn = document.getElementById('show-disney-code-tv-login-btn');
+    const disneyCodeTvPanel = document.getElementById('disney-code-tv-login-panel');
+    const activateDisneyCodeTvBtn = document.getElementById('activate-disney-code-tv-btn');
+
+    if (showDisneyCodeTvBtn && disneyCodeTvPanel) {
+        showDisneyCodeTvBtn.addEventListener('click', () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1));
+            if (isTvUsed) {
+                alert('⚠️ Ya usaste tu intento (1 vez) para activar Disney+ en TV con código.');
+                return;
+            }
+
+            const isOpen = disneyCodeTvPanel.style.display !== 'none';
+            disneyCodeTvPanel.style.display = isOpen ? 'none' : 'block';
+            showDisneyCodeTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#005AD6';
+            showDisneyCodeTvBtn.style.color = isOpen ? '#aaa' : 'white';
+            showDisneyCodeTvBtn.style.background = isOpen ? 'rgba(0,90,214,0.1)' : 'rgba(0,90,214,0.25)';
+            if (!isOpen) {
+                document.getElementById('disney-code-tv-activation-loading').style.display = 'none';
+                document.getElementById('disney-code-tv-activation-result').style.display = 'none';
+                document.getElementById('disney-code-tv-activation-error').style.display = 'none';
+            }
+        });
+    }
+
+    if (activateDisneyCodeTvBtn) {
+        activateDisneyCodeTvBtn.addEventListener('click', async () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1));
+            if (isTvUsed) {
+                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Disney+ en TV con código.');
+            }
+
+            const tvCode = (document.getElementById('disney-code-tv-code-input').value || '').trim().toUpperCase();
+            const emailSelect = document.getElementById('disney-code-tv-email-select');
+            const email = emailSelect ? emailSelect.value.trim() : '';
+
+            if (!tvCode || tvCode.length < 8) return alert('⚠️ Ingresa el código de 8 dígitos que aparece en tu TV (ej: 12345678).');
+            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!email) return alert('Selecciona el correo de tu cuenta Disney+.');
+
+            // Bloquear botón temporalmente
+            const originalBtnText = activateDisneyCodeTvBtn.innerHTML;
+            activateDisneyCodeTvBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Activando TV...';
+            activateDisneyCodeTvBtn.disabled = true;
+            document.getElementById('disney-code-tv-activation-loading').style.display = 'block';
+            document.getElementById('disney-code-tv-activation-result').style.display = 'none';
+            document.getElementById('disney-code-tv-activation-error').style.display = 'none';
+
+            // Iniciar interfaz de cuenta regresiva y fases de proceso
+            let totalSeconds = 45;
+            let secondsRemaining = totalSeconds;
+            const timerEl = document.getElementById('disney-code-tv-countdown-timer');
+            const progressEl = document.getElementById('disney-code-tv-progress-bar');
+            const phaseEl = document.getElementById('disney-code-tv-status-phase');
+            const queueNoticeEl = document.getElementById('disney-code-tv-queue-notice');
+
+            if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+            if (progressEl) progressEl.style.width = '5%';
+            if (queueNoticeEl) queueNoticeEl.style.display = 'none';
+            if (phaseEl) phaseEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando al sistema...';
+
+            let countdownInterval = setInterval(() => {
+                if (secondsRemaining > 1) {
+                    secondsRemaining--;
+                    if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+                    const percent = Math.min(95, Math.round(((totalSeconds - secondsRemaining) / totalSeconds) * 100));
+                    if (progressEl) progressEl.style.width = `${percent}%`;
+
+                    if (phaseEl) {
+                        if (percent < 25) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-network-wired"></i> Conectando con Disney+...';
+                        } else if (percent < 50) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-key"></i> Ingresando código de tu televisor...';
+                        } else if (percent < 75) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-envelope"></i> Validando código de acceso...';
+                        } else {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Finalizando vinculación...';
+                        }
+                    }
+                }
+            }, 1000);
+
+            try {
+                // Seleccionar botUrl (ngrok -> local -> render)
+                const RENDER_URL = 'https://streaming-backend-ce1u.onrender.com';
+                let botUrl = RENDER_URL;
+                let usingLocal = false;
+
+                let ngrokUrl = null;
+                try {
+                    const snap = await db.ref('config/botUrl').once('value');
+                    ngrokUrl = snap.val();
+                } catch (e) { }
+
+                if (ngrokUrl) {
+                    botUrl = ngrokUrl;
+                    usingLocal = true;
+                } else {
+                    try {
+                        const localCheck = await Promise.race([
+                            fetch('http://localhost:3099/status'),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+                        ]);
+                        if (localCheck.ok) {
+                            botUrl = 'http://localhost:3099';
+                            usingLocal = true;
+                        }
+                    } catch (e) { }
+                }
+
+                // Llamar al endpoint del bot
+                const response = await fetch(`${botUrl}/api/activate-disney-tv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                });
+                const data = await response.json();
+
+                clearInterval(countdownInterval);
+                if (progressEl) progressEl.style.width = '100%';
+                document.getElementById('disney-code-tv-activation-loading').style.display = 'none';
+
+                if (data.success) {
+                    // Registrar en Firebase y consumir intento
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'disney_code_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_code_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                    }
+
+                    if (window.clientUsedAttempts) {
+                        window.clientUsedAttempts['disney_code_tv'] = true;
+                        if (window.updateCodeCountersUI) window.updateCodeCountersUI();
+                    }
+
+                    // Mostrar éxito en color verde
+                    const resultDiv = document.getElementById('disney-code-tv-activation-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(46,204,113,0.1)';
+                    resultDiv.style.borderColor = '#2ecc71';
+                    const icon = document.getElementById('disney-code-tv-activation-icon');
+                    if (icon) { icon.className = 'fa-solid fa-circle-check'; icon.style.color = '#2ecc71'; }
+                    const msg = document.getElementById('disney-code-tv-activation-msg');
+                    if (msg) { msg.style.color = '#2ecc71'; msg.innerText = '¡TV Activada Exitosamente!'; }
+                    const desc = document.getElementById('disney-code-tv-activation-desc');
+                    if (desc) { desc.innerHTML = '¡Dispositivo Disney+ activado con éxito en tu Smart TV! Ya puedes disfrutar de todo el contenido.'; }
+                } else {
+                    document.getElementById('disney-code-tv-activation-error').style.display = 'block';
+                    let errorHtml = data.error || 'Código inválido o expirado. Verifica el código en tu TV.';
+                    if (data.screenshot) {
+                        errorHtml += `<br><br><span style="font-size:0.75rem; color:#aaa;">Captura de lo que ve el bot:</span><br><img src="${data.screenshot}" style="max-width:100%; border-radius:8px; margin-top:8px; border:1px solid rgba(255,255,255,0.2);">`;
+                    }
+                    document.getElementById('disney-code-tv-error-msg').innerHTML = errorHtml;
+                }
+
+            } catch (err) {
+                clearInterval(countdownInterval);
+                document.getElementById('disney-code-tv-activation-loading').style.display = 'none';
+                document.getElementById('disney-code-tv-activation-error').style.display = 'block';
+                document.getElementById('disney-code-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
+            } finally {
+                setTimeout(() => {
+                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['disney_code_tv'] === true || window.clientUsedAttempts['disney_code_tv'] >= 1);
+                    if (isTvUsedNow) {
+                        activateDisneyCodeTvBtn.disabled = true;
+                        activateDisneyCodeTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Disney TV con código agotado (1/1)';
+                        activateDisneyCodeTvBtn.style.opacity = '0.5';
+                        activateDisneyCodeTvBtn.style.cursor = 'not-allowed';
+                    } else {
+                        activateDisneyCodeTvBtn.innerHTML = originalBtnText;
+                        activateDisneyCodeTvBtn.disabled = false;
+                        activateDisneyCodeTvBtn.style.opacity = '1';
+                        activateDisneyCodeTvBtn.style.cursor = 'pointer';
                     }
                 }, 1500);
             }
