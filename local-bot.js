@@ -278,171 +278,152 @@ async function doActivateTv(email, tvCode) {
             Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
 
-        // 3. Verificar si Netflix ya tiene una sesión activa abierta (Evita fallos y ahorra tiempo)
-        console.log('[BOT] 🌐 Verificando estado de sesión en netflix.com/tv8...');
-        await page.goto('https://www.netflix.com/tv8', { waitUntil: 'networkidle2', timeout: 25000 });
+        // 3. Iniciar sesión en Netflix (SIEMPRE primero ingresar con la cuenta requerida)
+        console.log(`[BOT] 🌐 Navegando a netflix.com/login para iniciar sesión (${email})...`);
+        await page.goto('https://www.netflix.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
         await sleep(1500);
 
         let currentUrl = page.url();
         console.log(`[BOT] 🔗 URL detectada: ${currentUrl}`);
 
-        let alreadyLoggedIn = false;
-        if (currentUrl.includes('/tv8')) {
-            const tvInputCheck = await page.$('input[type="text"], input[type="tel"], input[type="number"], input');
-            if (tvInputCheck) {
-                console.log('[BOT] 🚀 ¡Sesión ya activa en Netflix! Saltando login para activar la TV de inmediato.');
-                alreadyLoggedIn = true;
+        // 4. Escribir email (soporte para múltiples selectores de Netflix)
+        const emailSelectors = [
+            'input[name="userLoginId"]',
+            'input[data-uia="login-field"]',
+            'input[autocomplete="email"]',
+            'input[type="email"]',
+            'input[id*="userLoginId"]'
+        ];
+
+        let emailInput = null;
+        for (const sel of emailSelectors) {
+            emailInput = await page.$(sel);
+            if (emailInput) break;
+        }
+
+        if (!emailInput) {
+            try {
+                await page.waitForSelector('input[name="userLoginId"], input[data-uia="login-field"], input[type="email"], input[type="text"]', { visible: true, timeout: 8000 });
+                emailInput = await page.$('input[name="userLoginId"], input[data-uia="login-field"], input[type="email"], input[type="text"]');
+            } catch (e) {
+                console.log(`[BOT] ⚠️ Selector estándar de email no apareció en ${page.url()}`);
             }
         }
 
-        // Si NO está logueado, procedemos con el inicio de sesión
-        if (!alreadyLoggedIn) {
-            console.log('[BOT] 🌐 Sesión no activa. Navegando a netflix.com/login...');
-            await page.goto('https://www.netflix.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
-            await sleep(1500);
-            currentUrl = page.url();
+        if (!emailInput) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            return {
+                success: false,
+                error: `Netflix no mostró el campo de correo en ${page.url()}.`,
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
 
-            // Si redirigió fuera de login (ej: /browse o /tv8)
-            if (!currentUrl.includes('/login')) {
-                console.log(`[BOT] ℹ️ Redirigido a ${currentUrl}. Verificando acceso a TV...`);
-                await page.goto('https://www.netflix.com/tv8', { waitUntil: 'networkidle2', timeout: 20000 });
-                await sleep(1500);
-                if (page.url().includes('/tv8')) {
-                    alreadyLoggedIn = true;
-                }
+        await sleep(500);
+        await emailInput.click({ clickCount: 3 });
+        await emailInput.type(email, { delay: 90 });
+        console.log(`[BOT] ✉️  Email escrito: ${email}`);
+
+        // 5. Presionar Enter para avanzar
+        console.log('[BOT] 🔄 Presionando Enter para continuar...');
+        await sleep(800);
+        await page.keyboard.press('Enter');
+        console.log('[BOT] ⏳ Esperando pantalla de código o contraseña de Netflix...');
+        await sleep(4000);
+
+        // Detectar si Netflix pidió contraseña directamente o código OTP
+        let passInput = await page.$('input[name="password"], input[type="password"]');
+        let askedForPassword = false;
+        if (passInput) {
+            const box = await passInput.boundingBox();
+            if (box && box.width > 0 && box.height > 0) {
+                askedForPassword = true;
             }
+        }
 
-            if (!alreadyLoggedIn) {
-                // 4. Escribir email (soporte para múltiples selectores de Netflix)
-                const emailSelectors = [
-                    'input[name="userLoginId"]',
-                    'input[data-uia="login-field"]',
-                    'input[autocomplete="email"]',
-                    'input[type="email"]',
-                    'input[id*="userLoginId"]'
-                ];
+        if (askedForPassword && netflixPass) {
+            console.log('[BOT] 🔒 Netflix solicitó contraseña. Escribiendo contraseña...');
+            await passInput.click({ clickCount: 3 });
+            await passInput.type(netflixPass.replace(/\s+/g, ''), { delay: 75 });
+            await sleep(500);
+            await page.keyboard.press('Enter');
+            console.log('[BOT] ⏳ Esperando validación de contraseña...');
+            await sleep(4000);
+        } else {
+            // 6. Leer código de inicio de sesión OTP (PIN) enviado al correo
+            console.log('[BOT] 📨 Solicitando al backend el código de acceso (PIN)...');
+            let loginCode = null;
+            const BACKEND_URL = 'https://streaming-backend-ce1u.onrender.com';
 
-                let emailInput = null;
-                for (const sel of emailSelectors) {
-                    emailInput = await page.$(sel);
-                    if (emailInput) break;
-                }
+            for (let attempt = 1; attempt <= 8; attempt++) {
+                try {
+                    console.log(`[BOT] 🔍 Intento ${attempt}/8 de lectura del correo...`);
+                    const codeResp = await axios.post(`${BACKEND_URL}/api/get-code`, {
+                        email: email,
+                        platform: 'logincode'
+                    }, { timeout: 15000 });
 
-                if (!emailInput) {
-                    try {
-                        await page.waitForSelector('input[name="userLoginId"], input[data-uia="login-field"], input[type="email"], input[type="text"]', { visible: true, timeout: 8000 });
-                        emailInput = await page.$('input[name="userLoginId"], input[data-uia="login-field"], input[type="email"], input[type="text"]');
-                    } catch (e) {
-                        console.log(`[BOT] ⚠️ Selector estándar de email no apareció en ${page.url()}`);
+                    if (codeResp.data && codeResp.data.code) {
+                        loginCode = codeResp.data.code.toString().replace(/\D/g, '').substring(0, 4);
+                        console.log(`[BOT] ✅ Código (PIN) recibido: ${loginCode}`);
+                        break;
                     }
+                } catch (e) {
+                    console.log(`[BOT] ⚠️  Intento ${attempt} falló: ${e.message}`);
                 }
-
-                if (!emailInput) {
-                    // Si no hay input de email, verificar si estamos en tv8 o browse
-                    if (page.url().includes('/tv8') || page.url().includes('/browse')) {
-                        console.log('[BOT] 🚀 Redirigido automáticamente a sesión activa.');
-                        alreadyLoggedIn = true;
-                    } else {
-                        const ss = await page.screenshot({ encoding: 'base64' });
-                        await browser.close();
-                        return {
-                            success: false,
-                            error: `Netflix no mostró el campo de correo en ${page.url()}.`,
-                            screenshot: `data:image/png;base64,${ss}`
-                        };
-                    }
-                }
-
-                if (!alreadyLoggedIn && emailInput) {
-                    await sleep(500);
-                    await emailInput.click({ clickCount: 3 });
-                    await emailInput.type(email, { delay: 90 });
-                    console.log('[BOT] ✉️  Email escrito');
-
-                    // 5. Presionar Enter para avanzar
-                    console.log('[BOT] 🔄 Presionando Enter para continuar...');
-                    await sleep(800);
-                    await page.keyboard.press('Enter');
-                    console.log('[BOT] ⏳ Esperando pantalla de código de Netflix...');
+                if (attempt < 8) {
                     await sleep(5000);
-
-                    // 6. Leer código de inicio de sesión OTP enviado al correo
-                    console.log('[BOT] 📨 Solicitando al backend el código de acceso...');
-                    let loginCode = null;
-                    const BACKEND_URL = 'https://streaming-backend-ce1u.onrender.com';
-
-                    for (let attempt = 1; attempt <= 6; attempt++) {
-                        try {
-                            console.log(`[BOT] 🔍 Intento ${attempt}/6 de lectura del correo...`);
-                            const codeResp = await axios.post(`${BACKEND_URL}/api/get-code`, {
-                                email: email,
-                                platform: 'logincode'
-                            }, { timeout: 15000 });
-
-                            if (codeResp.data && codeResp.data.code) {
-                                loginCode = codeResp.data.code.toString().replace(/\D/g, '').substring(0, 4);
-                                console.log(`[BOT] ✅ Código recibido: ${loginCode}`);
-                                break;
-                            }
-                        } catch (e) {
-                            console.log(`[BOT] ⚠️  Intento ${attempt} falló: ${e.message}`);
-                        }
-                        if (attempt < 6) {
-                            await sleep(5000);
-                        }
-                    }
-
-                    if (!loginCode) {
-                        const ss = await page.screenshot({ encoding: 'base64' });
-                        await browser.close();
-                        return {
-                            success: false,
-                            error: 'No se pudo leer el código de inicio de sesión del correo. Inténtalo de nuevo en 1 minuto.',
-                            screenshot: `data:image/png;base64,${ss}`
-                        };
-                    }
-
-                    // 7. Escribir el código en los inputs
-                    console.log(`[BOT] ⌨️  Escribiendo código de acceso: ${loginCode}`);
-                    await sleep(1000);
-
-                    const codeInputs = await page.$$('input[type="text"], input[type="tel"], input[aria-label], input[autocomplete="one-time-code"], input:not([name])');
-                    if (codeInputs.length >= 4) {
-                        for (let i = 0; i < Math.min(4, loginCode.length); i++) {
-                            await codeInputs[i].click();
-                            await sleep(200);
-                            await codeInputs[i].type(loginCode[i], { delay: 150 });
-                        }
-                    } else {
-                        await page.keyboard.type(loginCode, { delay: 200 });
-                    }
-
-                    console.log('[BOT] ⏳ Esperando validación del código...');
-                    await sleep(4000);
-
-                    const afterLoginUrl = page.url();
-                    console.log(`[BOT] 🔗 URL tras login: ${afterLoginUrl}`);
-
-                    if (afterLoginUrl.includes('/login')) {
-                        const errText = await page.evaluate(() => document.body.innerText.substring(0, 200));
-                        const ss = await page.screenshot({ encoding: 'base64' });
-                        await browser.close();
-                        return {
-                            success: false,
-                            error: `Netflix rechazó el código: "${errText}"`,
-                            screenshot: `data:image/png;base64,${ss}`
-                        };
-                    }
                 }
             }
+
+            if (!loginCode) {
+                const ss = await page.screenshot({ encoding: 'base64' });
+                await browser.close();
+                return {
+                    success: false,
+                    error: 'No se pudo leer el código de inicio de sesión del correo. Inténtalo de nuevo en 1 minuto.',
+                    screenshot: `data:image/png;base64,${ss}`
+                };
+            }
+
+            // 7. Escribir el código en los inputs
+            console.log(`[BOT] ⌨️  Escribiendo código de acceso (PIN): ${loginCode}`);
+            await sleep(1000);
+
+            const codeInputs = await page.$$('input[type="text"], input[type="tel"], input[aria-label], input[autocomplete="one-time-code"], input:not([name])');
+            if (codeInputs.length >= 4) {
+                for (let i = 0; i < Math.min(4, loginCode.length); i++) {
+                    await codeInputs[i].click();
+                    await sleep(200);
+                    await codeInputs[i].type(loginCode[i], { delay: 150 });
+                }
+            } else {
+                await page.keyboard.type(loginCode, { delay: 200 });
+            }
+
+            console.log('[BOT] ⏳ Esperando validación del código...');
+            await sleep(4000);
         }
 
-        // 9. Asegurar que estamos en netflix.com/tv8
-        if (!page.url().includes('/tv8')) {
-            console.log('[BOT] 📺 Navegando a netflix.com/tv8...');
-            await page.goto('https://www.netflix.com/tv8', { waitUntil: 'networkidle2', timeout: 20000 });
-            await sleep(2000);
+        const afterLoginUrl = page.url();
+        console.log(`[BOT] 🔗 URL tras login: ${afterLoginUrl}`);
+
+        if (afterLoginUrl.includes('/login') && !afterLoginUrl.includes('/tv8')) {
+            const errText = await page.evaluate(() => document.body.innerText.substring(0, 200));
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            return {
+                success: false,
+                error: `Netflix rechazó el acceso: "${errText}"`,
+                screenshot: `data:image/png;base64,${ss}`
+            };
         }
+
+        // 8. Navegar a netflix.com/tv8 con sesión activa
+        console.log('[BOT] 📺 Navegando a netflix.com/tv8 con sesión activa...');
+        await page.goto('https://www.netflix.com/tv8', { waitUntil: 'networkidle2', timeout: 25000 });
+        await sleep(2000);
 
         // 10. Ingresar el código de activación de TV (8 dígitos)
         const codeDigits = tvCode.replace(/[^0-9]/g, '');
@@ -510,6 +491,11 @@ async function doActivateTv(email, tvCode) {
 
         if (isError) {
             return { success: false, error: 'Código inválido o expirado. Obtén un nuevo código en tu TV.' };
+        }
+
+        if (finalUrl.includes('/login')) {
+            console.log('[BOT] ❌ Error: Netflix redirigió a /login en vez de confirmar la TV.');
+            return { success: false, error: 'Netflix no confirmó la vinculación de la TV (redirigió al inicio de sesión).' };
         }
 
         console.log('[BOT] 🎉 ¡Activación completada!');
