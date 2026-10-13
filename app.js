@@ -1459,6 +1459,7 @@ function setupEventListeners() {
         updateBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
         updateBtn('prime_tv', '📺', 'Iniciar sesión Prime Video en TV', 1);
         updateBtn('crunchyroll_tv', '📺', 'Iniciar sesión Crunchyroll en TV', 1);
+        updateBtn('vix_tv', '📺', 'Iniciar sesión Vix en TV', 1);
 
         // Actualizar botón de Smart TV
         const tvBtn = document.getElementById('show-tv-login-btn');
@@ -1616,6 +1617,38 @@ function setupEventListeners() {
                     actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Disney en TV';
                     actDisneyCodeBtn.style.opacity = '1';
                     actDisneyCodeBtn.style.cursor = 'pointer';
+                }
+            }
+        }
+
+        // Actualizar botón de ViX Smart TV
+        const vixTvBtn = document.getElementById('show-vix-tv-login-btn');
+        if (vixTvBtn) {
+            let tvUsed = window.clientUsedAttempts['vix_tv'];
+            let numTv = 0;
+            if (tvUsed === true) numTv = 1;
+            else if (typeof tvUsed === 'number') numTv = tvUsed;
+
+            let rem = 1 - numTv;
+            if (rem < 0) rem = 0;
+            vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+
+            const actVixBtn = document.getElementById('activate-vix-tv-btn');
+            if (rem <= 0) {
+                vixTvBtn.style.opacity = '0.6';
+                if (actVixBtn) {
+                    actVixBtn.disabled = true;
+                    actVixBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de ViX TV agotado (1/1)';
+                    actVixBtn.style.opacity = '0.5';
+                    actVixBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                vixTvBtn.style.opacity = '1';
+                if (actVixBtn) {
+                    actVixBtn.disabled = false;
+                    actVixBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar ViX en TV';
+                    actVixBtn.style.opacity = '1';
+                    actVixBtn.style.cursor = 'pointer';
                 }
             }
         }
@@ -1798,6 +1831,7 @@ function setupEventListeners() {
                     hbomax_tv: new Set(),
                     prime_tv: new Set(),
                     crunchyroll_tv: new Set(),
+                    vix_tv: new Set(),
                     global: new Set()
                 };
 
@@ -1848,6 +1882,9 @@ function setupEventListeners() {
                                     if (itemPlatform === 'crunchyroll') {
                                         window.clientActivePlatforms['crunchyroll_tv'].add(itemEmailL);
                                     }
+                                    if (itemPlatform === 'vix') {
+                                        window.clientActivePlatforms['vix_tv'].add(itemEmailL);
+                                    }
                                 } else {
                                     window.clientActivePlatforms.global.add(itemEmailL);
                                 }
@@ -1893,6 +1930,9 @@ function setupEventListeners() {
                                             if (effPlat === 'crunchyroll') {
                                                 window.clientActivePlatforms['crunchyroll_tv'].add(emailL);
                                             }
+                                            if (effPlat === 'vix') {
+                                                window.clientActivePlatforms['vix_tv'].add(emailL);
+                                            }
                                         } else {
                                             window.clientActivePlatforms.global.add(emailL);
                                         }
@@ -1914,8 +1954,8 @@ function setupEventListeners() {
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max, Prime Video, ViX, Crunchyroll, Disney TV, Disney TV con código, HBO Max TV, Prime TV y Crunchyroll TV siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'crunchyroll' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'disney_code_tv' || plat === 'hbomax_tv' || plat === 'prime_tv' || plat === 'crunchyroll_tv');
+                    // Netflix, Disney, HBO Max, Prime Video, ViX, Crunchyroll, Disney TV, Disney TV con código, HBO Max TV, Prime TV, Crunchyroll TV y ViX TV siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'crunchyroll' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'disney_code_tv' || plat === 'hbomax_tv' || plat === 'prime_tv' || plat === 'crunchyroll_tv' || plat === 'vix_tv');
 
                     if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
@@ -2027,6 +2067,25 @@ function setupEventListeners() {
                         disneyCodeTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas Disney+ --</option>';
                     }
                 }
+
+                // Poblar específicamente el selector de correos para Activar ViX TV (Solo ViX y global)
+                const vixTvEmailSelect = document.getElementById('vix-tv-email-select');
+                if (vixTvEmailSelect && window.clientActivePlatforms) {
+                    const vixEmails = window.clientActivePlatforms.vix || new Set();
+                    const globEmails = window.clientActivePlatforms.global || new Set();
+                    const combined = new Set([...vixEmails, ...globEmails]);
+
+                    vixTvEmailSelect.innerHTML = '';
+                    if (combined.size > 0) {
+                        combined.forEach(em => {
+                            const opt = document.createElement('option');
+                            opt.value = opt.textContent = em;
+                            vixTvEmailSelect.appendChild(opt);
+                        });
+                    } else {
+                        vixTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas ViX --</option>';
+                    }
+                }
             } catch (e) {
                 emailSelect.innerHTML = '<option value="">-- Error al cargar cuentas --</option>';
             }
@@ -2068,7 +2127,8 @@ function setupEventListeners() {
         prime: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
         vix: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' },
         crunchyroll: { border: '#F47521', bg: 'rgba(244,117,33,0.18)', color: 'white' },
-        crunchyroll_tv: { border: '#F47521', bg: 'rgba(244,117,33,0.18)', color: 'white' }
+        crunchyroll_tv: { border: '#F47521', bg: 'rgba(244,117,33,0.18)', color: 'white' },
+        vix_tv: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' }
     };
     const platformTabBtns = document.querySelectorAll('.platform-tab-btn');
     const codePlatformInput = document.getElementById('code-platform');
@@ -2120,7 +2180,7 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
-                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'crunchyroll', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'disney_code_tv', 'hbomax_tv', 'prime_tv', 'crunchyroll_tv'].includes(chosen)) {
+                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'crunchyroll', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'disney_code_tv', 'hbomax_tv', 'prime_tv', 'crunchyroll_tv', 'vix_tv'].includes(chosen)) {
                     fetchBtn.style.display = 'none';
                 } else {
                     fetchBtn.style.display = 'block';
@@ -3419,6 +3479,193 @@ function setupEventListeners() {
                         activateDisneyCodeTvBtn.disabled = false;
                         activateDisneyCodeTvBtn.style.opacity = '1';
                         activateDisneyCodeTvBtn.style.cursor = 'pointer';
+                    }
+                }, 1500);
+            }
+        });
+    }
+
+    // ACTIVACIÓN SMART TV — VIX
+    const showVixTvBtn = document.getElementById('show-vix-tv-login-btn');
+    const vixTvPanel = document.getElementById('vix-tv-login-panel');
+    const activateVixTvBtn = document.getElementById('activate-vix-tv-btn');
+
+    if (showVixTvBtn && vixTvPanel) {
+        showVixTvBtn.addEventListener('click', () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || (typeof window.clientUsedAttempts['vix_tv'] === 'number' && window.clientUsedAttempts['vix_tv'] >= 1));
+            if (isTvUsed) {
+                alert('⚠️ Ya usaste tu intento (1 vez) para activar ViX en TV.');
+                return;
+            }
+
+            const isOpen = vixTvPanel.style.display !== 'none';
+            vixTvPanel.style.display = isOpen ? 'none' : 'block';
+            showVixTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#FF5B00';
+            showVixTvBtn.style.color = isOpen ? '#aaa' : 'white';
+            showVixTvBtn.style.background = isOpen ? 'rgba(255,91,0,0.1)' : 'rgba(255,91,0,0.25)';
+            if (!isOpen) {
+                document.getElementById('vix-tv-activation-loading').style.display = 'none';
+                document.getElementById('vix-tv-activation-result').style.display = 'none';
+                document.getElementById('vix-tv-activation-error').style.display = 'none';
+            }
+        });
+    }
+
+    if (activateVixTvBtn) {
+        activateVixTvBtn.addEventListener('click', async () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || (typeof window.clientUsedAttempts['vix_tv'] === 'number' && window.clientUsedAttempts['vix_tv'] >= 1));
+            if (isTvUsed) {
+                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar ViX en TV.');
+            }
+
+            const tvCode = (document.getElementById('vix-tv-code-input').value || '').trim().toUpperCase();
+            const emailSelect = document.getElementById('vix-tv-email-select');
+            const email = emailSelect ? emailSelect.value.trim() : '';
+
+            if (!tvCode || tvCode.length < 8) return alert('⚠️ Ingresa el código de 8 caracteres que aparece en tu TV (ej: ABCD1234).');
+            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!email) return alert('Selecciona el correo de tu cuenta ViX.');
+
+            // Bloquear botón temporalmente
+            const originalBtnText = activateVixTvBtn.innerHTML;
+            activateVixTvBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Activando TV...';
+            activateVixTvBtn.disabled = true;
+            document.getElementById('vix-tv-activation-loading').style.display = 'block';
+            document.getElementById('vix-tv-activation-result').style.display = 'none';
+            document.getElementById('vix-tv-activation-error').style.display = 'none';
+
+            // Iniciar interfaz de cuenta regresiva y fases de proceso
+            let totalSeconds = 45;
+            let secondsRemaining = totalSeconds;
+            const timerEl = document.getElementById('vix-tv-countdown-timer');
+            const progressEl = document.getElementById('vix-tv-progress-bar');
+            const phaseEl = document.getElementById('vix-tv-status-phase');
+            const queueNoticeEl = document.getElementById('vix-tv-queue-notice');
+
+            if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+            if (progressEl) progressEl.style.width = '5%';
+            if (queueNoticeEl) queueNoticeEl.style.display = 'none';
+            if (phaseEl) phaseEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando al sistema...';
+
+            let countdownInterval = setInterval(() => {
+                if (secondsRemaining > 1) {
+                    secondsRemaining--;
+                    if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+                    const percent = Math.min(95, Math.round(((totalSeconds - secondsRemaining) / totalSeconds) * 100));
+                    if (progressEl) progressEl.style.width = `${percent}%`;
+
+                    if (phaseEl) {
+                        if (percent < 25) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-network-wired"></i> Conectando con ViX...';
+                        } else if (percent < 50) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-key"></i> Ingresando código de tu televisor...';
+                        } else if (percent < 75) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-lock"></i> Iniciando sesión con contraseña...';
+                        } else {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Finalizando vinculación...';
+                        }
+                    }
+                }
+            }, 1000);
+
+            try {
+                // Seleccionar botUrl (ngrok -> local -> render)
+                const RENDER_URL = 'https://streaming-backend-ce1u.onrender.com';
+                let botUrl = RENDER_URL;
+                let usingLocal = false;
+
+                let ngrokUrl = null;
+                try {
+                    const snap = await db.ref('config/botUrl').once('value');
+                    ngrokUrl = snap.val();
+                } catch (e) { }
+
+                if (ngrokUrl) {
+                    botUrl = ngrokUrl;
+                    usingLocal = true;
+                } else {
+                    try {
+                        const localCheck = await Promise.race([
+                            fetch('http://localhost:3099/status'),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+                        ]);
+                        if (localCheck.ok) {
+                            botUrl = 'http://localhost:3099';
+                            usingLocal = true;
+                        }
+                    } catch (e) { }
+                }
+
+                // Llamar al endpoint del bot
+                const response = await fetch(`${botUrl}/api/activate-vix-tv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                });
+                const data = await response.json();
+
+                clearInterval(countdownInterval);
+                if (progressEl) progressEl.style.width = '100%';
+                document.getElementById('vix-tv-activation-loading').style.display = 'none';
+
+                if (data.success) {
+                    // Registrar en Firebase y consumir intento
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'vix_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/vix_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/vix_tv`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/vix_tv`).set(true);
+                    }
+
+                    if (window.clientUsedAttempts) {
+                        window.clientUsedAttempts['vix_tv'] = true;
+                        if (window.updateCodeCountersUI) window.updateCodeCountersUI();
+                    }
+
+                    // Mostrar éxito en color verde
+                    const resultDiv = document.getElementById('vix-tv-activation-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(46,204,113,0.1)';
+                    resultDiv.style.borderColor = '#2ecc71';
+                    const icon = document.getElementById('vix-tv-activation-icon');
+                    if (icon) { icon.className = 'fa-solid fa-circle-check'; icon.style.color = '#2ecc71'; }
+                    const msg = document.getElementById('vix-tv-activation-msg');
+                    if (msg) { msg.style.color = '#2ecc71'; msg.innerText = '¡TV Activada Exitosamente!'; }
+                    const desc = document.getElementById('vix-tv-activation-desc');
+                    if (desc) { desc.innerHTML = '¡Dispositivo ViX activado con éxito en tu Smart TV! Ya puedes disfrutar de todo el contenido.'; }
+                } else {
+                    document.getElementById('vix-tv-activation-error').style.display = 'block';
+                    let errorHtml = data.error || 'Código inválido o expirado. Verifica el código en tu TV.';
+                    if (data.screenshot) {
+                        errorHtml += `<br><br><span style="font-size:0.75rem; color:#aaa;">Captura de lo que ve el bot:</span><br><img src="${data.screenshot}" style="max-width:100%; border-radius:8px; margin-top:8px; border:1px solid rgba(255,255,255,0.2);">`;
+                    }
+                    document.getElementById('vix-tv-error-msg').innerHTML = errorHtml;
+                }
+
+            } catch (err) {
+                clearInterval(countdownInterval);
+                document.getElementById('vix-tv-activation-loading').style.display = 'none';
+                document.getElementById('vix-tv-activation-error').style.display = 'block';
+                document.getElementById('vix-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
+            } finally {
+                setTimeout(() => {
+                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || window.clientUsedAttempts['vix_tv'] >= 1);
+                    if (isTvUsedNow) {
+                        activateVixTvBtn.disabled = true;
+                        activateVixTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de ViX TV agotado (1/1)';
+                        activateVixTvBtn.style.opacity = '0.5';
+                        activateVixTvBtn.style.cursor = 'not-allowed';
+                    } else {
+                        activateVixTvBtn.innerHTML = originalBtnText;
+                        activateVixTvBtn.disabled = false;
+                        activateVixTvBtn.style.opacity = '1';
+                        activateVixTvBtn.style.cursor = 'pointer';
                     }
                 }, 1500);
             }

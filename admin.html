@@ -1361,6 +1361,10 @@
                                             style="background:linear-gradient(135deg,#F47521,#d35400); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(244,117,33,0.3);">
                                             <i class="fa-solid fa-tv"></i> Iniciar sesión Crunchyroll en TV
                                         </button>
+                                        <button type="button" onclick="adminExecuteAction('vix_tv')"
+                                            style="background:linear-gradient(135deg,#FF5B00,#C34400); border:none; color:white; font-weight:bold; padding:10px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 10px rgba(255,91,0,0.3);">
+                                            <i class="fa-solid fa-tv"></i> Iniciar sesión ViX en TV
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1425,6 +1429,7 @@
                                     <option value="hbomax_tv">Iniciar sesión HBO Max en TV</option>
                                     <option value="prime_tv">Iniciar sesión Prime Video en TV</option>
                                     <option value="crunchyroll_tv">Iniciar sesión Crunchyroll en TV</option>
+                                    <option value="vix_tv">Iniciar sesión ViX en TV</option>
                                     <option value="prime">Prime Video</option>
                                     <option value="vix">ViX</option>
                                     <option value="crunchyroll">Crunchyroll</option>
@@ -2780,6 +2785,7 @@
                         if (usedData['hbomax_tv']) attemptBadges.push(`<span style="color:#8A2BE2;">TV Max</span>`);
                         if (usedData['prime_tv']) attemptBadges.push(`<span style="color:#00A8E1;">TV Prime</span>`);
                         if (usedData['crunchyroll_tv']) attemptBadges.push(`<span style="color:#F47521;">TV Crunchy</span>`);
+                        if (usedData['vix_tv']) attemptBadges.push(`<span style="color:#FF5B00;">TV ViX</span>`);
                         if (usedData['netflix']) attemptBadges.push(`<span style="color:#e50914;">Nflx</span>`);
                         if (usedData['disney']) attemptBadges.push(`<span style="color:#113ccf;">Disn</span>`);
                         if (usedData['hbomax']) attemptBadges.push(`<span style="color:#6c5ce7;">Max</span>`);
@@ -2912,8 +2918,8 @@
             spinner.style.display = 'block';
             content.style.display = 'none';
 
-            // CASO ESPECIAL: Smart TV (Netflix, HBO Max, Prime Video, Crunchyroll y Disney+)
-            if (platform === 'netflix_tv' || platform === 'hbomax_tv' || platform === 'prime_tv' || platform === 'crunchyroll_tv' || platform === 'disney_code_tv') {
+            // CASO ESPECIAL: Smart TV (Netflix, HBO Max, Prime Video, Crunchyroll, Disney+ y ViX)
+            if (platform === 'netflix_tv' || platform === 'hbomax_tv' || platform === 'prime_tv' || platform === 'crunchyroll_tv' || platform === 'disney_code_tv' || platform === 'vix_tv') {
                 const tvInput = document.getElementById('admin-console-tv-code');
                 const tvCode = tvInput ? tvInput.value.trim() : '';
                 if (!tvCode) {
@@ -2936,6 +2942,9 @@
                 } else if (platform === 'disney_code_tv') {
                     serviceName = 'Disney+';
                     endpoint = '/api/activate-disney-tv';
+                } else if (platform === 'vix_tv') {
+                    serviceName = 'ViX';
+                    endpoint = '/api/activate-vix-tv';
                 }
 
                 if (statusText) statusText.innerText = `Conectando con el bot de ${serviceName} TV e iniciando sesión...`;
@@ -3289,6 +3298,7 @@
                             if (usedData['hbomax_tv'] === true) badges.push(`<span style="color:#8A2BE2;">📺 TV Max</span>`);
                             if (usedData['prime_tv'] === true) badges.push(`<span style="color:#00A8E1;">📺 TV Prime</span>`);
                             if (usedData['crunchyroll_tv'] === true) badges.push(`<span style="color:#F47521;">📺 TV Crunchy</span>`);
+                            if (usedData['vix_tv'] === true) badges.push(`<span style="color:#FF5B00;">📺 TV ViX</span>`);
                             if (usedData['netflix'] === true) badges.push(`<span style="color:#e74c3c;">🎬 Nflx</span>`);
                             if (usedData['disney_update']) badges.push(`<span style="color:#00d2d3; font-weight:bold;">🏰 Hogar Disney: ${usedData['disney_update']}/2</span>`);
                             if (usedData['hbomax_update']) badges.push(`<span style="color:#a29bfe; font-weight:bold;">📺 Fuera Casa Max: ${usedData['hbomax_update']}/2</span>`);
@@ -3328,6 +3338,7 @@
                                     <option value="hbomax_tv">Iniciar sesión HBO Max en TV</option>
                                     <option value="prime_tv">Iniciar sesión Prime Video en TV</option>
                                     <option value="crunchyroll_tv">Iniciar sesión Crunchyroll en TV</option>
+                                    <option value="vix_tv">Iniciar sesión ViX en TV</option>
                                     <option value="prime" ${defaultPlatform === 'prime' ? 'selected' : ''}>Prime Video</option>
                                     <option value="vix">ViX</option>
                                     <option value="all" ${defaultPlatform === 'all' ? 'selected' : ''}>TODAS LAS PANTALLAS</option>

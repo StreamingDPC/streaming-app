@@ -308,9 +308,80 @@ async function findCrunchyrollPassword(targetEmail) {
     return null;
 }
 
+// ── Función reutilizable: buscar contraseña de ViX en Firebase ───────────────
+async function findVixPassword(targetEmail) {
+    const email = targetEmail.toLowerCase().trim();
 
+    // 1. Buscar en clientSales
+    try {
+        const resp = await axios.get(`${FIREBASE_DB_URL}/clientSales.json`);
+        const data = resp.data;
+        if (data) {
+            for (const phone of Object.keys(data)) {
+                const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
+                for (const sale of salesArr) {
+                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
+                    if (!sale?.items) continue;
+                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+                    for (const item of items) {
+                        const itemName = (item.name || '').toLowerCase();
+                        const isVixItem = itemName.includes('vix');
+                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
+                            console.log(`[BOT-VIX] ✅ Pass encontrado en item de clientSales (${phone})`);
+                            return item.pass.trim();
+                        }
+                        if (item?.specificEmails) {
+                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                            for (const s of screens) {
+                                const isVix = (s?.platform && s.platform.toLowerCase().includes('vix')) || isVixItem;
+                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isVix || !s?.platform)) {
+                                    console.log(`[BOT-VIX] ✅ Pass encontrado en clientSales (${phone})`);
+                                    return s.pass.trim();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { console.warn('[BOT-VIX] clientSales error:', e.message); }
 
+    // 2. Buscar en sellerSales
+    try {
+        const resp = await axios.get(`${FIREBASE_DB_URL}/sellerSales.json`);
+        const data = resp.data;
+        if (data) {
+            for (const seller of Object.keys(data)) {
+                const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
+                for (const sale of salesArr) {
+                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
+                    if (!sale?.items) continue;
+                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+                    for (const item of items) {
+                        const itemName = (item.name || '').toLowerCase();
+                        const isVixItem = itemName.includes('vix');
+                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
+                            console.log(`[BOT-VIX] ✅ Pass encontrado en item de sellerSales (${seller})`);
+                            return item.pass.trim();
+                        }
+                        if (item?.specificEmails) {
+                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                            for (const s of screens) {
+                                const isVix = (s?.platform && s.platform.toLowerCase().includes('vix')) || isVixItem;
+                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isVix || !s?.platform)) {
+                                    console.log(`[BOT-VIX] ✅ Pass encontrado en sellerSales (${seller})`);
+                                    return s.pass.trim();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { console.warn('[BOT-VIX] sellerSales error:', e.message); }
 
+    return null;
+}
 
 // ── Cola de Activación Concurrente ─────────────────────────────────────────
 const activationQueue = [];
@@ -352,6 +423,10 @@ async function processQueue() {
             } else if (item.platform === 'disney_code_tv') {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Disney+ TV con código: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
                 const result = await doActivateDisneyTv(item.email, item.tvCode);
+                item.resolve(result);
+            } else if (item.platform === 'vix_tv') {
+                console.log(`\n[BOT-QUEUE] ⏳ Procesando turno ViX TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
+                const result = await doActivateVixTv(item.email, item.tvCode);
                 item.resolve(result);
             } else {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Netflix TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
@@ -491,6 +566,31 @@ app.post('/api/activate-disney-tv', async (req, res) => {
         return res.status(500).json({
             success: false,
             error: err.message || 'Error en la activación de Disney+ en el bot local.'
+        });
+    }
+});
+
+// ── ENDPOINT: Activar ViX TV con código ─────────────────────────────────────
+app.post('/api/activate-vix-tv', async (req, res) => {
+    const { email, tvCode } = req.body;
+
+    if (!email || !tvCode) {
+        return res.status(400).json({ success: false, error: 'Email y código de TV son requeridos.' });
+    }
+
+    const queuePromise = new Promise((resolve, reject) => {
+        activationQueue.push({ platform: 'vix_tv', email, tvCode, resolve, reject, time: Date.now() });
+    });
+
+    processQueue();
+
+    try {
+        const result = await queuePromise;
+        return res.json(result);
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            error: err.message || 'Error en la activación de ViX en el bot local.'
         });
     }
 });
@@ -2123,6 +2223,312 @@ async function doActivateDisneyTv(email, tvCode) {
         }
 
         const payload = { success: false, error: 'Error del bot de Disney+ TV: ' + err.message };
+        if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
+        return payload;
+    }
+}
+
+// ── FUNCIÓN: Activar ViX TV con código (vix.com/es-es/activar) ─────────────
+async function doActivateVixTv(email, tvCode) {
+    let browser = null;
+    let chromeProc = null;
+    try {
+        console.log(`\n[BOT-VIX] ════════════════════════════════════`);
+        console.log(`[BOT-VIX] Activando ViX en TV: ${email} → código TV: ${tvCode}`);
+
+        // 1. Buscar contraseña en Firebase
+        const vixPass = await findVixPassword(email);
+        if (!vixPass) {
+            return {
+                success: false,
+                error: `No se encontró la contraseña de ViX para ${email}. Verifica que esté configurada en la venta del cliente.`
+            };
+        }
+        console.log('[BOT-VIX] 🔑 Contraseña de ViX obtenida de Firebase.');
+
+        const chromePath = getChromePath();
+        if (!chromePath) {
+            return {
+                success: false,
+                error: 'Google Chrome no está instalado en esta PC.'
+            };
+        }
+
+        const cdpPort = 9346;
+        const profileDir = path.join(process.env.USERPROFILE || 'C:\\Users\\Default', '.gemini', 'vix_bot_profile');
+
+        console.log(`[BOT-VIX] 🚀 Iniciando Chrome genuino (CDP port ${cdpPort})...`);
+        chromeProc = spawn(chromePath, [
+            `--remote-debugging-port=${cdpPort}`,
+            `--user-data-dir=${profileDir}`,
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--window-position=50,50',
+            '--window-size=1280,800',
+            'about:blank'
+        ]);
+
+        let endpoint = null;
+        for (let i = 0; i < 20; i++) {
+            await sleep(500);
+            try {
+                const resp = await axios.get(`http://127.0.0.1:${cdpPort}/json/version`);
+                if (resp.data && resp.data.webSocketDebuggerUrl) {
+                    endpoint = resp.data.webSocketDebuggerUrl;
+                    break;
+                }
+            } catch (e) { }
+        }
+
+        if (!endpoint) {
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return { success: false, error: 'No se pudo iniciar Chrome para ViX.' };
+        }
+
+        browser = await puppeteer.connect({ browserWSEndpoint: endpoint });
+        const pages = await browser.pages();
+        const page = pages[0] || await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+
+        // 2. Navegar a https://vix.com/es-es/activar
+        console.log('[BOT-VIX] 🌐 Navegando a https://vix.com/es-es/activar...');
+        await page.goto('https://vix.com/es-es/activar', { waitUntil: 'networkidle2', timeout: 40000 });
+        await sleep(2500);
+
+        // Aceptar banner de cookies si aparece
+        try {
+            const cookieBtn = await page.$('#onetrust-accept-btn-handler, .save-preference-btn-handler');
+            if (cookieBtn) await cookieBtn.click();
+        } catch (e) { }
+        await sleep(1000);
+
+        // 3. Paso 1: Ingresar código del televisor (8 casillas: number_0 .. number_7)
+        const cleanTvCode = tvCode.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+        console.log(`[BOT-VIX] 🔢 Ingresando código de TV (${cleanTvCode.length} caracteres): ${cleanTvCode}`);
+
+        let codeBoxesReady = false;
+        for (let wait = 0; wait < 15; wait++) {
+            const box0 = await page.$('#number_0');
+            if (box0) {
+                codeBoxesReady = true;
+                break;
+            }
+            await sleep(1000);
+        }
+
+        if (!codeBoxesReady) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: 'ViX no cargó las casillas para ingresar el código del televisor.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        for (let i = 0; i < 8; i++) {
+            const field = await page.$('#number_' + i);
+            if (field) {
+                await field.click();
+                await field.type(cleanTvCode[i] || '', { delay: 60 });
+                await sleep(50);
+            }
+        }
+        await sleep(800);
+
+        // Clic en "Siguiente"
+        console.log('[BOT-VIX] ➡️ Clic en "Siguiente"...');
+        const clickedNext = await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button'));
+            const btn = btns.find(b => (b.innerText || '').toLowerCase().includes('siguiente'));
+            if (btn && !btn.disabled) {
+                btn.click();
+                return true;
+            }
+            return false;
+        });
+
+        if (!clickedNext) {
+            await page.keyboard.press('Enter');
+        }
+        await sleep(3500);
+
+        // Verificar si el código fue inválido
+        const isCodeError = await page.evaluate(() => {
+            const txt = (document.body.innerText || '').toLowerCase();
+            return txt.includes('código no válido') || txt.includes('codigo no valido') || txt.includes('código inválido') || txt.includes('código incorrecto') || txt.includes('intenta de nuevo');
+        });
+        if (isCodeError) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: 'El código ingresado no coincide o expiró en tu TV. Genera un nuevo código en tu televisor.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        // 4. Paso 2: Ingresar correo electrónico
+        console.log(`[BOT-VIX] ✉️ Ingresando correo electrónico: ${email}`);
+        let emailInputReady = false;
+        for (let wait = 0; wait < 15; wait++) {
+            const inp = await page.$('input[name="email"], input[id="email"], input[type="email"]');
+            if (inp) {
+                emailInputReady = true;
+                await inp.click({ clickCount: 3 });
+                await page.keyboard.press('Backspace');
+                await inp.type(email, { delay: 40 });
+                break;
+            }
+            await sleep(1000);
+        }
+
+        if (!emailInputReady) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: 'ViX no mostró la casilla para ingresar el correo.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        await sleep(600);
+
+        // Clic en "Ingresar con mi correo"
+        console.log('[BOT-VIX] ➡️ Clic en "Ingresar con mi correo"...');
+        await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button'));
+            const btn = btns.find(b => (b.innerText || '').toLowerCase().includes('ingresar con mi correo')) ||
+                document.querySelector('button[type="submit"]');
+            if (btn) btn.click();
+        });
+        await sleep(3500);
+
+        // 5. Paso 3: Pantalla "Ingresa con el enlace que enviamos a tu correo" -> Clic en "Iniciar sesión con mi contraseña"
+        console.log('[BOT-VIX] 🔘 Buscando opción "Iniciar sesión con mi contraseña"...');
+        let clickedPassOption = false;
+        for (let wait = 0; wait < 15; wait++) {
+            clickedPassOption = await page.evaluate(() => {
+                const btns = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+                for (const b of btns) {
+                    const txt = (b.innerText || b.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (txt.includes('con mi contrasena') || txt.includes('con mi contrase') || txt.includes('iniciar sesion con mi')) {
+                        b.click();
+                        return true;
+                    }
+                }
+                return false;
+            });
+            if (clickedPassOption) break;
+            await sleep(1000);
+        }
+
+        if (!clickedPassOption) {
+            console.log('[BOT-VIX] ⚠️ Intentando buscar botón alternativo de contraseña...');
+            await page.evaluate(() => {
+                const btns = Array.from(document.querySelectorAll('button'));
+                const b = btns.find(btn => (btn.innerText || '').toLowerCase().includes('contrase'));
+                if (b) b.click();
+            });
+        }
+        await sleep(3000);
+
+        // 6. Paso 4: Pantalla "Ingresa tu contraseña"
+        console.log('[BOT-VIX] 🔑 Ingresando contraseña...');
+        let passInputReady = false;
+        for (let wait = 0; wait < 15; wait++) {
+            const inp = await page.$('input[name="password"], input[id="password"], input[type="password"]');
+            if (inp) {
+                passInputReady = true;
+                await inp.click({ clickCount: 3 });
+                await page.keyboard.press('Backspace');
+                await inp.type(vixPass, { delay: 40 });
+                break;
+            }
+            await sleep(1000);
+        }
+
+        if (!passInputReady) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: 'ViX no mostró el campo para ingresar la contraseña.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        await sleep(600);
+
+        // Clic en "Iniciar sesión"
+        console.log('[BOT-VIX] 🚀 Clic en "Iniciar sesión"...');
+        await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button'));
+            const btn = btns.find(b => (b.innerText || '').toLowerCase().trim() === 'iniciar sesión' || (b.innerText || '').toLowerCase().trim() === 'iniciar sesion') ||
+                document.querySelector('button[type="submit"]');
+            if (btn) btn.click();
+        });
+        await sleep(4000);
+
+        // 7. Paso 5: Pantalla de confirmación "¡Tu televisor está listo para ver ViX!"
+        console.log('[BOT-VIX] ⏳ Esperando confirmación de activación en TV...');
+        let confirmed = false;
+        for (let wait = 0; wait < 15; wait++) {
+            confirmed = await page.evaluate(() => {
+                const txt = (document.body.innerText || '').toLowerCase();
+                return txt.includes('listo para ver vix') || txt.includes('código qr') || txt.includes('actualiza automáticamente') || txt.includes('abrir o descargar la app') || txt.includes('continuar desde la web');
+            });
+            if (confirmed) break;
+            await sleep(1000);
+        }
+
+        // 8. Limpiar y cerrar sesión
+        console.log('[BOT-VIX] 🧹 Limpiando y cerrando sesión de ViX...');
+        try {
+            const client = await page.target().createCDPSession();
+            await client.send('Network.clearBrowserCookies');
+            await client.send('Network.clearBrowserCache');
+            console.log('[BOT-VIX] 🍪 Cookies y caché limpiados vía CDP.');
+        } catch (e) { }
+
+        try {
+            await page.goto('https://vix.com/es-es/cerrar-sesion', { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => { });
+        } catch (e) { }
+
+        await browser.disconnect();
+        browser = null;
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
+            chromeProc = null;
+        }
+
+        console.log('[BOT-VIX] 🎉 ¡Activación de ViX en TV completada con éxito!');
+        return {
+            success: true,
+            message: '¡ViX activado con éxito en tu Smart TV! Ya puedes disfrutar de todo el contenido.'
+        };
+
+    } catch (err) {
+        console.error('[BOT-VIX] ❌ Error:', err.message);
+
+        let screenshot = null;
+        if (browser) {
+            try {
+                const pages = await browser.pages();
+                if (pages.length > 0) screenshot = await pages[0].screenshot({ encoding: 'base64' });
+                await browser.disconnect();
+            } catch (e) { }
+        }
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
+        }
+
+        const payload = { success: false, error: 'Error del bot de ViX TV: ' + err.message };
         if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
         return payload;
     }
