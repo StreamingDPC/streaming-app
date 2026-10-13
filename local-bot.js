@@ -553,6 +553,7 @@ async function doActivateTv(email, tvCode) {
 // ── FUNCIÓN: Activar HBO Max TV (auth.hbomax.com/link?flow=connectDeviceSignIn) ──
 async function doActivateHboTv(email, tvCode) {
     let browser = null;
+    let chromeProc = null;
     try {
         console.log(`\n[BOT-HBO] ════════════════════════════════════`);
         console.log(`[BOT-HBO] Activando HBO Max en TV: ${email} → código: ${tvCode}`);
@@ -565,29 +566,42 @@ async function doActivateHboTv(email, tvCode) {
             };
         }
 
-        browser = await puppeteer.launch({
-            executablePath: chromePath,
-            headless: false,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-dev-shm-usage',
-                '--disable-backgrounding-occluded-windows',
-                '--disable-background-timer-throttling',
-                '--disable-renderer-backgrounding',
-                '--window-position=50,50',
-                '--window-size=1100,750'
-            ]
-        });
+        // Lanzar Chrome 100% real con perfil dedicado para evitar detección por Arkose / Feroot
+        const cdpPort = 9338;
+        const profileDir = path.join(process.env.USERPROFILE || 'C:\\Users\\Default', '.gemini', 'hbo_bot_profile');
 
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        console.log(`[BOT-HBO] 🚀 Iniciando Chrome genuino (CDP port ${cdpPort})...`);
+        chromeProc = spawn(chromePath, [
+            `--remote-debugging-port=${cdpPort}`,
+            `--user-data-dir=${profileDir}`,
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--window-position=50,50',
+            '--window-size=1280,800',
+            'about:blank'
+        ]);
+
+        let endpoint = null;
+        for (let i = 0; i < 20; i++) {
+            await sleep(500);
+            try {
+                const resp = await axios.get(`http://127.0.0.1:${cdpPort}/json/version`);
+                if (resp.data && resp.data.webSocketDebuggerUrl) {
+                    endpoint = resp.data.webSocketDebuggerUrl;
+                    break;
+                }
+            } catch (e) { }
+        }
+
+        if (!endpoint) {
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return { success: false, error: 'No se pudo iniciar Chrome para HBO Max.' };
+        }
+
+        browser = await puppeteer.connect({ browserWSEndpoint: endpoint });
+        const pages = await browser.pages();
+        const page = pages[0] || await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
-
-        await page.evaluateOnNewDocument(() => {
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-        });
 
         // 1. Navegar a auth.hbomax.com/link?flow=connectDeviceSignIn
         console.log('[BOT-HBO] 🌐 Navegando a auth.hbomax.com/link?flow=connectDeviceSignIn...');
@@ -670,7 +684,8 @@ async function doActivateHboTv(email, tvCode) {
         });
         if (tvCodeError) {
             const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.close();
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
             return {
                 success: false,
                 error: 'El código ingresado no coincide o expiró en tu TV. Genera un nuevo código en tu televisor e intenta nuevamente.',
@@ -681,7 +696,7 @@ async function doActivateHboTv(email, tvCode) {
         // 3. Ingresar el correo electrónico
         console.log(`[BOT-HBO] ✉️ Ingresando correo electrónico: ${email}`);
         let emailReady = false;
-        for (let wait = 0; wait < 10; wait++) {
+        for (let wait = 0; wait < 12; wait++) {
             emailReady = await page.evaluate(() => {
                 function searchEmail(root) {
                     const inp = root.querySelector('#sign-in-phoneEmail-input, [data-testid*="phoneEmailInput"], input[type="email"], input[name="phoneEmail"]');
@@ -708,7 +723,8 @@ async function doActivateHboTv(email, tvCode) {
 
         if (!emailReady) {
             const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.close();
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
             return {
                 success: false,
                 error: 'HBO Max no cargó el campo de correo electrónico.',
@@ -716,7 +732,7 @@ async function doActivateHboTv(email, tvCode) {
             };
         }
 
-        await page.keyboard.type(email, { delay: 80 });
+        await page.keyboard.type(email, { delay: 60 });
         await sleep(600);
 
         // Clic en Continuar
@@ -744,12 +760,12 @@ async function doActivateHboTv(email, tvCode) {
         if (!clickedContinue) {
             await page.keyboard.press('Enter');
         }
-        await sleep(4000);
 
         // 4. Clic en "Obtener código de un solo uso"
-        console.log('[BOT-HBO] 🔘 Buscando opción "Obtener código de un solo uso"...');
+        console.log('[BOT-HBO] 🔘 Esperando y buscando opción "Obtener código de un solo uso"...');
         let clickedOtpBtn = false;
-        for (let wait = 0; wait < 10; wait++) {
+        for (let wait = 0; wait < 18; wait++) {
+            await sleep(1000);
             clickedOtpBtn = await page.evaluate(() => {
                 function searchOtp(root) {
                     const btns = Array.from(root.querySelectorAll('button, a, [role="button"]'));
@@ -775,19 +791,19 @@ async function doActivateHboTv(email, tvCode) {
                 console.log('[BOT-HBO] ✅ Clic en "Obtener código de un solo uso" ejecutado.');
                 break;
             }
-            await sleep(1500);
         }
 
         if (!clickedOtpBtn) {
             const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.close();
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
             return {
                 success: false,
                 error: 'No se encontró el botón "Obtener código de un solo uso" en HBO Max.',
                 screenshot: `data:image/png;base64,${ss}`
             };
         }
-        await sleep(4000);
+        await sleep(3500);
 
         // 5. Leer código OTP (6 dígitos) enviado al correo
         console.log('[BOT-HBO] 📨 Solicitando al backend el código de acceso (6 dígitos)...');
@@ -820,7 +836,8 @@ async function doActivateHboTv(email, tvCode) {
 
         if (!loginCode) {
             const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.close();
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
             return {
                 success: false,
                 error: 'No se pudo leer el código de acceso de HBO Max del correo. Inténtalo de nuevo en 1 minuto.',
@@ -832,7 +849,7 @@ async function doActivateHboTv(email, tvCode) {
         console.log(`[BOT-HBO] ⌨️ Ingresando código OTP en las casillas: ${loginCode}`);
         await page.evaluate(() => {
             function searchOtpField(root) {
-                const f0 = root.querySelector('#activationCode-field-0, [data-testid*="single_input_0"], input[type="text"], input[type="tel"]');
+                const f0 = root.querySelector('#oneTimeCode-field-0, #activationCode-field-0, [data-testid*="single_input_0"], [data-testid*="oneTimeCode"], input[type="text"], input[type="tel"]');
                 if (f0) return f0;
                 const all = Array.from(root.querySelectorAll('*'));
                 for (const el of all) {
@@ -902,8 +919,12 @@ async function doActivateHboTv(email, tvCode) {
             await page.goto('https://auth.hbomax.com/logout', { waitUntil: 'networkidle2', timeout: 8000 }).catch(() => { });
         } catch (e) { }
 
-        await browser.close();
+        await browser.disconnect();
         browser = null;
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
+            chromeProc = null;
+        }
 
         console.log('[BOT-HBO] 🎉 ¡Activación de HBO Max TV completada con éxito!');
         return {
@@ -919,8 +940,11 @@ async function doActivateHboTv(email, tvCode) {
             try {
                 const pages = await browser.pages();
                 if (pages.length > 0) screenshot = await pages[0].screenshot({ encoding: 'base64' });
-                await browser.close();
+                await browser.disconnect();
             } catch (e) { }
+        }
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
         }
 
         const payload = { success: false, error: 'Error del bot de HBO Max: ' + err.message };
