@@ -1457,6 +1457,7 @@ function setupEventListeners() {
         updateBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV', 1);
         updateBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
         updateBtn('prime_tv', '📺', 'Iniciar sesión Prime Video en TV', 1);
+        updateBtn('crunchyroll_tv', '📺', 'Iniciar sesión Crunchyroll en TV', 1);
 
         // Actualizar botón de Smart TV
         const tvBtn = document.getElementById('show-tv-login-btn');
@@ -1550,6 +1551,38 @@ function setupEventListeners() {
                     actPrimeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Prime en TV';
                     actPrimeBtn.style.opacity = '1';
                     actPrimeBtn.style.cursor = 'pointer';
+                }
+            }
+        }
+
+        // Actualizar botón de Crunchyroll Smart TV
+        const crunchyTvBtn = document.getElementById('show-crunchyroll-tv-login-btn');
+        if (crunchyTvBtn) {
+            let tvUsed = window.clientUsedAttempts['crunchyroll_tv'];
+            let numTv = 0;
+            if (tvUsed === true) numTv = 1;
+            else if (typeof tvUsed === 'number') numTv = tvUsed;
+
+            let rem = 1 - numTv;
+            if (rem < 0) rem = 0;
+            crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+
+            const actCrunchyBtn = document.getElementById('activate-crunchyroll-tv-btn');
+            if (rem <= 0) {
+                crunchyTvBtn.style.opacity = '0.6';
+                if (actCrunchyBtn) {
+                    actCrunchyBtn.disabled = true;
+                    actCrunchyBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Crunchyroll TV agotado (1/1)';
+                    actCrunchyBtn.style.opacity = '0.5';
+                    actCrunchyBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                crunchyTvBtn.style.opacity = '1';
+                if (actCrunchyBtn) {
+                    actCrunchyBtn.disabled = false;
+                    actCrunchyBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Crunchyroll en TV';
+                    actCrunchyBtn.style.opacity = '1';
+                    actCrunchyBtn.style.cursor = 'pointer';
                 }
             }
         }
@@ -1722,6 +1755,7 @@ function setupEventListeners() {
                     hbomax: new Set(),
                     prime: new Set(),
                     vix: new Set(),
+                    crunchyroll: new Set(),
                     netflix_update: new Set(),
                     netflix_temp: new Set(),
                     disney_update: new Set(),
@@ -1729,6 +1763,7 @@ function setupEventListeners() {
                     disney_tv: new Set(),
                     hbomax_tv: new Set(),
                     prime_tv: new Set(),
+                    crunchyroll_tv: new Set(),
                     global: new Set()
                 };
 
@@ -1753,6 +1788,7 @@ function setupEventListeners() {
                             else if (itemName.includes('hbo') || itemName.includes('max')) itemPlatform = 'hbomax';
                             else if (itemName.includes('prime')) itemPlatform = 'prime';
                             else if (itemName.includes('vix')) itemPlatform = 'vix';
+                            else if (itemName.includes('crunch') || itemName.includes('roll')) itemPlatform = 'crunchyroll';
 
                             if (item.email) {
                                 const itemEmailL = item.email.toLowerCase().trim();
@@ -1774,6 +1810,9 @@ function setupEventListeners() {
                                     if (itemPlatform === 'prime') {
                                         window.clientActivePlatforms['prime_tv'].add(itemEmailL);
                                     }
+                                    if (itemPlatform === 'crunchyroll') {
+                                        window.clientActivePlatforms['crunchyroll_tv'].add(itemEmailL);
+                                    }
                                 } else {
                                     window.clientActivePlatforms.global.add(itemEmailL);
                                 }
@@ -1793,6 +1832,7 @@ function setupEventListeners() {
                                         else if (sePlat.includes('hbo') || sePlat.includes('max')) effPlat = 'hbomax';
                                         else if (sePlat.includes('prime') || sePlat.includes('amazon')) effPlat = 'prime';
                                         else if (sePlat.includes('vix')) effPlat = 'vix';
+                                        else if (sePlat.includes('crunch') || sePlat.includes('roll')) effPlat = 'crunchyroll';
 
                                         // 2º Si el objeto no traía platform explícita, heredar de la plataforma del item
                                         if (!effPlat) effPlat = itemPlatform;
@@ -1813,6 +1853,9 @@ function setupEventListeners() {
                                             }
                                             if (effPlat === 'prime') {
                                                 window.clientActivePlatforms['prime_tv'].add(emailL);
+                                            }
+                                            if (effPlat === 'crunchyroll') {
+                                                window.clientActivePlatforms['crunchyroll_tv'].add(emailL);
                                             }
                                         } else {
                                             window.clientActivePlatforms.global.add(emailL);
@@ -1835,8 +1878,8 @@ function setupEventListeners() {
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max, Prime Video, ViX, Disney TV, HBO Max TV y Prime TV siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'hbomax_tv' || plat === 'prime_tv');
+                    // Netflix, Disney, HBO Max, Prime Video, ViX, Crunchyroll, Disney TV, HBO Max TV, Prime TV y Crunchyroll TV siempre deben mostrarse en el panel
+                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'crunchyroll' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'hbomax_tv' || plat === 'prime_tv' || plat === 'crunchyroll_tv');
 
                     if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
                         targetEl.style.display = 'flex';
@@ -1910,6 +1953,25 @@ function setupEventListeners() {
                         primeTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas Prime Video --</option>';
                     }
                 }
+
+                // Poblar específicamente el selector de correos para Activar Crunchyroll TV (Solo Crunchyroll y global)
+                const crunchyTvEmailSelect = document.getElementById('crunchyroll-tv-email-select');
+                if (crunchyTvEmailSelect && window.clientActivePlatforms) {
+                    const crunchyEmails = window.clientActivePlatforms.crunchyroll || new Set();
+                    const globEmails = window.clientActivePlatforms.global || new Set();
+                    const combined = new Set([...crunchyEmails, ...globEmails]);
+
+                    crunchyTvEmailSelect.innerHTML = '';
+                    if (combined.size > 0) {
+                        combined.forEach(em => {
+                            const opt = document.createElement('option');
+                            opt.value = opt.textContent = em;
+                            crunchyTvEmailSelect.appendChild(opt);
+                        });
+                    } else {
+                        crunchyTvEmailSelect.innerHTML = '<option value="">-- Sin cuentas Crunchyroll --</option>';
+                    }
+                }
             } catch (e) {
                 emailSelect.innerHTML = '<option value="">-- Error al cargar cuentas --</option>';
             }
@@ -1948,7 +2010,9 @@ function setupEventListeners() {
         hbomax_tv: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
         prime_tv: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
         prime: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
-        vix: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' }
+        vix: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' },
+        crunchyroll: { border: '#F47521', bg: 'rgba(244,117,33,0.18)', color: 'white' },
+        crunchyroll_tv: { border: '#F47521', bg: 'rgba(244,117,33,0.18)', color: 'white' }
     };
     const platformTabBtns = document.querySelectorAll('.platform-tab-btn');
     const codePlatformInput = document.getElementById('code-platform');
@@ -2000,7 +2064,7 @@ function setupEventListeners() {
             // Validar si el intento YA fue consumido para esta plataforma en específico
             const fetchBtn = document.getElementById('fetch-code-btn');
             if (fetchBtn) {
-                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'hbomax_tv', 'prime_tv'].includes(chosen)) {
+                if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'crunchyroll', 'netflix_update', 'netflix_temp', 'disney_update', 'hbomax_update', 'disney_tv', 'hbomax_tv', 'prime_tv', 'crunchyroll_tv'].includes(chosen)) {
                     fetchBtn.style.display = 'none';
                 } else {
                     fetchBtn.style.display = 'block';
@@ -2925,6 +2989,193 @@ function setupEventListeners() {
                         activatePrimeTvBtn.disabled = false;
                         activatePrimeTvBtn.style.opacity = '1';
                         activatePrimeTvBtn.style.cursor = 'pointer';
+                    }
+                }, 1500);
+            }
+        });
+    }
+
+    // ACTIVACIÓN SMART TV — CRUNCHYROLL
+    const showCrunchyTvBtn = document.getElementById('show-crunchyroll-tv-login-btn');
+    const crunchyTvPanel = document.getElementById('crunchyroll-tv-login-panel');
+    const activateCrunchyTvBtn = document.getElementById('activate-crunchyroll-tv-btn');
+
+    if (showCrunchyTvBtn && crunchyTvPanel) {
+        showCrunchyTvBtn.addEventListener('click', () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || (typeof window.clientUsedAttempts['crunchyroll_tv'] === 'number' && window.clientUsedAttempts['crunchyroll_tv'] >= 1));
+            if (isTvUsed) {
+                alert('⚠️ Ya usaste tu intento (1 vez) para activar Crunchyroll en TV.');
+                return;
+            }
+
+            const isOpen = crunchyTvPanel.style.display !== 'none';
+            crunchyTvPanel.style.display = isOpen ? 'none' : 'block';
+            showCrunchyTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#F47521';
+            showCrunchyTvBtn.style.color = isOpen ? '#aaa' : 'white';
+            showCrunchyTvBtn.style.background = isOpen ? 'rgba(244,117,33,0.1)' : 'rgba(244,117,33,0.25)';
+            if (!isOpen) {
+                document.getElementById('crunchyroll-tv-activation-loading').style.display = 'none';
+                document.getElementById('crunchyroll-tv-activation-result').style.display = 'none';
+                document.getElementById('crunchyroll-tv-activation-error').style.display = 'none';
+            }
+        });
+    }
+
+    if (activateCrunchyTvBtn) {
+        activateCrunchyTvBtn.addEventListener('click', async () => {
+            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || (typeof window.clientUsedAttempts['crunchyroll_tv'] === 'number' && window.clientUsedAttempts['crunchyroll_tv'] >= 1));
+            if (isTvUsed) {
+                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Crunchyroll en TV.');
+            }
+
+            const tvCode = (document.getElementById('crunchyroll-tv-code-input').value || '').trim().toUpperCase();
+            const emailSelect = document.getElementById('crunchyroll-tv-email-select');
+            const email = emailSelect ? emailSelect.value.trim() : '';
+
+            if (!tvCode || tvCode.length !== 6) return alert('⚠️ Ingresa el código de 6 caracteres que aparece en tu TV (ej: ABCDEF).');
+            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!email) return alert('Selecciona el correo de tu cuenta Crunchyroll.');
+
+            // Bloquear botón temporalmente
+            const originalBtnText = activateCrunchyTvBtn.innerHTML;
+            activateCrunchyTvBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Activando TV...';
+            activateCrunchyTvBtn.disabled = true;
+            document.getElementById('crunchyroll-tv-activation-loading').style.display = 'block';
+            document.getElementById('crunchyroll-tv-activation-result').style.display = 'none';
+            document.getElementById('crunchyroll-tv-activation-error').style.display = 'none';
+
+            // Iniciar interfaz de cuenta regresiva y fases de proceso
+            let totalSeconds = 45;
+            let secondsRemaining = totalSeconds;
+            const timerEl = document.getElementById('crunchyroll-tv-countdown-timer');
+            const progressEl = document.getElementById('crunchyroll-tv-progress-bar');
+            const phaseEl = document.getElementById('crunchyroll-tv-status-phase');
+            const queueNoticeEl = document.getElementById('crunchyroll-tv-queue-notice');
+
+            if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+            if (progressEl) progressEl.style.width = '5%';
+            if (queueNoticeEl) queueNoticeEl.style.display = 'none';
+            if (phaseEl) phaseEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando al sistema...';
+
+            let countdownInterval = setInterval(() => {
+                if (secondsRemaining > 1) {
+                    secondsRemaining--;
+                    if (timerEl) timerEl.innerText = `${secondsRemaining}s`;
+                    const percent = Math.min(95, Math.round(((totalSeconds - secondsRemaining) / totalSeconds) * 100));
+                    if (progressEl) progressEl.style.width = `${percent}%`;
+
+                    if (phaseEl) {
+                        if (percent < 25) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-network-wired"></i> Conectando con Crunchyroll...';
+                        } else if (percent < 50) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-key"></i> Ingresando código de tu Smart TV...';
+                        } else if (percent < 75) {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-tv"></i> Autenticando tu cuenta Crunchyroll...';
+                        } else {
+                            phaseEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Finalizando vinculación...';
+                        }
+                    }
+                }
+            }, 1000);
+
+            try {
+                // Seleccionar botUrl (ngrok -> local -> render)
+                const RENDER_URL = 'https://streaming-backend-ce1u.onrender.com';
+                let botUrl = RENDER_URL;
+                let usingLocal = false;
+
+                let ngrokUrl = null;
+                try {
+                    const snap = await db.ref('config/botUrl').once('value');
+                    ngrokUrl = snap.val();
+                } catch (e) { }
+
+                if (ngrokUrl) {
+                    botUrl = ngrokUrl;
+                    usingLocal = true;
+                } else {
+                    try {
+                        const localCheck = await Promise.race([
+                            fetch('http://localhost:3099/status'),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+                        ]);
+                        if (localCheck.ok) {
+                            botUrl = 'http://localhost:3099';
+                            usingLocal = true;
+                        }
+                    } catch (e) { }
+                }
+
+                // Llamar al endpoint del bot
+                const response = await fetch(`${botUrl}/api/activate-crunchyroll-tv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                });
+                const data = await response.json();
+
+                clearInterval(countdownInterval);
+                if (progressEl) progressEl.style.width = '100%';
+                document.getElementById('crunchyroll-tv-activation-loading').style.display = 'none';
+
+                if (data.success) {
+                    // Registrar en Firebase y consumir intento
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'crunchyroll_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/crunchyroll_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/crunchyroll_tv`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/crunchyroll_tv`).set(true);
+                    }
+
+                    if (window.clientUsedAttempts) {
+                        window.clientUsedAttempts['crunchyroll_tv'] = true;
+                        if (window.updateCodeCountersUI) window.updateCodeCountersUI();
+                    }
+
+                    // Mostrar éxito en color verde
+                    const resultDiv = document.getElementById('crunchyroll-tv-activation-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(46,204,113,0.1)';
+                    resultDiv.style.borderColor = '#2ecc71';
+                    const icon = document.getElementById('crunchyroll-tv-activation-icon');
+                    if (icon) { icon.className = 'fa-solid fa-circle-check'; icon.style.color = '#2ecc71'; }
+                    const msg = document.getElementById('crunchyroll-tv-activation-msg');
+                    if (msg) { msg.style.color = '#2ecc71'; msg.innerText = '¡TV Activada Exitosamente!'; }
+                    const desc = document.getElementById('crunchyroll-tv-activation-desc');
+                    if (desc) { desc.innerHTML = '¡Dispositivo Crunchyroll activado con éxito en tu Smart TV! Ya puedes disfrutar del mejor anime.'; }
+                } else {
+                    document.getElementById('crunchyroll-tv-activation-error').style.display = 'block';
+                    let errorHtml = data.error || 'Código inválido o expirado. Verifica el código en tu TV.';
+                    if (data.screenshot) {
+                        errorHtml += `<br><br><span style="font-size:0.75rem; color:#aaa;">Captura de lo que ve el bot:</span><br><img src="${data.screenshot}" style="max-width:100%; border-radius:8px; margin-top:8px; border:1px solid rgba(255,255,255,0.2);">`;
+                    }
+                    document.getElementById('crunchyroll-tv-error-msg').innerHTML = errorHtml;
+                }
+
+            } catch (err) {
+                clearInterval(countdownInterval);
+                document.getElementById('crunchyroll-tv-activation-loading').style.display = 'none';
+                document.getElementById('crunchyroll-tv-activation-error').style.display = 'block';
+                document.getElementById('crunchyroll-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
+            } finally {
+                setTimeout(() => {
+                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || window.clientUsedAttempts['crunchyroll_tv'] >= 1);
+                    if (isTvUsedNow) {
+                        activateCrunchyTvBtn.disabled = true;
+                        activateCrunchyTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Crunchyroll TV agotado (1/1)';
+                        activateCrunchyTvBtn.style.opacity = '0.5';
+                        activateCrunchyTvBtn.style.cursor = 'not-allowed';
+                    } else {
+                        activateCrunchyTvBtn.innerHTML = originalBtnText;
+                        activateCrunchyTvBtn.disabled = false;
+                        activateCrunchyTvBtn.style.opacity = '1';
+                        activateCrunchyTvBtn.style.cursor = 'pointer';
                     }
                 }, 1500);
             }

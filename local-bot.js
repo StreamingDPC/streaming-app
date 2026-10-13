@@ -170,16 +170,24 @@ async function findPrimePassword(targetEmail) {
             for (const phone of Object.keys(data)) {
                 const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
                 for (const sale of salesArr) {
+                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
                     if (!sale?.items) continue;
                     const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
                     for (const item of items) {
-                        if (!item?.specificEmails) continue;
-                        const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                        for (const s of screens) {
-                            const isPrime = s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'));
-                            if (s?.email?.toLowerCase().trim() === email && isPrime && s?.pass) {
-                                console.log(`[BOT-PRIME] ✅ Pass encontrado en clientSales (${phone})`);
-                                return s.pass.trim();
+                        const itemName = (item.name || '').toLowerCase();
+                        const isPrimeItem = itemName.includes('prime') || itemName.includes('amazon');
+                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
+                            console.log(`[BOT-PRIME] ✅ Pass encontrado en item de clientSales (${phone})`);
+                            return item.pass.trim();
+                        }
+                        if (item?.specificEmails) {
+                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                            for (const s of screens) {
+                                const isPrime = (s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'))) || isPrimeItem;
+                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isPrime || !s?.platform)) {
+                                    console.log(`[BOT-PRIME] ✅ Pass encontrado en clientSales (${phone})`);
+                                    return s.pass.trim();
+                                }
                             }
                         }
                     }
@@ -196,16 +204,24 @@ async function findPrimePassword(targetEmail) {
             for (const seller of Object.keys(data)) {
                 const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
                 for (const sale of salesArr) {
+                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
                     if (!sale?.items) continue;
                     const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
                     for (const item of items) {
-                        if (!item?.specificEmails) continue;
-                        const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                        for (const s of screens) {
-                            const isPrime = s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'));
-                            if (s?.email?.toLowerCase().trim() === email && isPrime && s?.pass) {
-                                console.log(`[BOT-PRIME] ✅ Pass encontrado en sellerSales (${seller})`);
-                                return s.pass.trim();
+                        const itemName = (item.name || '').toLowerCase();
+                        const isPrimeItem = itemName.includes('prime') || itemName.includes('amazon');
+                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
+                            console.log(`[BOT-PRIME] ✅ Pass encontrado en item de sellerSales (${seller})`);
+                            return item.pass.trim();
+                        }
+                        if (item?.specificEmails) {
+                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                            for (const s of screens) {
+                                const isPrime = (s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'))) || isPrimeItem;
+                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isPrime || !s?.platform)) {
+                                    console.log(`[BOT-PRIME] ✅ Pass encontrado en sellerSales (${seller})`);
+                                    return s.pass.trim();
+                                }
                             }
                         }
                     }
@@ -216,6 +232,82 @@ async function findPrimePassword(targetEmail) {
 
     return null;
 }
+
+// ── Función reutilizable: buscar contraseña de Crunchyroll en Firebase ─────
+async function findCrunchyrollPassword(targetEmail) {
+    const email = targetEmail.toLowerCase().trim();
+
+    // 1. Buscar en clientSales
+    try {
+        const resp = await axios.get(`${FIREBASE_DB_URL}/clientSales.json`);
+        const data = resp.data;
+        if (data) {
+            for (const phone of Object.keys(data)) {
+                const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
+                for (const sale of salesArr) {
+                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
+                    if (!sale?.items) continue;
+                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+                    for (const item of items) {
+                        const itemName = (item.name || '').toLowerCase();
+                        const isCrunchyItem = itemName.includes('crunch') || itemName.includes('roll');
+                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
+                            console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en item de clientSales (${phone})`);
+                            return item.pass.trim();
+                        }
+                        if (item?.specificEmails) {
+                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                            for (const s of screens) {
+                                const isCrunchy = (s?.platform && (s.platform.toLowerCase().includes('crunch') || s.platform.toLowerCase().includes('roll'))) || isCrunchyItem;
+                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isCrunchy || !s?.platform)) {
+                                    console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en clientSales (${phone})`);
+                                    return s.pass.trim();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { console.warn('[BOT-CRUNCHY] clientSales error:', e.message); }
+
+    // 2. Buscar en sellerSales
+    try {
+        const resp = await axios.get(`${FIREBASE_DB_URL}/sellerSales.json`);
+        const data = resp.data;
+        if (data) {
+            for (const seller of Object.keys(data)) {
+                const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
+                for (const sale of salesArr) {
+                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
+                    if (!sale?.items) continue;
+                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+                    for (const item of items) {
+                        const itemName = (item.name || '').toLowerCase();
+                        const isCrunchyItem = itemName.includes('crunch') || itemName.includes('roll');
+                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
+                            console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en item de sellerSales (${seller})`);
+                            return item.pass.trim();
+                        }
+                        if (item?.specificEmails) {
+                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                            for (const s of screens) {
+                                const isCrunchy = (s?.platform && (s.platform.toLowerCase().includes('crunch') || s.platform.toLowerCase().includes('roll'))) || isCrunchyItem;
+                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isCrunchy || !s?.platform)) {
+                                    console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en sellerSales (${seller})`);
+                                    return s.pass.trim();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { console.warn('[BOT-CRUNCHY] sellerSales error:', e.message); }
+
+    return null;
+}
+
 
 
 
@@ -252,6 +344,10 @@ async function processQueue() {
             } else if (item.platform === 'prime_tv') {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Prime Video TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
                 const result = await doActivatePrimeTv(item.email, item.tvCode);
+                item.resolve(result);
+            } else if (item.platform === 'crunchyroll_tv') {
+                console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Crunchyroll TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
+                const result = await doActivateCrunchyrollTv(item.email, item.tvCode);
                 item.resolve(result);
             } else {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Netflix TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
@@ -344,6 +440,32 @@ app.post('/api/activate-prime-tv', async (req, res) => {
         });
     }
 });
+
+// ── ENDPOINT: Activar Crunchyroll TV ───────────────────────────────────────
+app.post('/api/activate-crunchyroll-tv', async (req, res) => {
+    const { email, tvCode } = req.body;
+
+    if (!email || !tvCode) {
+        return res.status(400).json({ success: false, error: 'Email y código de TV son requeridos.' });
+    }
+
+    const queuePromise = new Promise((resolve, reject) => {
+        activationQueue.push({ platform: 'crunchyroll_tv', email, tvCode, resolve, reject, time: Date.now() });
+    });
+
+    processQueue();
+
+    try {
+        const result = await queuePromise;
+        return res.json(result);
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            error: err.message || 'Error en la activación de Crunchyroll en el bot local.'
+        });
+    }
+});
+
 
 
 // ── LÓGICA DE ACTIVACIÓN CON CHROME (Segundo Plano) ────────────────────────
@@ -1340,6 +1462,263 @@ async function doActivatePrimeTv(email, tvCode) {
         }
 
         const payload = { success: false, error: 'Error del bot de Prime Video: ' + err.message };
+        if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
+        return payload;
+    }
+}
+
+// ── FUNCIÓN: Activar Crunchyroll TV (crunchyroll.com/es/activate) ───────────
+async function doActivateCrunchyrollTv(email, tvCode) {
+    let browser = null;
+    let chromeProc = null;
+    try {
+        console.log(`\n[BOT-CRUNCHY] ════════════════════════════════════`);
+        console.log(`[BOT-CRUNCHY] Activando Crunchyroll en TV: ${email} → código: ${tvCode}`);
+
+        // 1. Buscar contraseña en Firebase
+        const crunchyPass = await findCrunchyrollPassword(email);
+        if (!crunchyPass) {
+            return {
+                success: false,
+                error: `No se encontró la contraseña de Crunchyroll para ${email}. Verifica que esté configurada en la venta.`
+            };
+        }
+        console.log(`[BOT-CRUNCHY] 🔑 Contraseña lista (oculta). Iniciando Chrome en segundo plano...`);
+
+        const chromePath = getChromePath();
+        if (!chromePath) {
+            return {
+                success: false,
+                error: 'Google Chrome no está instalado en esta PC. Instala Chrome e intenta de nuevo.'
+            };
+        }
+
+        const cdpPort = 9342;
+        const profileDir = path.join(process.env.USERPROFILE || 'C:\\Users\\Default', '.gemini', 'crunchy_bot_profile');
+
+        console.log(`[BOT-CRUNCHY] 🚀 Iniciando Chrome genuino (CDP port ${cdpPort})...`);
+        chromeProc = spawn(chromePath, [
+            `--remote-debugging-port=${cdpPort}`,
+            `--user-data-dir=${profileDir}`,
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--window-position=50,50',
+            '--window-size=1280,800',
+            'about:blank'
+        ]);
+
+        let endpoint = null;
+        for (let i = 0; i < 20; i++) {
+            await sleep(500);
+            try {
+                const resp = await axios.get(`http://127.0.0.1:${cdpPort}/json/version`);
+                if (resp.data && resp.data.webSocketDebuggerUrl) {
+                    endpoint = resp.data.webSocketDebuggerUrl;
+                    break;
+                }
+            } catch (e) { }
+        }
+
+        if (!endpoint) {
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return { success: false, error: 'No se pudo iniciar Chrome para Crunchyroll.' };
+        }
+
+        browser = await puppeteer.connect({ browserWSEndpoint: endpoint });
+        const pages = await browser.pages();
+        const page = pages[0] || await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+
+        // 2. Navegar a https://www.crunchyroll.com/es/activate
+        console.log('[BOT-CRUNCHY] 🌐 Navegando a https://www.crunchyroll.com/es/activate...');
+        await page.goto('https://www.crunchyroll.com/es/activate', { waitUntil: 'domcontentloaded', timeout: 35000 });
+        await sleep(3000);
+
+        // Aceptar banner de cookies si aparece
+        try {
+            const cookieBtn = await page.$('#onetrust-accept-btn-handler');
+            if (cookieBtn) await cookieBtn.click();
+        } catch (e) { }
+        await sleep(1000);
+
+        // 3. Escribir código de 6 caracteres en las 6 casillas
+        const cleanTvCode = tvCode.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+        console.log(`[BOT-CRUNCHY] 🔢 Escribiendo código de TV: ${cleanTvCode}`);
+
+        for (let i = 0; i < 6; i++) {
+            const input = await page.$(`#Code-input-${i}`);
+            if (input) {
+                await input.focus();
+                await page.keyboard.type(cleanTvCode[i] || '');
+                await sleep(80);
+            }
+        }
+        await sleep(1000);
+
+        // 4. Clic en "ACTIVAR"
+        console.log('[BOT-CRUNCHY] ➡️ Clic en botón ACTIVAR...');
+        await page.evaluate(() => {
+            const btn = document.querySelector('.activate-button') || Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('ACTIVAR'));
+            if (btn) btn.click();
+        });
+
+        // 5. Esperar la pantalla de inicio de sesión de Crunchyroll (SSO)
+        console.log('[BOT-CRUNCHY] ⏳ Esperando pantalla de inicio de sesión de Crunchyroll...');
+        let emailInputReady = false;
+        for (let wait = 0; wait < 15; wait++) {
+            const curUrl = page.url();
+            if (curUrl.includes('/login') || curUrl.includes('sso.crunchyroll.com')) {
+                const inp = await page.$('input[name="email"], input[type="email"], .email-input__field--H4fRW');
+                if (inp) {
+                    emailInputReady = true;
+                    break;
+                }
+            }
+            await sleep(1500);
+        }
+
+        if (!emailInputReady) {
+            // Verificar si el código fue inválido o rechazado de inmediato
+            const pageText = await page.evaluate(() => (document.body.innerText || '').toLowerCase());
+            if (pageText.includes('inválido') || pageText.includes('incorrecto') || pageText.includes('no coincide') || pageText.includes('invalid')) {
+                const ss = await page.screenshot({ encoding: 'base64' });
+                await browser.disconnect();
+                if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+                return {
+                    success: false,
+                    error: 'El código de activación no es válido o ya expiró en tu TV. Genera un nuevo código.',
+                    screenshot: `data:image/png;base64,${ss}`
+                };
+            }
+        }
+
+        // 6. Escribir correo y contraseña en SSO Crunchyroll
+        console.log(`[BOT-CRUNCHY] ✉️ Ingresando correo: ${email}`);
+        const emailInput = await page.$('input[name="email"], input[type="email"], .email-input__field--H4fRW');
+        if (emailInput) {
+            await emailInput.click({ clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await emailInput.type(email, { delay: 40 });
+            await sleep(500);
+        }
+
+        console.log('[BOT-CRUNCHY] 🔑 Ingresando contraseña...');
+        const passInput = await page.$('input[name="password"], input[type="password"], .password-input__field--Qgoe0');
+        if (passInput) {
+            await passInput.click({ clickCount: 3 });
+            await page.keyboard.press('Backspace');
+            await passInput.type(crunchyPass, { delay: 40 });
+            await sleep(500);
+        }
+
+        // 7. Clic en "ACCEDER"
+        console.log('[BOT-CRUNCHY] 🚀 Clic en ACCEDER...');
+        const clickedLogin = await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+            for (const b of btns) {
+                const txt = (b.innerText || b.value || '').trim();
+                if (txt === 'ACCEDER' || txt === 'LOG IN' || txt.includes('ACCEDER')) {
+                    b.click();
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (!clickedLogin) {
+            await page.keyboard.press('Enter');
+        }
+        await sleep(5000);
+
+        // 8. Verificar confirmación de éxito o error
+        console.log('[BOT-CRUNCHY] ⏳ Verificando confirmación de activación...');
+        let isSuccess = false;
+        let isError = false;
+        let errorMsgDetail = '';
+
+        for (let wait = 0; wait < 8; wait++) {
+            const curUrl = page.url();
+            const pageText = await page.evaluate(() => (document.body.innerText || '').toLowerCase());
+
+            if (pageText.includes('éxito') ||
+                pageText.includes('exito') ||
+                pageText.includes('activado') ||
+                pageText.includes('dispositivo activado') ||
+                pageText.includes('enlazado') ||
+                pageText.includes('todo listo') ||
+                pageText.includes('disfruta') ||
+                curUrl.includes('/activate/success') ||
+                (curUrl.includes('crunchyroll.com') && !curUrl.includes('login') && !curUrl.includes('sso'))) {
+                isSuccess = true;
+                break;
+            }
+
+            if (pageText.includes('combinación incorrecta') ||
+                pageText.includes('contraseña incorrecta') ||
+                pageText.includes('incorrect password') ||
+                pageText.includes('código no es válido') ||
+                pageText.includes('código incorrecto') ||
+                pageText.includes('invalid code')) {
+                isError = true;
+                errorMsgDetail = 'Crunchyroll indicó datos incorrectos o código no válido.';
+                break;
+            }
+            await sleep(2000);
+        }
+
+        if (isError) {
+            const ss = await page.screenshot({ encoding: 'base64' });
+            await browser.disconnect();
+            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            return {
+                success: false,
+                error: errorMsgDetail || 'Error al validar la activación en Crunchyroll.',
+                screenshot: `data:image/png;base64,${ss}`
+            };
+        }
+
+        // 9. Cerrar sesión y limpiar cookies (como solicitado: "y al activarse cerrar sesion")
+        console.log('[BOT-CRUNCHY] 🧹 Limpiando y cerrando sesión de Crunchyroll...');
+        try {
+            const client = await page.target().createCDPSession();
+            await client.send('Network.clearBrowserCookies');
+            await client.send('Network.clearBrowserCache');
+            console.log('[BOT-CRUNCHY] 🧼 Cookies y caché limpiados vía CDP.');
+        } catch (e) { }
+
+        try {
+            await page.goto('https://www.crunchyroll.com/es/logout', { waitUntil: 'domcontentloaded', timeout: 8000 }).catch(() => { });
+        } catch (e) { }
+
+        await browser.disconnect();
+        browser = null;
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
+            chromeProc = null;
+        }
+
+        console.log('[BOT-CRUNCHY] 🎉 ¡Activación de Crunchyroll en TV completada con éxito!');
+        return {
+            success: true,
+            message: '¡Crunchyroll activado con éxito en tu Smart TV! Ya puedes disfrutar del mejor anime.'
+        };
+
+    } catch (err) {
+        console.error('[BOT-CRUNCHY] ❌ Error:', err.message);
+
+        let screenshot = null;
+        if (browser) {
+            try {
+                const pages = await browser.pages();
+                if (pages.length > 0) screenshot = await pages[0].screenshot({ encoding: 'base64' });
+                await browser.disconnect();
+            } catch (e) { }
+        }
+        if (chromeProc) {
+            try { chromeProc.kill(); } catch (e) { }
+        }
+
+        const payload = { success: false, error: 'Error del bot de Crunchyroll: ' + err.message };
         if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
         return payload;
     }

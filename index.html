@@ -780,6 +780,91 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Botón Iniciar sesión Crunchyroll en TV -->
+                <div class="platform-action-card" data-platform-container="crunchyroll_tv"
+                    style="display:flex; flex-direction:column; gap:6px;">
+                    <div>
+                        <button id="show-crunchyroll-tv-login-btn" type="button" class="platform-tab-btn" data-platform="crunchyroll_tv"
+                            style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(244,117,33,0.1); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
+                            <span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (1 vez)
+                        </button>
+                        <!-- Panel Crunchyroll TV: aparece al dar clic -->
+                        <div id="crunchyroll-tv-login-panel"
+                            style="display:none; margin-top:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.3); border:1px solid rgba(244,117,33,0.3); border-radius:14px; padding:1.2rem;">
+                            <p style="font-size:0.85rem; color:#aaa; margin-bottom:1rem;">
+                                <i class="fa-solid fa-circle-info" style="color:#F47521;"></i>
+                                En tu Smart TV abre Crunchyroll, selecciona <strong style="color:white;">"Acceder"</strong> o <strong style="color:white;">"Vincular dispositivo"</strong>.
+                                Aparecerá un código de 6 caracteres. Ingrésalo aquí y tu TV quedará activa.
+                            </p>
+
+                            <!-- Correo con que se activará -->
+                            <div style="margin-bottom:0.8rem;">
+                                <label style="display:block; font-size:0.82rem; color:#aaa; margin-bottom:0.4rem;">
+                                    <i class="fa-solid fa-envelope" style="color:#F47521;"></i> Cuenta Crunchyroll a usar:
+                                </label>
+                                <select id="crunchyroll-tv-email-select" class="input-modern"
+                                    style="font-size:0.9rem; padding:10px 12px;">
+                                    <option value="">-- Selecciona correo --</option>
+                                </select>
+                            </div>
+
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <input type="text" id="crunchyroll-tv-code-input" maxlength="6" placeholder="Ej: ABCDEF"
+                                    style="flex:1; min-width:140px; padding:12px 15px; border-radius:8px; border:1px solid rgba(244,117,33,0.5); background:rgba(0,0,0,0.5); color:white; font-size:1.2rem; font-weight:700; letter-spacing:4px; text-align:center; text-transform:uppercase;"
+                                    oninput="this.value = this.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase()">
+                                <button id="activate-crunchyroll-tv-btn" type="button"
+                                    style="background:linear-gradient(135deg,#F47521,#d35400); border:none; color:white; font-weight:bold; padding:12px 20px; border-radius:8px; cursor:pointer; font-size:0.95rem; white-space:nowrap; box-shadow:0 4px 10px rgba(244,117,33,0.3);">
+                                    <i class="fa-solid fa-tv"></i> Activar Crunchyroll en TV
+                                </button>
+                            </div>
+
+                            <!-- Estado de carga con paciencia y cuenta regresiva -->
+                            <div id="crunchyroll-tv-activation-loading" style="display:none; margin-top:1rem;">
+                                <div style="background:rgba(244,117,33,0.15); border:1px solid rgba(244,117,33,0.5); border-radius:12px; padding:12px 14px; margin-bottom:10px; text-align:left;">
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                        <span style="font-size:1.15rem;">⚠️</span>
+                                        <strong style="color:#F47521; font-size:0.92rem;">Favor tener paciencia, se está procesando</strong>
+                                    </div>
+                                    <p style="color:#eee; font-size:0.83rem; margin:0; line-height:1.35;">
+                                        No cierre esta ventana ni apague su TV hasta finalizar la activación.
+                                    </p>
+                                </div>
+
+                                <div style="background:rgba(20,20,28,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px 14px; text-align:left;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                        <span id="crunchyroll-tv-status-phase" style="font-size:0.84rem; color:#F47521; font-weight:600; display:flex; align-items:center; gap:6px;">
+                                            <i class="fa-solid fa-spinner fa-spin"></i> Conectando con Crunchyroll...
+                                        </span>
+                                        <span id="crunchyroll-tv-countdown-timer" style="font-size:0.85rem; color:#fff; font-weight:700; background:rgba(244,117,33,0.3); border:1px solid rgba(244,117,33,0.6); padding:2px 8px; border-radius:6px; min-width:38px; text-align:center;">
+                                            45s
+                                        </span>
+                                    </div>
+                                    <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                                        <div id="crunchyroll-tv-progress-bar" style="width:5%; height:100%; background:linear-gradient(90deg, #F47521, #2ecc71); border-radius:3px; transition:width 1s linear;">
+                                        </div>
+                                    </div>
+                                    <p id="crunchyroll-tv-queue-notice" style="color:#f39c12; font-size:0.8rem; margin:8px 0 0 0; display:none; line-height:1.3;">
+                                        <i class="fa-solid fa-clock"></i> Hay clientes en fila. Tu turno se atenderá automáticamente.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Resultado de éxito -->
+                            <div id="crunchyroll-tv-activation-result" style="display:none; margin-top:1rem; text-align:center; padding:1.2rem; border-radius:10px; background:rgba(46,204,113,0.1); border:1px solid #2ecc71;">
+                                <i class="fa-solid fa-circle-check" style="color:#2ecc71; font-size:2rem; margin-bottom:0.5rem;" id="crunchyroll-tv-activation-icon"></i>
+                                <p style="color:#2ecc71; font-weight:bold; font-size:1.1rem; margin-bottom: 0.3rem;" id="crunchyroll-tv-activation-msg">¡TV Activada Exitosamente!</p>
+                                <p style="color:#eee; font-size:0.9rem; margin-top:0.3rem;" id="crunchyroll-tv-activation-desc">¡Dispositivo Crunchyroll activado con éxito en tu Smart TV! Ya puedes disfrutar del mejor anime.</p>
+                            </div>
+
+                            <!-- Error -->
+                            <div id="crunchyroll-tv-activation-error" style="display:none; margin-top:1rem; text-align:center; padding:0.8rem; border-radius:10px; background:rgba(255,77,77,0.1); border:1px solid #ff4d4d;">
+                                <i class="fa-solid fa-triangle-exclamation" style="color:#ff4d4d;"></i>
+                                <p id="crunchyroll-tv-error-msg" style="color:#ff4d4d; font-size:0.85rem; margin-top:0.3rem;">No se pudo activar. Verifica el código e intenta de nuevo.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1227,7 +1312,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <!-- Lógica Principal -->
-    <script src="app.js?v=3.8.35"></script>
+    <script src="app.js?v=3.8.36"></script>
     <!-- CRM / Respuestas Selector Modal -->
     <div id="crm-selector-modal" class="modal" style="display:none; z-index: 5000;">
         <div class="modal-content"
