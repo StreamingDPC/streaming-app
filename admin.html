@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Panel de Administración | Streaming DPC</title>
     <link rel="stylesheet" href="style.css?v=3.7.2">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
@@ -263,9 +266,9 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.23 (Stats Export)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.24 (Métodos de Pago)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
-                <button class="logout-btn" style="background: #2e86de;" onclick="location.reload()"><i
+                <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
                 <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i>
                     Salir</button>
