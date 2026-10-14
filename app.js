@@ -2446,6 +2446,17 @@ function setupEventListeners() {
                         if (noteContainer) noteContainer.appendChild(vCard);
                     }
                 } else if (codeVal.startsWith('http://') || codeVal.startsWith('https://')) {
+                    // Seguridad: Si por alguna razón llegó un enlace de cambio de contraseña, nunca mostrarlo
+                    if (codeVal.toLowerCase().includes('password') || codeVal.toLowerCase().includes('reset') || codeVal.includes('URL_ACCOUNT_PASSWORD')) {
+                        if (loadingEl) loadingEl.style.display = 'none';
+                        if (codeResultOverlay) codeResultOverlay.style.display = 'none';
+                        if (errorEl) {
+                            errorEl.style.display = 'block';
+                            errorEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#e74c3c;"></i> Se detectó un correo de restablecimiento de contraseña en lugar del código temporal. Solicita el código de nuevo desde tu televisor o celular y vuelve a pulsar el botón.';
+                        }
+                        return;
+                    }
+
                     if (magicCodeEl) magicCodeEl.style.display = 'none';
                     const copyBtn = document.getElementById('copy-magic-code-btn');
                     if (copyBtn) copyBtn.style.display = 'none';
@@ -2479,7 +2490,9 @@ function setupEventListeners() {
                     }
                 } else {
                     if (titleEl) {
-                        if (platform === 'disney_update') {
+                        if (platform === 'netflix_temp') {
+                            titleEl.innerText = 'Tu código de Acceso Temporal Netflix:';
+                        } else if (platform === 'disney_update') {
                             titleEl.innerText = data.detectedType === 'hogar'
                                 ? 'Tu código de Actualizar Hogar Disney+:'
                                 : (data.detectedType === 'fuera_de_casa'

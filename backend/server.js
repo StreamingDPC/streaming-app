@@ -289,35 +289,90 @@ app.post('/api/get-code', async (req, res) => {
                             normFr.includes('hbo') || normFr.includes('max') ||
                             normTxt.includes('hbo') || normTxt.includes('max') ||
                             normSub.includes('codigo') || normTxt.includes('codigo');
+                    } else if (platformLower.includes('netflix')) {
+                        const isNetflixSender = fromText.includes('netflix') || subject.includes('netflix');
+                        const isPasswordEmail = subject.includes('contraseña') || subject.includes('password') || subject.includes('restablec') || textContent.includes('restablecer tu contraseña');
+
+                        if (isPasswordEmail) {
+                            // Ignorar correos de restablecimiento de contraseña para códigos de streaming
+                            isFromPlatform = false;
+                        } else if (platformLower === 'netflix_temp') {
+                            const isTempSubject = subject.includes('temporal') || subject.includes('viaje') || subject.includes('travel') || subject.includes('acceso') || subject.includes('código') || subject.includes('codigo') || textContent.includes('acceso temporal') || textContent.includes('temporal') || textContent.includes('15 minutos');
+                            isFromPlatform = isNetflixSender && isTempSubject;
+                        } else if (platformLower === 'netflix_update') {
+                            const isUpdateSubject = subject.includes('hogar') || subject.includes('household') || subject.includes('actualiz') || textContent.includes('actualizar tu hogar');
+                            isFromPlatform = isNetflixSender && isUpdateSubject;
+                        } else {
+                            isFromPlatform = isNetflixSender;
+                        }
                     } else {
                         isFromPlatform = subject.includes(platformLower) || fromText.includes(platformLower);
                     }
                     const mentionsEmail = textContent.includes(targetEmail) || htmlContent.toLowerCase().includes(targetEmail);
+                    const isPasswordEmail = subject.includes('contraseña') || subject.includes('password') || subject.includes('restablec') || textContent.includes('restablecer tu contraseña');
 
-                    if (isFromPlatform || mentionsEmail) {
+                    if ((isFromPlatform || mentionsEmail) && !isPasswordEmail) {
                         console.log(`[DEBUG] ¡MATCH ENCONTRADO en ${account.email}!`);
                         if (platformLower.includes('netflix')) {
-                            const isUpdateOrTemp = platformLower === 'netflix_update' || platformLower === 'netflix_temp';
+                            if (platformLower === 'netflix_temp') {
+                                // 1. Buscar código de 4 dígitos en el texto o asunto del correo de acceso temporal
+                                const codeMatch = textContent.match(/\b\d{4}\b/);
+                                if (codeMatch && (textContent.includes('código') || textContent.includes('codigo') || textContent.includes('temporal') || textContent.includes('acceso') || textContent.includes('15 minutos') || subject.includes('código') || subject.includes('codigo') || subject.includes('temporal'))) {
+                                    accountLogs.found = true;
+                                    console.log(`[DEBUG] Código temporal Netflix de 4 dígitos encontrado en texto: ${codeMatch[0]}`);
+                                    return codeMatch[0];
+                                }
 
-                            if (isUpdateOrTemp) {
-                                // Para actualizaciones de hogar o acceso temporal, devolvemos el enlace directamente
+                                // 2. Si no viene directo en texto, buscar enlace oficial de viaje o verificación (NUNCA contraseña)
                                 const $ = cheerio.load(htmlContent);
                                 const links = [];
                                 $('a').each((j, el) => {
                                     const href = $(el).attr('href');
-                                    if (href && (href.includes('netflix.com') || href.includes('nflx.it'))) links.push(href);
+                                    if (href && (href.includes('netflix.com') || href.includes('nflx.it'))) {
+                                        const hrefL = href.toLowerCase();
+                                        if (!hrefL.includes('password') && !hrefL.includes('reset') && !hrefL.includes('passwords')) {
+                                            links.push(href);
+                                        }
+                                    }
+                                });
+
+                                for (const link of links) {
+                                    if (link.includes('travel') || link.includes('verify') || link.includes('token') || link.includes('update-primary-location')) {
+                                        // Intentar visitar la URL para extraer el código de 4 dígitos
+                                        const webCode = await getCodeFromNetflixUrl(link);
+                                        if (webCode) {
+                                            accountLogs.found = true;
+                                            console.log(`[DEBUG] Código temporal Netflix de 4 dígitos obtenido desde la web: ${webCode}`);
+                                            return webCode;
+                                        }
+                                        // Si la web no devolvió código de 4 dígitos, devolver el link seguro
+                                        accountLogs.found = true;
+                                        return link;
+                                    }
+                                }
+                            } else if (platformLower === 'netflix_update') {
+                                // Para actualizaciones de hogar, devolvemos el enlace directamente (excluyendo estrictamente passwords)
+                                const $ = cheerio.load(htmlContent);
+                                const links = [];
+                                $('a').each((j, el) => {
+                                    const href = $(el).attr('href');
+                                    if (href && (href.includes('netflix.com') || href.includes('nflx.it'))) {
+                                        const hrefL = href.toLowerCase();
+                                        if (!hrefL.includes('password') && !hrefL.includes('reset') && !hrefL.includes('passwords')) {
+                                            links.push(href);
+                                        }
+                                    }
                                 });
                                 for (const link of links) {
                                     if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location') || link.includes('account/update-primary-location')) {
                                         accountLogs.found = true;
-                                        return link; // Retorna el link para que el frontend lo abra
+                                        return link; // Retorna el link seguro para que el frontend lo abra
                                     }
                                 }
                             } else {
-                                // Para código normal de TV de 4 dígitos
+                                // Para código normal de TV / CEL / PC de 4 dígitos
                                 const codeMatch = textContent.match(/\b\d{4}\b/);
-                                // Netflix envia códigos de activación en el asunto o cuerpo. Nos aseguramos que no sea un Update.
-                                if (codeMatch && !subject.toLowerCase().includes('hogar') && (textContent.includes('código') || textContent.includes('access') || subject.includes('netflix'))) {
+                                if (codeMatch && !subject.toLowerCase().includes('hogar') && (textContent.includes('código') || textContent.includes('codigo') || textContent.includes('access') || textContent.includes('acceso') || subject.includes('netflix'))) {
                                     accountLogs.found = true;
                                     return codeMatch[0];
                                 } else {
@@ -325,7 +380,12 @@ app.post('/api/get-code', async (req, res) => {
                                     const links = [];
                                     $('a').each((j, el) => {
                                         const href = $(el).attr('href');
-                                        if (href && href.includes('netflix.com')) links.push(href);
+                                        if (href && href.includes('netflix.com')) {
+                                            const hrefL = href.toLowerCase();
+                                            if (!hrefL.includes('password') && !hrefL.includes('reset') && !hrefL.includes('passwords')) {
+                                                links.push(href);
+                                            }
+                                        }
                                     });
                                     for (const link of links) {
                                         if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
