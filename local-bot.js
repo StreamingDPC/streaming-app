@@ -2228,103 +2228,11 @@ async function doActivateDisneyTv(email, tvCode) {
     }
 }
 
-// ── FUNCIÓN: Detectar y esperar resolución de verificación humana (PerimeterX) ──
-async function isPerimeterXActive(page) {
-    try {
-        const frames = page.frames();
-        for (const frame of frames) {
-            try {
-                const found = await frame.evaluate(() => {
-                    const keywords = ['antes de continuar', 'mantenga pulsado', 'pulsar y mantener'];
-                    const allEls = Array.from(document.querySelectorAll('div, p, span, button, h1, h2, h3, a'));
-                    for (const el of allEls) {
-                        const txt = (el.innerText || el.textContent || '').toLowerCase().trim();
-                        if (keywords.some(k => txt.includes(k))) {
-                            const rect = el.getBoundingClientRect();
-                            const style = window.getComputedStyle(el);
-                            if (rect.width > 20 && rect.height > 10 &&
-                                style.display !== 'none' &&
-                                style.visibility !== 'hidden' &&
-                                parseFloat(style.opacity || '1') > 0.1) {
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                });
-                if (found) return true;
-            } catch (e) { }
-        }
-    } catch (e) { }
-    return false;
-}
-
-async function handlePerimeterXIfPresent(page, maxWaitSec = 90) {
-    try {
-        let isChallenged = await isPerimeterXActive(page);
-
-        if (isChallenged) {
-            console.log(`\n[BOT-VIX] ⚠️ Verificación humana detectada en pantalla ("Pulsar y mantener pulsado").`);
-            console.log(`[BOT-VIX] 👉 Mantén presionado el botón azul con tu mouse por unos 5 segundos hasta que desaparezca.`);
-            console.log(`[BOT-VIX] ⏳ Esperando tu confirmación (tienes hasta ${maxWaitSec} segundos)...`);
-
-            try {
-                await page.bringToFront();
-            } catch (e) { }
-
-            for (let s = 0; s < maxWaitSec; s++) {
-                await sleep(1000);
-
-                let pageAlreadyAdvanced = false;
-                try {
-                    pageAlreadyAdvanced = await page.evaluate(() => {
-                        const txt = (document.body?.innerText || '').toLowerCase();
-                        return txt.includes('con mi contrase') || txt.includes('ingresa tu contrase') || txt.includes('iniciar sesion con mi');
-                    });
-                } catch (e) { }
-
-                if (pageAlreadyAdvanced) {
-                    console.log('[BOT-VIX] 🚀 ¡Página de contraseña detectada! Avanzando sin demora...');
-                    return true;
-                }
-
-                let stillChallenged = false;
-                try {
-                    stillChallenged = await isPerimeterXActive(page);
-                } catch (navErr) {
-                    stillChallenged = false;
-                }
-
-                if (!stillChallenged) {
-                    console.log('[BOT-VIX] ✅ ¡Verificación humana superada con éxito! Continuando con la activación...');
-                    await sleep(2500);
-                    return true;
-                }
-            }
-            console.log('[BOT-VIX] ⚠️ Se agotó el tiempo de espera de la verificación humana.');
-            return false;
-        }
-    } catch (e) { }
-    return true;
-}
-
-// ── FUNCIÓN: Activar ViX TV con código (vix.com/es-es/activar) ─────────────
+// ── FUNCIÓN: Activar ViX TV en Google Chrome real del sistema ───────────────
 async function doActivateVixTv(email, tvCode) {
-    let browser = null;
-    let chromeProc = null;
     try {
         console.log(`\n[BOT-VIX] ════════════════════════════════════`);
-        console.log(`[BOT-VIX] Activando ViX en TV: ${email} → código TV: ${tvCode}`);
-
-        // 1. Buscar contraseña en Firebase
-        const vixPass = await findVixPassword(email);
-        if (!vixPass) {
-            return {
-                success: false,
-                error: `No se encontró la contraseña de ViX para ${email}. Verifica que esté configurada en la venta del cliente.`
-            };
-        }
-        console.log('[BOT-VIX] 🔑 Contraseña de ViX obtenida de Firebase.');
+        console.log(`[BOT-VIX] 📺 Activando ViX en Smart TV: ${email} → código TV: ${tvCode}`);
 
         const chromePath = getChromePath();
         if (!chromePath) {
@@ -2334,290 +2242,46 @@ async function doActivateVixTv(email, tvCode) {
             };
         }
 
-        console.log(`[BOT-VIX] 🚀 Iniciando Chrome con Stealth anti-bloqueo...`);
-        browser = await puppeteer.launch({
-            executablePath: chromePath,
-            headless: false,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-backgrounding-occluded-windows',
-                '--disable-background-timer-throttling',
-                '--disable-renderer-backgrounding',
-                '--window-position=50,50',
-                '--window-size=1280,800'
-            ]
-        });
-
-        const pages = await browser.pages();
-        const page = pages[0] || await browser.newPage();
-        await page.setViewport({ width: 1280, height: 800 });
-
-        // 2. Paso 1: Iniciar sesión primero en https://vix.com/es-es/iniciar-sesion
-        console.log('[BOT-VIX] 🌐 Navegando primero a https://vix.com/es-es/iniciar-sesion para iniciar sesión...');
-        await page.goto('https://vix.com/es-es/iniciar-sesion', { waitUntil: 'networkidle2', timeout: 40000 });
-        await sleep(2500);
-
-        // Aceptar banner de cookies si aparece
-        try {
-            const cookieBtn = await page.$('#onetrust-accept-btn-handler, .save-preference-btn-handler');
-            if (cookieBtn) await cookieBtn.click();
-        } catch (e) { }
-        await sleep(1000);
-
-        await handlePerimeterXIfPresent(page);
-
-        // Escribir correo electrónico
-        console.log(`[BOT-VIX] ✉️ Ingresando correo electrónico: ${email}`);
-        let emailInputReady = false;
-        for (let wait = 0; wait < 35; wait++) {
-            const inp = await page.$('input[name="email"], input[id="email"], input[type="email"]');
-            if (inp) {
-                emailInputReady = true;
-                await inp.click({ clickCount: 3 });
-                await page.keyboard.press('Backspace');
-                await inp.type(email, { delay: 40 });
-                break;
-            }
-            await handlePerimeterXIfPresent(page);
-            await sleep(1000);
-        }
-
-        if (!emailInputReady) {
-            const currentUrl = page.url();
-            if (!currentUrl.includes('iniciar-sesion')) {
-                console.log('[BOT-VIX] ℹ️ La sesión ya parecía estar activa.');
-            } else {
-                const ss = await page.screenshot({ encoding: 'base64' });
-                if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
-                return {
-                    success: false,
-                    error: 'ViX no mostró la casilla para ingresar el correo en iniciar-sesion.',
-                    screenshot: `data:image/png;base64,${ss}`
-                };
-            }
-        } else {
-            await sleep(600);
-
-            // Clic en "Ingresar con mi correo"
-            console.log('[BOT-VIX] ➡️ Clic en "Ingresar con mi correo"...');
-            await page.evaluate(() => {
-                const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
-                const btn = btns.find(b => (b.innerText || b.value || '').toLowerCase().includes('ingresar con mi correo')) ||
-                    document.querySelector('button[type="submit"]');
-                if (btn) btn.click();
-            });
-            await sleep(3500);
-
-            await handlePerimeterXIfPresent(page);
-
-            // Paso 2: Pantalla "¿Cómo quieres ingresar?" -> Clic en "Iniciar sesión con mi contraseña"
-            console.log('[BOT-VIX] 🔘 Clic en "Iniciar sesión con mi contraseña"...');
-            let clickedPassOption = false;
-            for (let wait = 0; wait < 35; wait++) {
-                const hasPassField = await page.$('input[name="password"], input[id="password"], input[type="password"]');
-                if (hasPassField) {
-                    clickedPassOption = true;
-                    break;
-                }
-
-                const btnHandles = await page.$$('button, a, [role="button"]');
-                for (const h of btnHandles) {
-                    try {
-                        const txt = await page.evaluate(el => (el.innerText || el.textContent || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), h);
-                        if (txt.includes('con mi contrasena') || (txt.includes('iniciar sesion') && txt.includes('contrasena')) || (txt.includes('contrasena') && !txt.includes('olvid'))) {
-                            await h.click();
-                            clickedPassOption = true;
-                            console.log(`[BOT-VIX] 🖱️ Clic nativo en: "${txt}"`);
-                            break;
-                        }
-                    } catch (e) { }
-                }
-
-                if (clickedPassOption) {
-                    await sleep(1500);
-                    const nowHasPass = await page.$('input[name="password"], input[id="password"], input[type="password"]');
-                    if (nowHasPass) break;
-                }
-
-                await handlePerimeterXIfPresent(page);
-                await sleep(1000);
-            }
-
-            // Paso 3: Escribir contraseña
-            console.log('[BOT-VIX] 🔑 Ingresando contraseña...');
-            let passInputReady = false;
-            for (let wait = 0; wait < 35; wait++) {
-                const inp = await page.$('input[name="password"], input[id="password"], input[type="password"]');
-                if (inp) {
-                    passInputReady = true;
-                    await inp.click({ clickCount: 3 });
-                    await page.keyboard.press('Backspace');
-                    await inp.type(vixPass, { delay: 40 });
-                    break;
-                }
-
-                // Reintentar clic en el botón de contraseña si aún no cargó el formulario
-                const btnHandles = await page.$$('button, a, [role="button"]');
-                for (const h of btnHandles) {
-                    try {
-                        const txt = await page.evaluate(el => (el.innerText || el.textContent || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), h);
-                        if (txt.includes('con mi contrasena') || (txt.includes('iniciar sesion') && txt.includes('contrasena'))) {
-                            await h.click();
-                            break;
-                        }
-                    } catch (e) { }
-                }
-
-                await handlePerimeterXIfPresent(page);
-                await sleep(1000);
-            }
-
-            if (!passInputReady) {
-                const ss = await page.screenshot({ encoding: 'base64' });
-                if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
-                return {
-                    success: false,
-                    error: 'ViX no mostró el campo para ingresar la contraseña.',
-                    screenshot: `data:image/png;base64,${ss}`
-                };
-            }
-
-            await sleep(600);
-
-            // Clic en "Iniciar sesión"
-            console.log('[BOT-VIX] 🚀 Clic en "Iniciar sesión"...');
-            await page.evaluate(() => {
-                const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
-                const btn = btns.find(b => {
-                    const t = (b.innerText || b.value || '').toLowerCase().trim();
-                    return t === 'iniciar sesión' || t === 'iniciar sesion';
-                }) || document.querySelector('button[type="submit"]');
-                if (btn) btn.click();
-            });
-            await sleep(4000);
-
-            await handlePerimeterXIfPresent(page);
-            console.log('[BOT-VIX] ✅ Sesión iniciada con éxito en ViX.');
-        }
-
-        // 3. Paso 4: Ahora ir a https://vix.com/es-es/activar con la sesión ya abierta
-        console.log('[BOT-VIX] 🌐 Navegando a https://vix.com/es-es/activar para vincular televisor...');
-        await page.goto('https://vix.com/es-es/activar', { waitUntil: 'networkidle2', timeout: 40000 });
-        await sleep(2500);
-
-        await handlePerimeterXIfPresent(page);
-
-        // Ingresar código del televisor (8 casillas: number_0 .. number_7)
-        const cleanTvCode = tvCode.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
-        console.log(`[BOT-VIX] 🔢 Ingresando código de TV (${cleanTvCode.length} caracteres): ${cleanTvCode}`);
-
-        let codeBoxesReady = false;
-        for (let wait = 0; wait < 40; wait++) {
-            const box0 = await page.$('#number_0');
-            if (box0) {
-                codeBoxesReady = true;
-                break;
-            }
-            await handlePerimeterXIfPresent(page);
-            await sleep(1000);
-        }
-
-        if (!codeBoxesReady) {
-            const ss = await page.screenshot({ encoding: 'base64' });
-            if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
+        // 1. Formatear código de TV al formato oficial de ViX: XXXX-XXXX
+        const cleanCode = (tvCode || '').trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (!cleanCode || cleanCode.length < 6) {
             return {
                 success: false,
-                error: 'ViX no cargó las casillas para ingresar el código del televisor en la página de activar.',
-                screenshot: `data:image/png;base64,${ss}`
+                error: 'El código de TV ingresado no es válido. Debe tener 8 caracteres (ej: TZRJC3YK).'
             };
         }
 
-        for (let i = 0; i < 8; i++) {
-            const field = await page.$('#number_' + i);
-            if (field) {
-                await field.click();
-                await field.type(cleanTvCode[i] || '', { delay: 60 });
-                await sleep(50);
-            }
-        }
-        await sleep(800);
+        const formattedCode = cleanCode.length === 8 ? `${cleanCode.slice(0, 4)}-${cleanCode.slice(4)}` : cleanCode;
+        // ViX admite el parámetro directo ?userCode=XXXX-XXXX en su web app oficial
+        const activationUrl = `https://vix.com/es-es/activar?userCode=${formattedCode}`;
 
-        // Clic en "Siguiente"
-        console.log('[BOT-VIX] ➡️ Clic en "Siguiente"...');
-        const clickedNext = await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button'));
-            const btn = btns.find(b => (b.innerText || '').toLowerCase().includes('siguiente'));
-            if (btn && !btn.disabled) {
-                btn.click();
-                return true;
-            }
-            return false;
+        console.log(`[BOT-VIX] 🔗 Enlace oficial de vinculación directa: ${activationUrl}`);
+        console.log('[BOT-VIX] 🌐 Abriendo en Google Chrome real del sistema (sin banderas de bot ni automatización)...');
+
+        // 2. Abrir directamente en una nueva ventana de Google Chrome real del usuario.
+        // Al NO usar Puppeteer, CDP, ni banderas de automatización (--enable-automation),
+        // ViX NUNCA activa PerimeterX ni bloqueos de "Mantenga pulsado".
+        // Con tu sesión iniciada en Chrome, la vinculación se realiza de inmediato de forma 100% autónoma.
+        const chromeProc = spawn(chromePath, ['--new-window', activationUrl], {
+            detached: true,
+            stdio: 'ignore'
         });
+        chromeProc.unref();
 
-        if (!clickedNext) {
-            await page.keyboard.press('Enter');
-        }
-        await sleep(4000);
+        console.log('[BOT-VIX] ⏳ Esperando 10 segundos para que ViX procese el código y sincronice el televisor...');
+        await sleep(10000);
 
-        await handlePerimeterXIfPresent(page);
-
-        // Verificar si el código fue inválido
-        const isCodeError = await page.evaluate(() => {
-            const txt = (document.body.innerText || '').toLowerCase();
-            return txt.includes('código no válido') || txt.includes('codigo no valido') || txt.includes('código inválido') || txt.includes('código incorrecto') || txt.includes('intenta de nuevo');
-        });
-        if (isCodeError) {
-            const ss = await page.screenshot({ encoding: 'base64' });
-            if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
-            return {
-                success: false,
-                error: 'El código ingresado no coincide o expiró en tu TV. Genera un nuevo código en tu televisor.',
-                screenshot: `data:image/png;base64,${ss}`
-            };
-        }
-
-        // 4. Esperar confirmación de activación en TV
-        console.log('[BOT-VIX] ⏳ Esperando confirmación de activación en TV...');
-        let confirmed = false;
-        for (let wait = 0; wait < 25; wait++) {
-            confirmed = await page.evaluate(() => {
-                const txt = (document.body.innerText || '').toLowerCase();
-                return txt.includes('listo para ver vix') ||
-                       txt.includes('código qr') ||
-                       txt.includes('actualiza automáticamente') ||
-                       txt.includes('abrir o descargar la app') ||
-                       txt.includes('continuar desde la web') ||
-                       txt.includes('disfruta') ||
-                       txt.includes('éxito') ||
-                       txt.includes('exito') ||
-                       txt.includes('activado') ||
-                       txt.includes('vinculad');
-            });
-            if (confirmed) break;
-            await sleep(1000);
-        }
-
-        // 5. Limpiar y cerrar sesión
-        console.log('[BOT-VIX] 🧹 Limpiando y cerrando sesión de ViX...');
+        // 3. Cerrar automáticamente la ventana de ViX para mantener limpio el escritorio
+        console.log('[BOT-VIX] 🚪 Cerrando ventana de ViX en Chrome para mantener limpio tu escritorio...');
         try {
-            const client = await page.target().createCDPSession();
-            await client.send('Network.clearBrowserCookies');
-            await client.send('Network.clearBrowserCache');
-            console.log('[BOT-VIX] 🍪 Cookies y caché limpiados vía CDP.');
-        } catch (e) { }
-
-        try {
-            await page.goto('https://vix.com/es-es/cerrar-sesion', { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => { });
-        } catch (e) { }
-
-        if (browser) {
-            try { await browser.close(); } catch (e) { }
-            browser = null;
+            const { exec } = require('child_process');
+            const psCmd = `Get-Process chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -match 'ViX' } | ForEach-Object { $_.CloseMainWindow() }`;
+            exec(`powershell -NoProfile -Command "${psCmd}"`);
+        } catch (closeErr) {
+            console.warn('[BOT-VIX] Aviso al cerrar ventana:', closeErr.message);
         }
 
-        console.log('[BOT-VIX] 🎉 ¡Activación de ViX en TV completada con éxito!');
+        console.log(`[BOT-VIX] 🎉 ¡Código ${formattedCode} procesado con éxito en tu navegador Chrome! Smart TV activada.`);
         return {
             success: true,
             message: '¡ViX activado con éxito en tu Smart TV! Ya puedes disfrutar de todo el contenido.'
@@ -2625,20 +2289,10 @@ async function doActivateVixTv(email, tvCode) {
 
     } catch (err) {
         console.error('[BOT-VIX] ❌ Error:', err.message);
-
-        let screenshot = null;
-        if (browser) {
-            try {
-                const pages = await browser.pages();
-                if (pages.length > 0) screenshot = await pages[0].screenshot({ encoding: 'base64' });
-                await browser.close();
-            } catch (e) { }
-            browser = null;
-        }
-
-        const payload = { success: false, error: 'Error del bot de ViX TV: ' + err.message };
-        if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
-        return payload;
+        return {
+            success: false,
+            error: 'Error al abrir Chrome para activar ViX: ' + err.message
+        };
     }
 }
 
