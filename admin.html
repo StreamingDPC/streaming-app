@@ -1138,6 +1138,9 @@
                     style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; overflow-x: auto;">
                     <button class="save-btn sub-conf-btn" id="btn-conf-general" onclick="showSubConf('general', this)"
                         style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:white; color:black;">Generales</button>
+                    <button class="save-btn sub-conf-btn" id="btn-conf-pagos" onclick="showSubConf('pagos', this)"
+                        style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:rgba(46, 204, 113, 0.2); color:#2ecc71; border: 1px solid #2ecc71; font-weight: bold;"><i
+                            class="fa-solid fa-credit-card"></i> Métodos de Pago</button>
                     <button class="save-btn sub-conf-btn" id="btn-conf-clientes" onclick="showSubConf('clientes', this)"
                         style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Clientes
                         (Solo Administrador)</button>
@@ -1158,6 +1161,101 @@
                     <button class="save-btn sub-conf-btn" id="btn-conf-emails" onclick="showSubConf('emails', this)"
                         style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);"><i
                             class="fa-solid fa-envelope"></i> Cuentas Correo</button>
+                </div>
+
+                <!-- SUB TAB: METODOS DE PAGO -->
+                <div id="sub-conf-pagos" class="sub-conf-content" style="display:none;">
+                    <div style="background: rgba(46, 204, 113, 0.08); border: 2px solid #2ecc71; border-radius: 14px; padding: 1.5rem; margin-bottom: 2rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom: 0.8rem;">
+                            <h3 style="color:#2ecc71; margin:0; font-size:1.3rem; display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-credit-card"></i> Control de Métodos de Pago (Pie de Página)
+                            </h3>
+                            <button class="save-btn" onclick="savePaymentMethodsDirect()"
+                                style="margin:0; padding:10px 22px; width:auto; background:#2ecc71; color: black; font-weight: 800; border-radius: 8px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(46,204,113,0.35);">
+                                <i class="fa-solid fa-floppy-disk"></i> GUARDAR CAMBIOS
+                            </button>
+                        </div>
+                        <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 1.5rem; line-height: 1.5;">
+                            Aquí puedes activar o desactivar las tarjetas de métodos de pago (Nequi, Daviplata, Nu, Bre b) que aparecen al final de la tienda para que tus clientes las vean o queden totalmente ocultas.
+                        </p>
+
+                        <div id="payment-methods-save-status" style="display:none; padding:10px 15px; border-radius:8px; background:rgba(46,204,113,0.2); border:1px solid #2ecc71; color:#2ecc71; font-weight:bold; margin-bottom:1.5rem; text-align:center;"></div>
+
+                        <!-- 1. INTERRUPTOR MAESTRO -->
+                        <div style="background: rgba(0,0,0,0.5); border: 1.5px solid rgba(46,204,113,0.4); border-radius: 12px; padding: 1.2rem; margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+                            <div style="flex:1; min-width:240px;">
+                                <strong style="color:white; font-size:1.05rem; display:block; margin-bottom:4px;">
+                                    <i class="fa-solid fa-power-off" style="color:#2ecc71;"></i> Sección Completa de Métodos de Pago
+                                </strong>
+                                <span style="font-size:0.85rem; color:#aaa;">Si lo desactivas, se oculta completamente el título "Métodos de Pago" y todas sus tarjetas en la tienda.</span>
+                            </div>
+                            <div>
+                                <select id="conf-paymentMethodsEnabled" onchange="savePaymentMethodsDirect()"
+                                    style="padding: 10px 18px; border-radius: 8px; font-weight:bold; font-size:1rem; border:2px solid #2ecc71; background:#000; color:white; cursor:pointer;">
+                                    <option value="true">🟢 ACTIVADO (Visible)</option>
+                                    <option value="false">🔴 DESACTIVADO (Oculto)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 2. TARJETAS INDIVIDUALES -->
+                        <h4 style="color:white; margin-bottom:1rem; font-size:1rem; border-bottom:1px solid var(--glass-border); padding-bottom:0.5rem;">
+                            Tarjetas Individuales:
+                        </h4>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem;">
+                            <!-- Nequi / Daviplata -->
+                            <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1.2rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                                    <strong style="color:white; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                                        <img src="assets/nequi_daviplata.png" alt="Nequi" style="height:24px; object-fit:contain;" onerror="this.style.display='none'">
+                                        Nequi / Daviplata
+                                    </strong>
+                                    <select id="conf-nequiEnabled" onchange="savePaymentMethodsDirect()" style="padding: 6px 12px; border-radius: 6px; font-weight:bold; font-size:0.9rem;">
+                                        <option value="true">🟢 Activo</option>
+                                        <option value="false">🔴 Desactivado</option>
+                                    </select>
+                                </div>
+                                <div style="margin-bottom: 0.8rem;">
+                                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:4px;">Texto mostrado en la tarjeta:</label>
+                                    <input type="text" id="conf-nequiLabel" placeholder="Nequi / Daviplata" style="width:100%; padding:8px 10px; font-size:0.9rem; border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:4px;">Ruta / URL de la imagen:</label>
+                                    <input type="text" id="conf-nequiImg" placeholder="assets/nequi_daviplata.png" style="width:100%; padding:8px 10px; font-size:0.9rem; border-radius:6px;">
+                                </div>
+                            </div>
+
+                            <!-- Nu / Bre b -->
+                            <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1.2rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                                    <strong style="color:white; font-size:1rem; display:flex; align-items:center; gap:8px;">
+                                        <img src="assets/nu_bre.jpg" alt="Nu" style="height:24px; object-fit:contain;" onerror="this.style.display='none'">
+                                        Nu / Bre b
+                                    </strong>
+                                    <select id="conf-nuEnabled" onchange="savePaymentMethodsDirect()" style="padding: 6px 12px; border-radius: 6px; font-weight:bold; font-size:0.9rem;">
+                                        <option value="true">🟢 Activo</option>
+                                        <option value="false">🔴 Desactivado</option>
+                                    </select>
+                                </div>
+                                <div style="margin-bottom: 0.8rem;">
+                                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:4px;">Texto mostrado en la tarjeta:</label>
+                                    <input type="text" id="conf-nuLabel" placeholder="Nu / Bre b" style="width:100%; padding:8px 10px; font-size:0.9rem; border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.8rem; color:#aaa; display:block; margin-bottom:4px;">Ruta / URL de la imagen:</label>
+                                    <input type="text" id="conf-nuImg" placeholder="assets/nu_bre.jpg" style="width:100%; padding:8px 10px; font-size:0.9rem; border-radius:6px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1.5rem; text-align: right;">
+                            <button class="save-btn" onclick="savePaymentMethodsDirect()"
+                                style="margin:0; padding:10px 24px; width:auto; background:#2ecc71; color: black; font-weight: 800; border-radius: 8px; font-size: 0.95rem;">
+                                <i class="fa-solid fa-floppy-disk"></i> GUARDAR MÉTODOS DE PAGO
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- SUB TAB: MENSAJES ya no se usa aqui, se movio a TAB CRM independiente -->
@@ -1543,6 +1641,21 @@
 
                 <!-- SUB TAB: GENERAL -->
                 <div id="sub-conf-general" class="sub-conf-content" style="display:block;">
+                    <!-- Banner de acceso directo a Métodos de Pago -->
+                    <div style="background: rgba(46, 204, 113, 0.12); border: 2px solid #2ecc71; border-radius: 12px; padding: 1.2rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span style="font-size:2.4rem;">💳</span>
+                            <div>
+                                <h4 style="color: #2ecc71; margin: 0; font-size: 1.15rem; font-weight:800;">MÉTODOS DE PAGO (PIE DE PÁGINA)</h4>
+                                <p style="color: #ccc; margin: 4px 0 0 0; font-size: 0.85rem;">Activa o desactiva las tarjetas de Nequi / Daviplata y Nu / Bre b para que no se vean al pie de la tienda.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="save-btn" onclick="document.getElementById('btn-conf-pagos').click();"
+                            style="margin: 0; padding: 10px 22px; background: #2ecc71; color: black; font-weight: 800; border-radius: 8px; font-size:0.95rem; cursor:pointer; box-shadow: 0 4px 12px rgba(46,204,113,0.3);">
+                            <i class="fa-solid fa-sliders"></i> CONFIGURAR MÉTODOS DE PAGO
+                        </button>
+                    </div>
+
                     <div class="form-grid"
                         style="margin-bottom: 2rem; border: 2px solid #4cd137; border-radius: 12px; padding: 1rem; background: rgba(76, 209, 55, 0.05);">
                         <div class="form-col" style="grid-column: 1 / -1;">
@@ -1730,79 +1843,6 @@
                             <button class="save-btn" onclick="saveConfig()"
                                 style="margin:0; padding:10px 15px; width:auto; background:var(--accent-primary);"
                                 title="Guardar"><i class="fa-solid fa-floppy-disk"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="form-grid"
-                        style="margin-bottom: 2rem; border: 2px solid #2ecc71; border-radius: 12px; padding: 1.2rem; background: rgba(46, 204, 113, 0.05);">
-                        <div class="form-col" style="grid-column: 1 / -1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:0.5rem;">
-                                <label style="color:#2ecc71; font-weight:bold; font-size: 1.15rem; margin:0; display:flex; align-items:center; gap:8px;">
-                                    <i class="fa-solid fa-credit-card"></i> MÉTODOS DE PAGO (PIE DE PÁGINA)
-                                </label>
-                                <button class="save-btn" onclick="saveConfig()"
-                                    style="margin:0; padding:8px 18px; width:auto; background:#2ecc71; color: black; font-weight: bold; border-radius: 8px;"
-                                    title="Guardar Cambios de Métodos de Pago"><i class="fa-solid fa-floppy-disk"></i> GUARDAR MÉTODOS DE PAGO</button>
-                            </div>
-                            <p style="font-size: 0.85rem; color: #ccc; margin-bottom: 1.2rem;">
-                                Activa o desactiva las tarjetas de métodos de pago que aparecen en la parte inferior de la tienda para que se vean o no.
-                            </p>
-
-                            <!-- Interruptor Maestro de Sección -->
-                            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 15px; margin-bottom: 1.2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                                <div>
-                                    <strong style="color:white; font-size:0.95rem; display:block;">Sección completa "Métodos de Pago"</strong>
-                                    <span style="font-size:0.8rem; color:#aaa;">Oculta o muestra todo el bloque de métodos de pago al pie de la página.</span>
-                                </div>
-                                <select id="conf-paymentMethodsEnabled" style="width: auto; min-width: 140px; padding: 8px 12px; border-radius: 8px; font-weight:bold;">
-                                    <option value="true">🟢 Visible / Activo</option>
-                                    <option value="false">🔴 Oculto / Desactivado</option>
-                                </select>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-                                <!-- Nequi / Daviplata -->
-                                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.6rem;">
-                                        <label style="font-weight:bold; color:white; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
-                                            <span>💳</span> Nequi / Daviplata
-                                        </label>
-                                        <select id="conf-nequiEnabled" style="width: auto; padding: 6px 10px; border-radius: 6px; font-size:0.85rem;">
-                                            <option value="true">Activo</option>
-                                            <option value="false">Desactivado</option>
-                                        </select>
-                                    </div>
-                                    <div style="margin-bottom: 0.5rem;">
-                                        <label style="font-size:0.75rem; color:#aaa;">Texto en la tarjeta:</label>
-                                        <input type="text" id="conf-nequiLabel" placeholder="Nequi / Daviplata" style="width:100%; padding:6px 10px; font-size:0.85rem;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:0.75rem; color:#aaa;">Ruta de imagen / Logo:</label>
-                                        <input type="text" id="conf-nequiImg" placeholder="assets/nequi_daviplata.png" style="width:100%; padding:6px 10px; font-size:0.85rem;">
-                                    </div>
-                                </div>
-
-                                <!-- Nu / Bre b -->
-                                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.6rem;">
-                                        <label style="font-weight:bold; color:white; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
-                                            <span>🟣</span> Nu / Bre b
-                                        </label>
-                                        <select id="conf-nuEnabled" style="width: auto; padding: 6px 10px; border-radius: 6px; font-size:0.85rem;">
-                                            <option value="true">Activo</option>
-                                            <option value="false">Desactivado</option>
-                                        </select>
-                                    </div>
-                                    <div style="margin-bottom: 0.5rem;">
-                                        <label style="font-size:0.75rem; color:#aaa;">Texto en la tarjeta:</label>
-                                        <input type="text" id="conf-nuLabel" placeholder="Nu / Bre b" style="width:100%; padding:6px 10px; font-size:0.85rem;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:0.75rem; color:#aaa;">Ruta de imagen / Logo:</label>
-                                        <input type="text" id="conf-nuImg" placeholder="assets/nu_bre.jpg" style="width:100%; padding:6px 10px; font-size:0.85rem;">
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -3905,6 +3945,48 @@
             }
             if (subId === 'emails') {
                 fetchEmailAccounts();
+            }
+        }
+
+        async function savePaymentMethodsDirect() {
+            try {
+                const pmEnabled = document.getElementById('conf-paymentMethodsEnabled')?.value === 'true';
+                const nequiEnabled = document.getElementById('conf-nequiEnabled')?.value === 'true';
+                const nuEnabled = document.getElementById('conf-nuEnabled')?.value === 'true';
+                const nequiLabel = document.getElementById('conf-nequiLabel')?.value || 'Nequi / Daviplata';
+                const nequiImg = document.getElementById('conf-nequiImg')?.value || 'assets/nequi_daviplata.png';
+                const nuLabel = document.getElementById('conf-nuLabel')?.value || 'Nu / Bre b';
+                const nuImg = document.getElementById('conf-nuImg')?.value || 'assets/nu_bre.jpg';
+
+                if (!storeConfig) storeConfig = {};
+                storeConfig.paymentMethodsEnabled = pmEnabled;
+                storeConfig.nequiEnabled = nequiEnabled;
+                storeConfig.nuEnabled = nuEnabled;
+                storeConfig.nequiLabel = nequiLabel;
+                storeConfig.nequiImg = nequiImg;
+                storeConfig.nuLabel = nuLabel;
+                storeConfig.nuImg = nuImg;
+
+                await db.ref('storeConfig').update({
+                    paymentMethodsEnabled: pmEnabled,
+                    nequiEnabled: nequiEnabled,
+                    nuEnabled: nuEnabled,
+                    nequiLabel: nequiLabel,
+                    nequiImg: nequiImg,
+                    nuLabel: nuLabel,
+                    nuImg: nuImg
+                });
+
+                const statusEl = document.getElementById('payment-methods-save-status');
+                if (statusEl) {
+                    statusEl.style.display = 'block';
+                    statusEl.innerText = '✅ ¡Ajustes de métodos de pago guardados correctamente!';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+                } else {
+                    alert('✅ Métodos de pago actualizados correctamente.');
+                }
+            } catch (e) {
+                alert('Error al guardar métodos de pago: ' + e.message);
             }
         }
 
