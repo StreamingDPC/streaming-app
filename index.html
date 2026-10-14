@@ -357,7 +357,7 @@
                         </select>
                     </div>
 
-                    <div style="margin-bottom: 1.2rem;">
+                    <div id="section-cel-pc" style="margin-bottom: 1.2rem;">
                         <label style="display: block; margin-bottom: 0.7rem; font-weight: 600;">Códigos de Inicio de
                             Sesión: CEL O PC:</label>
                         <div style="display: grid; grid-template-columns: 1fr; gap: 0.8rem;" id="platform-tabs">
@@ -423,7 +423,9 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
 
+                    <div id="section-hogar" style="margin-bottom: 1.2rem;">
                         <label
                             style="display: block; margin-top: 1rem; margin-bottom: 0.7rem; font-weight: 600;">Actualizaciones
                             de Red / Hogar:</label>
@@ -482,20 +484,21 @@
                                 </button>
                             </div>
                         </div>
-
-                        <!-- Campo oculto que guarda la plataforma activa -->
-                        <input type="hidden" id="code-platform" value="netflix">
                     </div>
 
+                    <!-- Campo oculto que guarda la plataforma activa -->
+                    <input type="hidden" id="code-platform" value="netflix">
+
                     <!-- SECCIÓN TV -->
-                    <div style="margin-bottom: 1rem;">
+                    <div id="section-tv" style="margin-bottom: 1rem;">
                         <label
                             style="display: block; margin-top: 1rem; margin-bottom: 0.7rem; font-weight: 600;">Activar
                             Dispositivo (Smart TV):</label>
                         <div style="display: flex; flex-direction: column; gap: 0.8rem;">
                             <!-- Botón Netflix TV -->
-                            <div>
-                                <button id="show-tv-login-btn" type="button"
+                            <div class="platform-action-card" data-platform-container="netflix_tv"
+                                style="display:flex; flex-direction:column; gap:6px;">
+                                <button id="show-tv-login-btn" type="button" class="platform-tab-btn" data-platform="netflix_tv"
                                     style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid rgba(255,255,255,0.2); background:rgba(60,60,60,0.2); color:#aaa; font-weight:600; font-size:0.85rem; cursor:pointer; transition:all 0.2s; width:100%;">
                                     <span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (1 vez)
                                 </button>

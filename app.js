@@ -1836,10 +1836,21 @@ function setupEventListeners() {
                 };
 
                 window.allClientActiveEmails = new Set();
+                const userPurchasedPlatforms = new Set();
+
                 Object.values(sales).forEach(sale => {
                     // Validar si la venta está activa
                     const isExpired = sale.expirationDate && sale.expirationDate < Date.now();
                     if (isExpired) return;
+
+                    // Detectar plataforma desde propiedades raíz de la venta
+                    const saleRaw = `${sale.productName || ''} ${sale.name || ''} ${sale.category || ''} ${sale.platform || ''}`.toLowerCase();
+                    if (saleRaw.includes('netflix')) userPurchasedPlatforms.add('netflix');
+                    if (saleRaw.includes('disney')) userPurchasedPlatforms.add('disney');
+                    if (saleRaw.includes('hbo') || saleRaw.includes('max')) userPurchasedPlatforms.add('hbomax');
+                    if (saleRaw.includes('prime') || saleRaw.includes('amazon')) userPurchasedPlatforms.add('prime');
+                    if (saleRaw.includes('vix')) userPurchasedPlatforms.add('vix');
+                    if (saleRaw.includes('crunch') || saleRaw.includes('roll')) userPurchasedPlatforms.add('crunchyroll');
 
                     if (sale.email) {
                         const em = sale.email.toLowerCase().trim();
@@ -1851,12 +1862,18 @@ function setupEventListeners() {
                         sale.items.forEach(item => {
                             let itemPlatform = null;
                             const itemName = (item.name || '').toLowerCase();
-                            if (itemName.includes('netflix')) itemPlatform = 'netflix';
-                            else if (itemName.includes('disney')) itemPlatform = 'disney';
-                            else if (itemName.includes('hbo') || itemName.includes('max')) itemPlatform = 'hbomax';
-                            else if (itemName.includes('prime')) itemPlatform = 'prime';
-                            else if (itemName.includes('vix')) itemPlatform = 'vix';
-                            else if (itemName.includes('crunch') || itemName.includes('roll')) itemPlatform = 'crunchyroll';
+                            const itemCat = (item.category || '').toLowerCase();
+                            const itemFull = itemName + ' ' + itemCat;
+                            if (itemFull.includes('netflix')) itemPlatform = 'netflix';
+                            else if (itemFull.includes('disney')) itemPlatform = 'disney';
+                            else if (itemFull.includes('hbo') || itemFull.includes('max')) itemPlatform = 'hbomax';
+                            else if (itemFull.includes('prime') || itemFull.includes('amazon')) itemPlatform = 'prime';
+                            else if (itemFull.includes('vix')) itemPlatform = 'vix';
+                            else if (itemFull.includes('crunch') || itemFull.includes('roll')) itemPlatform = 'crunchyroll';
+
+                            if (itemPlatform) {
+                                userPurchasedPlatforms.add(itemPlatform);
+                            }
 
                             if (item.email) {
                                 const itemEmailL = item.email.toLowerCase().trim();
@@ -1910,6 +1927,7 @@ function setupEventListeners() {
                                         if (!effPlat) effPlat = itemPlatform;
 
                                         if (effPlat) {
+                                            userPurchasedPlatforms.add(effPlat);
                                             window.clientActivePlatforms[effPlat].add(emailL);
                                             if (effPlat === 'netflix') {
                                                 window.clientActivePlatforms['netflix_update'].add(emailL);
@@ -1943,31 +1961,81 @@ function setupEventListeners() {
                     }
                 });
 
-                // Mostrar/Ocultar Tabs según si tiene la plataforma
-                const hasGlobal = window.clientActivePlatforms.global.size > 0;
+                // Registrar plataformas que tengan correos asignados directamente
+                ['netflix', 'disney', 'hbomax', 'prime', 'vix', 'crunchyroll'].forEach(p => {
+                    if (window.clientActivePlatforms[p] && window.clientActivePlatforms[p].size > 0) {
+                        userPurchasedPlatforms.add(p);
+                    }
+                });
+
+                // Mapeo de subplataformas a plataformas base compradas
+                const PLATFORM_TO_BASE = {
+                    'netflix': 'netflix',
+                    'netflix_update': 'netflix',
+                    'netflix_temp': 'netflix',
+                    'netflix_tv': 'netflix',
+                    'disney': 'disney',
+                    'disney_update': 'disney',
+                    'disney_tv': 'disney',
+                    'disney_code_tv': 'disney',
+                    'hbomax': 'hbomax',
+                    'hbomax_update': 'hbomax',
+                    'hbomax_tv': 'hbomax',
+                    'prime': 'prime',
+                    'prime_tv': 'prime',
+                    'vix': 'vix',
+                    'vix_tv': 'vix',
+                    'crunchyroll': 'crunchyroll',
+                    'crunchyroll_tv': 'crunchyroll'
+                };
+
+                // Filtrar botones según las pantallas/servicios activos del cliente
+                const hasPurchasedAny = userPurchasedPlatforms.size > 0;
                 let firstValidPlatform = null;
                 const platformTabBtns = document.querySelectorAll('.platform-tab-btn');
 
                 platformTabBtns.forEach(btn => {
                     const plat = btn.dataset.platform;
-                    const hasPlat = window.clientActivePlatforms[plat] && window.clientActivePlatforms[plat].size > 0;
+                    const basePlat = PLATFORM_TO_BASE[plat] || plat;
                     const card = btn.closest('.platform-action-card');
                     const targetEl = card || btn;
 
-                    // Netflix, Disney, HBO Max, Prime Video, ViX, Crunchyroll, Disney TV, Disney TV con código, HBO Max TV, Prime TV, Crunchyroll TV y ViX TV siempre deben mostrarse en el panel
-                    const isAlwaysVisible = (plat === 'netflix' || plat === 'disney' || plat === 'hbomax' || plat === 'prime' || plat === 'vix' || plat === 'crunchyroll' || plat === 'netflix_update' || plat === 'netflix_temp' || plat === 'disney_update' || plat === 'hbomax_update' || plat === 'disney_tv' || plat === 'disney_code_tv' || plat === 'hbomax_tv' || plat === 'prime_tv' || plat === 'crunchyroll_tv' || plat === 'vix_tv');
+                    // Mostrar si el cliente compró la plataforma base, o fallback si tiene cuentas activas sin plataforma clasificada
+                    let isVisible = false;
+                    if (hasPurchasedAny) {
+                        isVisible = userPurchasedPlatforms.has(basePlat);
+                    } else if (window.clientActivePlatforms.global.size > 0 || window.allClientActiveEmails.size > 0) {
+                        isVisible = true;
+                    }
 
-                    if (isAlwaysVisible || hasPlat || hasGlobal || window.allClientActiveEmails.size > 0) {
+                    if (isVisible) {
                         targetEl.style.display = 'flex';
-                        if (!firstValidPlatform && plat === 'netflix') firstValidPlatform = btn;
+                        if (!firstValidPlatform) {
+                            firstValidPlatform = btn;
+                        }
                     } else {
                         targetEl.style.display = 'none';
                     }
                 });
 
+                // Ocultar secciones completas (CEL/PC, Hogar, TV) si no contienen ninguna tarjeta visible
+                const updateSectionVisibility = (secId) => {
+                    const secEl = document.getElementById(secId);
+                    if (!secEl) return;
+                    let hasVisibleCard = false;
+                    secEl.querySelectorAll('.platform-action-card').forEach(c => {
+                        if (c.style.display !== 'none') hasVisibleCard = true;
+                    });
+                    secEl.style.display = hasVisibleCard ? 'block' : 'none';
+                };
+
+                updateSectionVisibility('section-cel-pc');
+                updateSectionVisibility('section-hogar');
+                updateSectionVisibility('section-tv');
+
                 if (firstValidPlatform) {
                     firstValidPlatform.click();
-                } else if (platformTabBtns[0]) {
+                } else if (platformTabBtns[0] && platformTabBtns[0].closest('.platform-action-card')?.style.display !== 'none') {
                     platformTabBtns[0].click();
                 } else {
                     emailSelect.innerHTML = '<option value="">-- No tienes pantallas activas --</option>';
