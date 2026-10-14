@@ -4003,13 +4003,61 @@ function setupEventListeners() {
         }
 
 
+        // 🔄 LÓGICA DE RENOVACIÓN DE FECHAS (Cap Month anclado a la fecha registrada)
+        let saleDate = Date.now();
+        let saleAnchor = Date.now();
+        let saleExp = window.DPCBillingEngine.calcularProximoVencimiento(saleAnchor, saleDate).getTime();
+
+        const isRenewalChecked = document.getElementById('is-renewal') && document.getElementById('is-renewal').checked;
+        const cleanPhoneTracking = cPhone ? cPhone.replace(/\D/g, '') : '';
+
+        // Si fue disparado desde renewFromDash o se marcó como renovación manual:
+        let prevExp = window.renewalSaleExp ? parseInt(window.renewalSaleExp) : null;
+        let prevOrig = window.renewalSaleOrig ? parseInt(window.renewalSaleOrig) : null;
+        let prevStart = window.renewalSaleStart ? parseInt(window.renewalSaleStart) : null;
+
+        // Fallback: Si no vinieron en memoria pero es renovación y tenemos celular, buscar la venta previa
+        if (!prevExp && (window.renewalSaleId || isRenewalChecked) && cleanPhoneTracking && cleanPhoneTracking.length > 5) {
+            try {
+                const snap = await db.ref(`clientSales/${cleanPhoneTracking}`).once('value');
+                const cSales = snap.val();
+                if (cSales) {
+                    const activeSales = Object.values(cSales).filter(s => s && s.expirationDate);
+                    activeSales.sort((a, b) => b.expirationDate - a.expirationDate);
+                    if (activeSales.length > 0) {
+                        const s = activeSales[0];
+                        prevExp = parseInt(s.expirationDate);
+                        prevOrig = parseInt(s.fechaCompraOriginal);
+                        prevStart = parseInt(s.date);
+                    }
+                }
+            } catch (e) {
+                console.warn('[RENEWAL] Error buscando venta previa:', e);
+            }
+        }
+
+        if (prevExp && !isNaN(prevExp)) {
+            saleAnchor = prevOrig || prevStart || prevExp;
+            // Si la fecha registrada de vencimiento es hoy o futura (o está dentro de las últimas 24 horas de gracia):
+            // La renovación inicia exactamente en la fecha de vencimiento que ya tenía registrada (ej: 16 de octubre)
+            // y se vence un mes después anclada a ese mismo día registrado (ej: 16 de noviembre)
+            if (prevExp >= (Date.now() - 24 * 60 * 60 * 1000)) {
+                saleDate = prevExp;
+                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(saleAnchor, prevExp).getTime();
+            } else {
+                // Si ya estaba vencida hace más tiempo, arranca desde hoy pero anclado al día de corte original
+                saleDate = Date.now();
+                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(saleAnchor, Date.now()).getTime();
+            }
+        }
+
         const saleData = {
             clientName: cName || '',
             clientCity: cCity || '',
             clientPhone: cPhone || '',
-            date: Date.now(),
-            expirationDate: window.DPCBillingEngine.calcularProximoVencimiento(Date.now(), Date.now()).getTime(),
-            fechaCompraOriginal: Date.now(), // Cap Month
+            date: saleDate,
+            expirationDate: saleExp,
+            fechaCompraOriginal: saleAnchor, // Cap Month
             items: stats.processedCart.map(item => ({
                 id: item.id || Date.now(),
                 name: item.customName ? `${item.name} (${item.customName})` : (item.name || 'Pantalla'),
@@ -4032,28 +4080,59 @@ function setupEventListeners() {
             finalSellerDestination = extrasOriginalOwner;
         }
 
-        // Always save to client historical indexed by their clean phone
-        const cleanPhoneTracking = cPhone ? cPhone.replace(/\D/g, '') : '';
-
         if (window.renewalSaleId) {
             // UPDATE EL MISMO REGISTRO, NO GENERAR UNO NUEVO
             if (window.renewalSource === 'seller') {
                 if (isSellerMode || publicSellerRef || extrasOriginalOwner) {
-                    db.ref(`sellerSales/${finalSellerDestination}/${window.renewalSaleId}`).set(saleData);
+                    await db.ref(`sellerSales/${finalSellerDestination}/${window.renewalSaleId}`).set(saleData);
                 }
                 if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
-                    db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
+                    try {
+                        const cSnap = await db.ref(`clientSales/${cleanPhoneTracking}`).once('value');
+                        const cSales = cSnap.val();
+                        let targetKey = null;
+                        if (cSales) {
+                            for (const [k, v] of Object.entries(cSales)) {
+                                if (v && (v.date === prevStart || v.expirationDate === prevExp || v.date === saleData.date)) {
+                                    targetKey = k;
+                                    break;
+                                }
+                            }
+                        }
+                        if (targetKey) {
+                            await db.ref(`clientSales/${cleanPhoneTracking}/${targetKey}`).set(saleData);
+                        } else {
+                            await db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
+                        }
+                    } catch (e) {
+                        await db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
+                    }
                 }
             } else if (window.renewalSource === 'client') {
                 if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
-                    db.ref(`clientSales/${cleanPhoneTracking}/${window.renewalSaleId}`).set(saleData);
+                    await db.ref(`clientSales/${cleanPhoneTracking}/${window.renewalSaleId}`).set(saleData);
                 }
-                // Si el cliente renueva, para que el admin lo vea en su lista, usualmente lo notifica por whatsapp. 
-                // No crearemos un registro nuevo global para evitar el duplicado pedido expresamente.
+                for (let sName of [finalSellerDestination, 'Página Web Oficial', currentSellerName].filter(Boolean)) {
+                    try {
+                        const sSnap = await db.ref(`sellerSales/${sName}`).once('value');
+                        const sSales = sSnap.val();
+                        if (sSales) {
+                            for (const [k, v] of Object.entries(sSales)) {
+                                if (v && (v.date === prevStart || v.expirationDate === prevExp)) {
+                                    await db.ref(`sellerSales/${sName}/${k}`).set(saleData);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (e) { }
+                }
             }
 
             window.renewalSaleId = null;
             window.renewalSource = null;
+            window.renewalSaleExp = null;
+            window.renewalSaleOrig = null;
+            window.renewalSaleStart = null;
         } else {
             // NUEVA VENTA
             // For admin or direct purchases when no seller is attached, track under 'Página Web Oficial'
@@ -4301,7 +4380,7 @@ function renderSellerSaleCard(sale, isExpired, container) {
                     <i class="fa-solid fa-file-invoice-dollar"></i> Ticket Admin
                 </button>
                 ${canRenew ? `
-                <button onclick="renewFromDash('${safeDecode(sale.clientName)}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller')" 
+                <button onclick="renewFromDash('${safeDecode(sale.clientName)}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller', ${sale.expirationDate || 0}, ${sale.fechaCompraOriginal || 0}, ${sale.date || 0})" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                     <i class="fa-solid fa-redo"></i> Renovar
                 </button>` : ''}
@@ -4343,9 +4422,12 @@ function renderSellerSaleCard(sale, isExpired, container) {
     container.appendChild(div);
 }
 
-window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded, saleId = null, source = 'client') {
+window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded, saleId = null, source = 'client', prevExpDate = null, prevOrigDate = null, prevStartDate = null) {
     window.renewalSaleId = saleId;
     window.renewalSource = source;
+    window.renewalSaleExp = prevExpDate ? parseInt(prevExpDate) : null;
+    window.renewalSaleOrig = prevOrigDate ? parseInt(prevOrigDate) : null;
+    window.renewalSaleStart = prevStartDate ? parseInt(prevStartDate) : null;
     try {
         const itemsToRenew = JSON.parse(decodeURIComponent(itemsJsonEncoded));
 
@@ -4716,7 +4798,7 @@ function renderSaleItem(sale, isExpired, container) {
     }).join('')}
             </div>
             ${daysLeft <= 3 ? `
-            <button onclick="renewFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client')" 
+            <button onclick="renewFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || clientPhoneLoggedIn}', '${sale.clientCity || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'client', ${sale.expirationDate || 0}, ${sale.fechaCompraOriginal || 0}, ${sale.date || 0})" 
                 style="width: 100%; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
                 <i class="fa-solid fa-redo"></i> ⚠️ Renovar mis pantallas
             </button>` : ''}

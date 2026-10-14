@@ -5613,6 +5613,7 @@
                         const newExp = window.DPCBillingEngine.calcularProximoVencimiento(anchorDate, currentExp).getTime();
 
                         finalMsgTS = newExp; // Guarda para el WhatsApp
+                        updates[`clientSales/${cleanPhone}/${saleId}/date`] = currentExp;
                         updates[`clientSales/${cleanPhone}/${saleId}/expirationDate`] = newExp;
                         updates[`clientSales/${cleanPhone}/${saleId}/fechaCompraOriginal`] = anchorDate; // Guarda ancla para el futuro
                         updates[`clientSales/${cleanPhone}/${saleId}/isPaid`] = true;
@@ -5622,6 +5623,7 @@
                             for (let sid in sellerSales[sName]) {
                                 const ss = sellerSales[sName][sid];
                                 if (ss.clientPhone === cleanPhone && ss.date === s.date) {
+                                    updates[`sellerSales/${sName}/${sid}/date`] = currentExp;
                                     updates[`sellerSales/${sName}/${sid}/expirationDate`] = newExp;
                                     updates[`sellerSales/${sName}/${sid}/isPaid`] = true;
                                 }
@@ -5634,6 +5636,7 @@
                         const newExp = window.DPCBillingEngine.calcularProximoVencimiento(anchorDate, currentExp).getTime();
 
                         finalMsgTS = newExp; // Guarda para el WhatsApp
+                        updates[`sellerSales/${sourceName}/${saleId}/date`] = currentExp;
                         updates[`sellerSales/${sourceName}/${saleId}/expirationDate`] = newExp;
                         updates[`sellerSales/${sourceName}/${saleId}/fechaCompraOriginal`] = anchorDate;
                         updates[`sellerSales/${sourceName}/${saleId}/isPaid`] = true;
@@ -5642,6 +5645,7 @@
                         if (clientSales[cleanPhone]) {
                             for (let cid in clientSales[cleanPhone]) {
                                 if (clientSales[cleanPhone][cid].date === s.date) {
+                                    updates[`clientSales/${cleanPhone}/${cid}/date`] = currentExp;
                                     updates[`clientSales/${cleanPhone}/${cid}/expirationDate`] = newExp;
                                     updates[`clientSales/${cleanPhone}/${cid}/fechaCompraOriginal`] = anchorDate;
                                     updates[`clientSales/${cleanPhone}/${cid}/isPaid`] = true;
