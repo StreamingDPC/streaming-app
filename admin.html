@@ -2896,8 +2896,7 @@
                         if (usedData['disney_update']) attemptBadges.push(`<span style="color:#00d2d3;">Hogar Disney: ${usedData['disney_update']}/2</span>`);
                         if (usedData['netflix_temp']) attemptBadges.push(`<span style="color:#0984e3;">Temporal</span>`);
                         if (usedData['netflix_tv']) attemptBadges.push(`<span style="color:#2ecc71;">TV</span>`);
-                        if (usedData['disney_tv']) attemptBadges.push(`<span style="color:#005AD6;">TV Disn</span>`);
-                        if (usedData['disney_code_tv']) attemptBadges.push(`<span style="color:#005AD6;">TV Disn (Cód)</span>`);
+                        if (usedData['disney_tv'] || usedData['disney_code_tv']) attemptBadges.push(`<span style="color:#005AD6;">TV Disn</span>`);
                         if (usedData['hbomax_tv']) attemptBadges.push(`<span style="color:#8A2BE2;">TV Max</span>`);
                         if (usedData['prime_tv']) attemptBadges.push(`<span style="color:#00A8E1;">TV Prime</span>`);
                         if (usedData['crunchyroll_tv']) attemptBadges.push(`<span style="color:#F47521;">TV Crunchy</span>`);
@@ -3317,6 +3316,9 @@
                 for (const p of phonesToClean) {
                     if (platform === 'all') {
                         await db.ref(`clientProfiles/${p}/codeAttemptUsed`).remove();
+                    } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_tv`).remove();
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`).remove();
                     } else {
                         await db.ref(`clientProfiles/${p}/codeAttemptUsed/${platform}`).remove();
                     }
@@ -3409,8 +3411,7 @@
                             if (netflixUpdates > 0) badges.push(`<span style="color:${netflixUpdates >= 2 ? '#ff4d4d' : '#f39c12'}; font-weight:bold;">🏠 Act. Hogar: ${netflixUpdates}/2</span>`);
                             if (usedData['netflix_temp'] === true) badges.push(`<span style="color:#e74c3c;">✈️ Acc. Temporal</span>`);
                             if (usedData['netflix_tv'] === true) badges.push(`<span style="color:#2ecc71;">📺 TV Act.</span>`);
-                            if (usedData['disney_tv'] === true) badges.push(`<span style="color:#005AD6;">📺 TV Disn</span>`);
-                            if (usedData['disney_code_tv'] === true) badges.push(`<span style="color:#005AD6;">📺 TV Disn (Cód)</span>`);
+                            if (usedData['disney_tv'] === true || usedData['disney_code_tv'] === true) badges.push(`<span style="color:#005AD6;">📺 TV Disn</span>`);
                             if (usedData['hbomax_tv'] === true) badges.push(`<span style="color:#8A2BE2;">📺 TV Max</span>`);
                             if (usedData['prime_tv'] === true) badges.push(`<span style="color:#00A8E1;">📺 TV Prime</span>`);
                             if (usedData['crunchyroll_tv'] === true) badges.push(`<span style="color:#F47521;">📺 TV Crunchy</span>`);
@@ -3521,6 +3522,9 @@
                 for (const p of phonesToClean) {
                     if (platform === 'all') {
                         await db.ref(`clientProfiles/${p}/codeAttemptUsed`).remove();
+                    } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_tv`).remove();
+                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`).remove();
                     } else {
                         await db.ref(`clientProfiles/${p}/codeAttemptUsed/${platform}`).remove();
                     }

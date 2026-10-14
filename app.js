@@ -1402,6 +1402,13 @@ function setupEventListeners() {
             if (altData === true) Object.assign(combined, { netflix: true, disney: true, hbomax: true, prime: true });
             else if (altData && typeof altData === 'object') Object.assign(combined, altData);
 
+            // 🏰 Vincular Disney TV: Iniciar sesión por email y por código comparten el mismo único intento de Smart TV
+            if (combined.disney_tv === true || (typeof combined.disney_tv === 'number' && combined.disney_tv >= 1) ||
+                combined.disney_code_tv === true || (typeof combined.disney_code_tv === 'number' && combined.disney_code_tv >= 1)) {
+                combined.disney_tv = true;
+                combined.disney_code_tv = true;
+            }
+
             window.clientUsedAttempts = combined;
             if (window.updateCodeCountersUI) {
                 window.updateCodeCountersUI();
@@ -1440,6 +1447,13 @@ function setupEventListeners() {
 
     window.updateCodeCountersUI = function () {
         if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
+
+        // 🏰 Vincular Disney TV en UI: Si cualquiera fue usado, ambos se reflejan como usados
+        if (window.clientUsedAttempts.disney_tv === true || (typeof window.clientUsedAttempts.disney_tv === 'number' && window.clientUsedAttempts.disney_tv >= 1) ||
+            window.clientUsedAttempts.disney_code_tv === true || (typeof window.clientUsedAttempts.disney_code_tv === 'number' && window.clientUsedAttempts.disney_code_tv >= 1)) {
+            window.clientUsedAttempts.disney_tv = true;
+            window.clientUsedAttempts.disney_code_tv = true;
+        }
 
         function updateBtn(plat, icon, name, maxUses) {
             const btn = document.querySelector(`.platform-tab-btn[data-platform="${plat}"]`);
@@ -2333,6 +2347,13 @@ function setupEventListeners() {
             if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
                 const updatesUsed = parseInt(window.clientUsedAttempts[platform]) || 0;
                 if (updatesUsed >= 2) isExhausted = true;
+            } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                const tvEmail = window.clientUsedAttempts['disney_tv'];
+                const tvCode = window.clientUsedAttempts['disney_code_tv'];
+                if (tvEmail === true || (typeof tvEmail === 'number' && tvEmail >= 1) ||
+                    tvCode === true || (typeof tvCode === 'number' && tvCode >= 1)) {
+                    isExhausted = true;
+                }
             } else if (window.clientUsedAttempts[platform] === true || (typeof window.clientUsedAttempts[platform] === 'number' && window.clientUsedAttempts[platform] >= 1)) {
                 isExhausted = true;
             }
@@ -2354,6 +2375,8 @@ function setupEventListeners() {
                 } else {
                     alert(`Atención: Ya has utilizado tus 2 intentos en ${brand}.`);
                 }
+            } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Disney+ en TV.');
             } else {
                 alert('Ya has utilizado el intento disponible para esta plataforma.');
             }
@@ -2402,6 +2425,20 @@ function setupEventListeners() {
                         await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/${platform}`).set(nextCount);
                     }
                     window.clientUsedAttempts[platform] = nextCount;
+                } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                    // 🏰 Disney TV vinculados: descontar y bloquear ambos (email y código)
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_tv`).set(true);
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_code_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                    }
+                    if (cleanPhone && !cleanPhone.startsWith('57')) {
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                    }
+                    window.clientUsedAttempts['disney_tv'] = true;
+                    window.clientUsedAttempts['disney_code_tv'] = true;
                 } else {
                     await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(true);
                     if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
@@ -3402,9 +3439,12 @@ function setupEventListeners() {
 
     if (showDisneyCodeTvBtn && disneyCodeTvPanel) {
         showDisneyCodeTvBtn.addEventListener('click', () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1));
+            const isTvUsed = window.clientUsedAttempts && (
+                window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1) ||
+                window.clientUsedAttempts['disney_tv'] === true || (typeof window.clientUsedAttempts['disney_tv'] === 'number' && window.clientUsedAttempts['disney_tv'] >= 1)
+            );
             if (isTvUsed) {
-                alert('⚠️ Ya usaste tu intento (1 vez) para activar Disney+ en TV con código.');
+                alert('⚠️ Ya usaste tu intento (1 vez) para activar Disney+ en TV.');
                 return;
             }
 
@@ -3423,9 +3463,12 @@ function setupEventListeners() {
 
     if (activateDisneyCodeTvBtn) {
         activateDisneyCodeTvBtn.addEventListener('click', async () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1));
+            const isTvUsed = window.clientUsedAttempts && (
+                window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1) ||
+                window.clientUsedAttempts['disney_tv'] === true || (typeof window.clientUsedAttempts['disney_tv'] === 'number' && window.clientUsedAttempts['disney_tv'] >= 1)
+            );
             if (isTvUsed) {
-                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Disney+ en TV con código.');
+                return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Disney+ en TV.');
             }
 
             const tvCode = (document.getElementById('disney-code-tv-code-input').value || '').trim().toUpperCase();
@@ -3522,19 +3565,23 @@ function setupEventListeners() {
                 document.getElementById('disney-code-tv-activation-loading').style.display = 'none';
 
                 if (data.success) {
-                    // Registrar en Firebase y consumir intento
+                    // Registrar en Firebase y consumir intento para AMBOS métodos de Disney TV (email y código)
                     const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
                     await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'disney_code_tv', timestamp: Date.now() });
                     await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_code_tv`).set(true);
+                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_tv`).set(true);
                     if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
                         await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
                     }
 
                     if (window.clientUsedAttempts) {
                         window.clientUsedAttempts['disney_code_tv'] = true;
+                        window.clientUsedAttempts['disney_tv'] = true;
                         if (window.updateCodeCountersUI) window.updateCodeCountersUI();
                     }
 
@@ -3565,10 +3612,13 @@ function setupEventListeners() {
                 document.getElementById('disney-code-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['disney_code_tv'] === true || window.clientUsedAttempts['disney_code_tv'] >= 1);
+                    const isTvUsedNow = window.clientUsedAttempts && (
+                        window.clientUsedAttempts['disney_code_tv'] === true || window.clientUsedAttempts['disney_code_tv'] >= 1 ||
+                        window.clientUsedAttempts['disney_tv'] === true || window.clientUsedAttempts['disney_tv'] >= 1
+                    );
                     if (isTvUsedNow) {
                         activateDisneyCodeTvBtn.disabled = true;
-                        activateDisneyCodeTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Disney TV con código agotado (1/1)';
+                        activateDisneyCodeTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Disney TV agotado (1/1)';
                         activateDisneyCodeTvBtn.style.opacity = '0.5';
                         activateDisneyCodeTvBtn.style.cursor = 'not-allowed';
                     } else {
