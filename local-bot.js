@@ -2334,47 +2334,25 @@ async function doActivateVixTv(email, tvCode) {
             };
         }
 
-        const cdpPort = 9346;
-        const profileDir = path.join(process.env.USERPROFILE || 'C:\\Users\\Default', '.gemini', 'vix_bot_profile');
+        console.log(`[BOT-VIX] 🚀 Iniciando Chrome con Stealth anti-bloqueo...`);
+        browser = await puppeteer.launch({
+            executablePath: chromePath,
+            headless: false,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-background-timer-throttling',
+                '--disable-renderer-backgrounding',
+                '--window-position=50,50',
+                '--window-size=1280,800'
+            ]
+        });
 
-        console.log(`[BOT-VIX] 🚀 Iniciando Chrome genuino (CDP port ${cdpPort})...`);
-        chromeProc = spawn(chromePath, [
-            `--remote-debugging-port=${cdpPort}`,
-            `--user-data-dir=${profileDir}`,
-            '--no-first-run',
-            '--no-default-browser-check',
-            '--window-position=50,50',
-            '--window-size=1280,800',
-            'about:blank'
-        ]);
-
-        let endpoint = null;
-        for (let i = 0; i < 20; i++) {
-            await sleep(500);
-            try {
-                const resp = await axios.get(`http://127.0.0.1:${cdpPort}/json/version`);
-                if (resp.data && resp.data.webSocketDebuggerUrl) {
-                    endpoint = resp.data.webSocketDebuggerUrl;
-                    break;
-                }
-            } catch (e) { }
-        }
-
-        if (!endpoint) {
-            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
-            return { success: false, error: 'No se pudo iniciar Chrome para ViX.' };
-        }
-
-        browser = await puppeteer.connect({ browserWSEndpoint: endpoint });
         const pages = await browser.pages();
         const page = pages[0] || await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
-
-        // Ocultar webdriver
-        await page.evaluateOnNewDocument(() => {
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            window.chrome = { runtime: {} };
-        });
 
         // 2. Paso 1: Iniciar sesión primero en https://vix.com/es-es/iniciar-sesion
         console.log('[BOT-VIX] 🌐 Navegando primero a https://vix.com/es-es/iniciar-sesion para iniciar sesión...');
@@ -2412,8 +2390,7 @@ async function doActivateVixTv(email, tvCode) {
                 console.log('[BOT-VIX] ℹ️ La sesión ya parecía estar activa.');
             } else {
                 const ss = await page.screenshot({ encoding: 'base64' });
-                await browser.disconnect();
-                if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+                if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
                 return {
                     success: false,
                     error: 'ViX no mostró la casilla para ingresar el correo en iniciar-sesion.',
@@ -2499,8 +2476,7 @@ async function doActivateVixTv(email, tvCode) {
 
             if (!passInputReady) {
                 const ss = await page.screenshot({ encoding: 'base64' });
-                await browser.disconnect();
-                if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+                if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
                 return {
                     success: false,
                     error: 'ViX no mostró el campo para ingresar la contraseña.',
@@ -2550,8 +2526,7 @@ async function doActivateVixTv(email, tvCode) {
 
         if (!codeBoxesReady) {
             const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.disconnect();
-            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
             return {
                 success: false,
                 error: 'ViX no cargó las casillas para ingresar el código del televisor en la página de activar.',
@@ -2595,8 +2570,7 @@ async function doActivateVixTv(email, tvCode) {
         });
         if (isCodeError) {
             const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.disconnect();
-            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+            if (browser) { try { await browser.close(); } catch (e) { } browser = null; }
             return {
                 success: false,
                 error: 'El código ingresado no coincide o expiró en tu TV. Genera un nuevo código en tu televisor.',
@@ -2638,11 +2612,9 @@ async function doActivateVixTv(email, tvCode) {
             await page.goto('https://vix.com/es-es/cerrar-sesion', { waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => { });
         } catch (e) { }
 
-        await browser.disconnect();
-        browser = null;
-        if (chromeProc) {
-            try { chromeProc.kill(); } catch (e) { }
-            chromeProc = null;
+        if (browser) {
+            try { await browser.close(); } catch (e) { }
+            browser = null;
         }
 
         console.log('[BOT-VIX] 🎉 ¡Activación de ViX en TV completada con éxito!');
@@ -2659,11 +2631,9 @@ async function doActivateVixTv(email, tvCode) {
             try {
                 const pages = await browser.pages();
                 if (pages.length > 0) screenshot = await pages[0].screenshot({ encoding: 'base64' });
-                await browser.disconnect();
+                await browser.close();
             } catch (e) { }
-        }
-        if (chromeProc) {
-            try { chromeProc.kill(); } catch (e) { }
+            browser = null;
         }
 
         const payload = { success: false, error: 'Error del bot de ViX TV: ' + err.message };
