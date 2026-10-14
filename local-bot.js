@@ -2235,16 +2235,22 @@ async function isPerimeterXActive(page) {
         for (const frame of frames) {
             try {
                 const found = await frame.evaluate(() => {
-                    const txt = (document.body?.innerText || '').toLowerCase();
-                    return txt.includes('antes de continuar') ||
-                           txt.includes('mantenga pulsado') ||
-                           txt.includes('pulsar y mantener') ||
-                           txt.includes('no es un bot') ||
-                           txt.includes('no un bot') ||
-                           !!document.querySelector('#px-captcha') ||
-                           !!document.querySelector('[id*="px-captcha"]') ||
-                           !!document.querySelector('iframe[src*="perimeterx"]') ||
-                           !!document.querySelector('iframe[src*="px"]');
+                    const keywords = ['antes de continuar', 'mantenga pulsado', 'pulsar y mantener'];
+                    const allEls = Array.from(document.querySelectorAll('div, p, span, button, h1, h2, h3, a'));
+                    for (const el of allEls) {
+                        const txt = (el.innerText || el.textContent || '').toLowerCase().trim();
+                        if (keywords.some(k => txt.includes(k))) {
+                            const rect = el.getBoundingClientRect();
+                            const style = window.getComputedStyle(el);
+                            if (rect.width > 20 && rect.height > 10 &&
+                                style.display !== 'none' &&
+                                style.visibility !== 'hidden' &&
+                                parseFloat(style.opacity || '1') > 0.1) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
                 });
                 if (found) return true;
             } catch (e) { }
@@ -2258,12 +2264,30 @@ async function handlePerimeterXIfPresent(page, maxWaitSec = 90) {
         let isChallenged = await isPerimeterXActive(page);
 
         if (isChallenged) {
-            console.log(`\n[BOT-VIX] ⚠️ Verificación humana detectada ("Mantenga pulsado").`);
-            console.log(`[BOT-VIX] 👉 La ventana de Chrome está abierta en tu pantalla: mantén presionado el botón azul con el mouse.`);
-            console.log(`[BOT-VIX] ⏳ Esperando que completes la verificación (tienes hasta ${maxWaitSec} segundos)...`);
+            console.log(`\n[BOT-VIX] ⚠️ Verificación humana detectada en pantalla ("Pulsar y mantener pulsado").`);
+            console.log(`[BOT-VIX] 👉 Mantén presionado el botón azul con tu mouse por unos 5 segundos hasta que desaparezca.`);
+            console.log(`[BOT-VIX] ⏳ Esperando tu confirmación (tienes hasta ${maxWaitSec} segundos)...`);
+
+            try {
+                await page.bringToFront();
+            } catch (e) { }
 
             for (let s = 0; s < maxWaitSec; s++) {
                 await sleep(1000);
+
+                let pageAlreadyAdvanced = false;
+                try {
+                    pageAlreadyAdvanced = await page.evaluate(() => {
+                        const txt = (document.body?.innerText || '').toLowerCase();
+                        return txt.includes('con mi contrase') || txt.includes('ingresa tu contrase') || txt.includes('iniciar sesion con mi');
+                    });
+                } catch (e) { }
+
+                if (pageAlreadyAdvanced) {
+                    console.log('[BOT-VIX] 🚀 ¡Página de contraseña detectada! Avanzando sin demora...');
+                    return true;
+                }
+
                 let stillChallenged = false;
                 try {
                     stillChallenged = await isPerimeterXActive(page);
@@ -2273,7 +2297,7 @@ async function handlePerimeterXIfPresent(page, maxWaitSec = 90) {
 
                 if (!stillChallenged) {
                     console.log('[BOT-VIX] ✅ ¡Verificación humana superada con éxito! Continuando con la activación...');
-                    await sleep(3000);
+                    await sleep(2500);
                     return true;
                 }
             }
@@ -2486,11 +2510,19 @@ async function doActivateVixTv(email, tvCode) {
         console.log('[BOT-VIX] 🔘 Buscando opción "Iniciar sesión con mi contraseña"...');
         let clickedPassOption = false;
         for (let wait = 0; wait < 35; wait++) {
+            // Si ya estamos directamente en el campo de contraseña, avanzar
+            const alreadyHasPassField = await page.$('input[name="password"], input[id="password"], input[type="password"]');
+            if (alreadyHasPassField) {
+                console.log('[BOT-VIX] 🔑 Casilla de contraseña ya visible en pantalla.');
+                clickedPassOption = true;
+                break;
+            }
+
             clickedPassOption = await page.evaluate(() => {
-                const btns = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+                const btns = Array.from(document.querySelectorAll('button, a, [role="button"], span, p, div'));
                 for (const b of btns) {
                     const txt = (b.innerText || b.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    if (txt.includes('con mi contrasena') || txt.includes('con mi contrase') || txt.includes('iniciar sesion con mi')) {
+                    if ((txt.includes('con mi contrase') || txt.includes('con contrase') || txt.includes('iniciar sesion con mi') || txt.includes('tu contrase')) && !txt.includes('olvid')) {
                         b.click();
                         return true;
                     }
@@ -2505,7 +2537,7 @@ async function doActivateVixTv(email, tvCode) {
         if (!clickedPassOption) {
             console.log('[BOT-VIX] ⚠️ Intentando buscar botón alternativo de contraseña...');
             await page.evaluate(() => {
-                const btns = Array.from(document.querySelectorAll('button'));
+                const btns = Array.from(document.querySelectorAll('button, a'));
                 const b = btns.find(btn => (btn.innerText || '').toLowerCase().includes('contrase'));
                 if (b) b.click();
             });
