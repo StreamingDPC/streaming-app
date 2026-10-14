@@ -1137,8 +1137,17 @@ function setupEventListeners() {
             const vendBtn = document.getElementById('open-vendedores-btn');
             if (vendBtn) vendBtn.style.display = 'none';
             clientLoginModal.style.display = 'none';
-            renderClientDashboard();
-            clientDashboardModal.style.display = 'block';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Sesión iniciada con éxito!',
+                    text: 'Bienvenido. Puedes ver tu historial de pantallas cuando desees desde el botón "Mis Compras".',
+                    timer: 1800,
+                    showConfirmButton: false,
+                    background: '#1a1a1a',
+                    color: '#fff'
+                });
+            }
         });
     }
 
