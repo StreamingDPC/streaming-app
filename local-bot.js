@@ -2341,7 +2341,6 @@ async function doActivateVixTv(email, tvCode) {
         chromeProc = spawn(chromePath, [
             `--remote-debugging-port=${cdpPort}`,
             `--user-data-dir=${profileDir}`,
-            '--disable-blink-features=AutomationControlled',
             '--no-first-run',
             '--no-default-browser-check',
             '--window-position=50,50',
@@ -2446,33 +2445,28 @@ async function doActivateVixTv(email, tvCode) {
                     break;
                 }
 
-                clickedPassOption = await page.evaluate(() => {
-                    const btns = Array.from(document.querySelectorAll('button, a, [role="button"], span, p, div'));
-                    for (const b of btns) {
-                        const txt = (b.innerText || b.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                        if ((txt.includes('con mi contrase') || txt.includes('con contrase') || txt.includes('iniciar sesion con mi') || txt.includes('tu contrase')) && !txt.includes('olvid')) {
-                            b.click();
-                            return true;
+                const btnHandles = await page.$$('button, a, [role="button"]');
+                for (const h of btnHandles) {
+                    try {
+                        const txt = await page.evaluate(el => (el.innerText || el.textContent || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), h);
+                        if (txt.includes('con mi contrasena') || (txt.includes('iniciar sesion') && txt.includes('contrasena')) || (txt.includes('contrasena') && !txt.includes('olvid'))) {
+                            await h.click();
+                            clickedPassOption = true;
+                            console.log(`[BOT-VIX] 🖱️ Clic nativo en: "${txt}"`);
+                            break;
                         }
-                    }
-                    return false;
-                });
-                if (clickedPassOption) break;
+                    } catch (e) { }
+                }
+
+                if (clickedPassOption) {
+                    await sleep(1500);
+                    const nowHasPass = await page.$('input[name="password"], input[id="password"], input[type="password"]');
+                    if (nowHasPass) break;
+                }
+
                 await handlePerimeterXIfPresent(page);
                 await sleep(1000);
             }
-
-            if (!clickedPassOption) {
-                console.log('[BOT-VIX] ⚠️ Intentando buscar botón alternativo de contraseña...');
-                await page.evaluate(() => {
-                    const btns = Array.from(document.querySelectorAll('button, a'));
-                    const b = btns.find(btn => (btn.innerText || '').toLowerCase().includes('contrase'));
-                    if (b) b.click();
-                });
-            }
-            await sleep(2500);
-
-            await handlePerimeterXIfPresent(page);
 
             // Paso 3: Escribir contraseña
             console.log('[BOT-VIX] 🔑 Ingresando contraseña...');
@@ -2486,6 +2480,19 @@ async function doActivateVixTv(email, tvCode) {
                     await inp.type(vixPass, { delay: 40 });
                     break;
                 }
+
+                // Reintentar clic en el botón de contraseña si aún no cargó el formulario
+                const btnHandles = await page.$$('button, a, [role="button"]');
+                for (const h of btnHandles) {
+                    try {
+                        const txt = await page.evaluate(el => (el.innerText || el.textContent || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), h);
+                        if (txt.includes('con mi contrasena') || (txt.includes('iniciar sesion') && txt.includes('contrasena'))) {
+                            await h.click();
+                            break;
+                        }
+                    } catch (e) { }
+                }
+
                 await handlePerimeterXIfPresent(page);
                 await sleep(1000);
             }
