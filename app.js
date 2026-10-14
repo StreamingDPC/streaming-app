@@ -231,25 +231,32 @@ function setupConfigUI() {
 
     // Dynamic Payment Methods
     const paymentMethodsContainer = document.getElementById('dynamic-payment-methods');
+    const paymentMethodsSection = document.getElementById('payment-methods-section') || (paymentMethodsContainer ? paymentMethodsContainer.closest('.payment-methods') : null);
     if (paymentMethodsContainer) {
         let methodsHtml = '';
-        if (storeConfig.nequiEnabled !== false) {
-            methodsHtml += `
-                <div class="method-card">
-                    <img src="${storeConfig.nequiImg || 'assets/nequi_daviplata.png'}" alt="Nequi Daviplata" style="border-radius: 8px; max-height: 48px; object-fit: contain;">
-                    <span>${storeConfig.nequiLabel || 'Nequi / Daviplata'}</span>
-                </div>`;
+        const isMasterEnabled = storeConfig.paymentMethodsEnabled !== false;
+
+        if (isMasterEnabled) {
+            if (storeConfig.nequiEnabled !== false) {
+                methodsHtml += `
+                    <div class="method-card">
+                        <img src="${storeConfig.nequiImg || 'assets/nequi_daviplata.png'}" alt="Nequi Daviplata" style="border-radius: 8px; max-height: 48px; object-fit: contain;">
+                        <span>${storeConfig.nequiLabel || 'Nequi / Daviplata'}</span>
+                    </div>`;
+            }
+            if (storeConfig.nuEnabled !== false) {
+                methodsHtml += `
+                    <div class="method-card">
+                        <img src="${storeConfig.nuImg || 'assets/nu_bre.jpg'}" alt="Nu Bre b" style="border-radius: 8px; max-height: 48px; object-fit: contain;">
+                        <span>${storeConfig.nuLabel || 'Nu / Bre b'}</span>
+                    </div>`;
+            }
         }
-        if (storeConfig.nuEnabled !== false) {
-            methodsHtml += `
-                <div class="method-card">
-                    <img src="${storeConfig.nuImg || 'assets/nu_bre.jpg'}" alt="Nu Bre b" style="border-radius: 8px; max-height: 48px; object-fit: contain;">
-                    <span>${storeConfig.nuLabel || 'Nu / Bre b'}</span>
-                </div>`;
-        }
+
         paymentMethodsContainer.innerHTML = methodsHtml;
-        const section = paymentMethodsContainer.closest('.payment-methods');
-        if (section) section.style.display = methodsHtml ? 'block' : 'none';
+        if (paymentMethodsSection) {
+            paymentMethodsSection.style.display = (isMasterEnabled && methodsHtml) ? 'block' : 'none';
+        }
     }
 
     // Dynamic Tab Order
