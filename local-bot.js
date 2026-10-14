@@ -2377,13 +2377,10 @@ async function doActivateVixTv(email, tvCode) {
             window.chrome = { runtime: {} };
         });
 
-        // 2. Navegar a https://vix.com/es-es/activar
-        console.log('[BOT-VIX] 🌐 Navegando a https://vix.com/es-es/activar...');
-        await page.goto('https://vix.com/es-es/activar', { waitUntil: 'networkidle2', timeout: 40000 });
+        // 2. Paso 1: Iniciar sesión primero en https://vix.com/es-es/iniciar-sesion
+        console.log('[BOT-VIX] 🌐 Navegando primero a https://vix.com/es-es/iniciar-sesion para iniciar sesión...');
+        await page.goto('https://vix.com/es-es/iniciar-sesion', { waitUntil: 'networkidle2', timeout: 40000 });
         await sleep(2500);
-
-        // Comprobar si hay verificación humana en la entrada
-        await handlePerimeterXIfPresent(page);
 
         // Aceptar banner de cookies si aparece
         try {
@@ -2392,7 +2389,144 @@ async function doActivateVixTv(email, tvCode) {
         } catch (e) { }
         await sleep(1000);
 
-        // 3. Paso 1: Ingresar código del televisor (8 casillas: number_0 .. number_7)
+        await handlePerimeterXIfPresent(page);
+
+        // Escribir correo electrónico
+        console.log(`[BOT-VIX] ✉️ Ingresando correo electrónico: ${email}`);
+        let emailInputReady = false;
+        for (let wait = 0; wait < 35; wait++) {
+            const inp = await page.$('input[name="email"], input[id="email"], input[type="email"]');
+            if (inp) {
+                emailInputReady = true;
+                await inp.click({ clickCount: 3 });
+                await page.keyboard.press('Backspace');
+                await inp.type(email, { delay: 40 });
+                break;
+            }
+            await handlePerimeterXIfPresent(page);
+            await sleep(1000);
+        }
+
+        if (!emailInputReady) {
+            const currentUrl = page.url();
+            if (!currentUrl.includes('iniciar-sesion')) {
+                console.log('[BOT-VIX] ℹ️ La sesión ya parecía estar activa.');
+            } else {
+                const ss = await page.screenshot({ encoding: 'base64' });
+                await browser.disconnect();
+                if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+                return {
+                    success: false,
+                    error: 'ViX no mostró la casilla para ingresar el correo en iniciar-sesion.',
+                    screenshot: `data:image/png;base64,${ss}`
+                };
+            }
+        } else {
+            await sleep(600);
+
+            // Clic en "Ingresar con mi correo"
+            console.log('[BOT-VIX] ➡️ Clic en "Ingresar con mi correo"...');
+            await page.evaluate(() => {
+                const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+                const btn = btns.find(b => (b.innerText || b.value || '').toLowerCase().includes('ingresar con mi correo')) ||
+                    document.querySelector('button[type="submit"]');
+                if (btn) btn.click();
+            });
+            await sleep(3500);
+
+            await handlePerimeterXIfPresent(page);
+
+            // Paso 2: Pantalla "¿Cómo quieres ingresar?" -> Clic en "Iniciar sesión con mi contraseña"
+            console.log('[BOT-VIX] 🔘 Clic en "Iniciar sesión con mi contraseña"...');
+            let clickedPassOption = false;
+            for (let wait = 0; wait < 35; wait++) {
+                const hasPassField = await page.$('input[name="password"], input[id="password"], input[type="password"]');
+                if (hasPassField) {
+                    clickedPassOption = true;
+                    break;
+                }
+
+                clickedPassOption = await page.evaluate(() => {
+                    const btns = Array.from(document.querySelectorAll('button, a, [role="button"], span, p, div'));
+                    for (const b of btns) {
+                        const txt = (b.innerText || b.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        if ((txt.includes('con mi contrase') || txt.includes('con contrase') || txt.includes('iniciar sesion con mi') || txt.includes('tu contrase')) && !txt.includes('olvid')) {
+                            b.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+                if (clickedPassOption) break;
+                await handlePerimeterXIfPresent(page);
+                await sleep(1000);
+            }
+
+            if (!clickedPassOption) {
+                console.log('[BOT-VIX] ⚠️ Intentando buscar botón alternativo de contraseña...');
+                await page.evaluate(() => {
+                    const btns = Array.from(document.querySelectorAll('button, a'));
+                    const b = btns.find(btn => (btn.innerText || '').toLowerCase().includes('contrase'));
+                    if (b) b.click();
+                });
+            }
+            await sleep(2500);
+
+            await handlePerimeterXIfPresent(page);
+
+            // Paso 3: Escribir contraseña
+            console.log('[BOT-VIX] 🔑 Ingresando contraseña...');
+            let passInputReady = false;
+            for (let wait = 0; wait < 35; wait++) {
+                const inp = await page.$('input[name="password"], input[id="password"], input[type="password"]');
+                if (inp) {
+                    passInputReady = true;
+                    await inp.click({ clickCount: 3 });
+                    await page.keyboard.press('Backspace');
+                    await inp.type(vixPass, { delay: 40 });
+                    break;
+                }
+                await handlePerimeterXIfPresent(page);
+                await sleep(1000);
+            }
+
+            if (!passInputReady) {
+                const ss = await page.screenshot({ encoding: 'base64' });
+                await browser.disconnect();
+                if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
+                return {
+                    success: false,
+                    error: 'ViX no mostró el campo para ingresar la contraseña.',
+                    screenshot: `data:image/png;base64,${ss}`
+                };
+            }
+
+            await sleep(600);
+
+            // Clic en "Iniciar sesión"
+            console.log('[BOT-VIX] 🚀 Clic en "Iniciar sesión"...');
+            await page.evaluate(() => {
+                const btns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+                const btn = btns.find(b => {
+                    const t = (b.innerText || b.value || '').toLowerCase().trim();
+                    return t === 'iniciar sesión' || t === 'iniciar sesion';
+                }) || document.querySelector('button[type="submit"]');
+                if (btn) btn.click();
+            });
+            await sleep(4000);
+
+            await handlePerimeterXIfPresent(page);
+            console.log('[BOT-VIX] ✅ Sesión iniciada con éxito en ViX.');
+        }
+
+        // 3. Paso 4: Ahora ir a https://vix.com/es-es/activar con la sesión ya abierta
+        console.log('[BOT-VIX] 🌐 Navegando a https://vix.com/es-es/activar para vincular televisor...');
+        await page.goto('https://vix.com/es-es/activar', { waitUntil: 'networkidle2', timeout: 40000 });
+        await sleep(2500);
+
+        await handlePerimeterXIfPresent(page);
+
+        // Ingresar código del televisor (8 casillas: number_0 .. number_7)
         const cleanTvCode = tvCode.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
         console.log(`[BOT-VIX] 🔢 Ingresando código de TV (${cleanTvCode.length} caracteres): ${cleanTvCode}`);
 
@@ -2413,7 +2547,7 @@ async function doActivateVixTv(email, tvCode) {
             if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
             return {
                 success: false,
-                error: 'ViX no cargó las casillas para ingresar el código del televisor. Si apareció verificación humana, asegúrate de mantener pulsado el botón.',
+                error: 'ViX no cargó las casillas para ingresar el código del televisor en la página de activar.',
                 screenshot: `data:image/png;base64,${ss}`
             };
         }
@@ -2443,9 +2577,8 @@ async function doActivateVixTv(email, tvCode) {
         if (!clickedNext) {
             await page.keyboard.press('Enter');
         }
-        await sleep(3500);
+        await sleep(4000);
 
-        // Comprobar verificación humana tras dar siguiente
         await handlePerimeterXIfPresent(page);
 
         // Verificar si el código fue inválido
@@ -2464,144 +2597,28 @@ async function doActivateVixTv(email, tvCode) {
             };
         }
 
-        // 4. Paso 2: Ingresar correo electrónico
-        console.log(`[BOT-VIX] ✉️ Ingresando correo electrónico: ${email}`);
-        let emailInputReady = false;
-        for (let wait = 0; wait < 35; wait++) {
-            const inp = await page.$('input[name="email"], input[id="email"], input[type="email"]');
-            if (inp) {
-                emailInputReady = true;
-                await inp.click({ clickCount: 3 });
-                await page.keyboard.press('Backspace');
-                await inp.type(email, { delay: 40 });
-                break;
-            }
-            await handlePerimeterXIfPresent(page);
-            await sleep(1000);
-        }
-
-        if (!emailInputReady) {
-            const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.disconnect();
-            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
-            return {
-                success: false,
-                error: 'ViX no mostró la casilla para ingresar el correo.',
-                screenshot: `data:image/png;base64,${ss}`
-            };
-        }
-
-        await sleep(600);
-
-        // Clic en "Ingresar con mi correo"
-        console.log('[BOT-VIX] ➡️ Clic en "Ingresar con mi correo"...');
-        await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button'));
-            const btn = btns.find(b => (b.innerText || '').toLowerCase().includes('ingresar con mi correo')) ||
-                document.querySelector('button[type="submit"]');
-            if (btn) btn.click();
-        });
-        await sleep(3500);
-
-        // Comprobar verificación humana tras enviar correo
-        await handlePerimeterXIfPresent(page);
-
-        // 5. Paso 3: Pantalla "Ingresa con el enlace que enviamos a tu correo" -> Clic en "Iniciar sesión con mi contraseña"
-        console.log('[BOT-VIX] 🔘 Buscando opción "Iniciar sesión con mi contraseña"...');
-        let clickedPassOption = false;
-        for (let wait = 0; wait < 35; wait++) {
-            // Si ya estamos directamente en el campo de contraseña, avanzar
-            const alreadyHasPassField = await page.$('input[name="password"], input[id="password"], input[type="password"]');
-            if (alreadyHasPassField) {
-                console.log('[BOT-VIX] 🔑 Casilla de contraseña ya visible en pantalla.');
-                clickedPassOption = true;
-                break;
-            }
-
-            clickedPassOption = await page.evaluate(() => {
-                const btns = Array.from(document.querySelectorAll('button, a, [role="button"], span, p, div'));
-                for (const b of btns) {
-                    const txt = (b.innerText || b.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    if ((txt.includes('con mi contrase') || txt.includes('con contrase') || txt.includes('iniciar sesion con mi') || txt.includes('tu contrase')) && !txt.includes('olvid')) {
-                        b.click();
-                        return true;
-                    }
-                }
-                return false;
-            });
-            if (clickedPassOption) break;
-            await handlePerimeterXIfPresent(page);
-            await sleep(1000);
-        }
-
-        if (!clickedPassOption) {
-            console.log('[BOT-VIX] ⚠️ Intentando buscar botón alternativo de contraseña...');
-            await page.evaluate(() => {
-                const btns = Array.from(document.querySelectorAll('button, a'));
-                const b = btns.find(btn => (btn.innerText || '').toLowerCase().includes('contrase'));
-                if (b) b.click();
-            });
-        }
-        await sleep(3000);
-
-        // Comprobar verificación humana tras seleccionar contraseña
-        await handlePerimeterXIfPresent(page);
-
-        // 6. Paso 4: Pantalla "Ingresa tu contraseña"
-        console.log('[BOT-VIX] 🔑 Ingresando contraseña...');
-        let passInputReady = false;
-        for (let wait = 0; wait < 35; wait++) {
-            const inp = await page.$('input[name="password"], input[id="password"], input[type="password"]');
-            if (inp) {
-                passInputReady = true;
-                await inp.click({ clickCount: 3 });
-                await page.keyboard.press('Backspace');
-                await inp.type(vixPass, { delay: 40 });
-                break;
-            }
-            await handlePerimeterXIfPresent(page);
-            await sleep(1000);
-        }
-
-        if (!passInputReady) {
-            const ss = await page.screenshot({ encoding: 'base64' });
-            await browser.disconnect();
-            if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
-            return {
-                success: false,
-                error: 'ViX no mostró el campo para ingresar la contraseña.',
-                screenshot: `data:image/png;base64,${ss}`
-            };
-        }
-
-        await sleep(600);
-
-        // Clic en "Iniciar sesión"
-        console.log('[BOT-VIX] 🚀 Clic en "Iniciar sesión"...');
-        await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button'));
-            const btn = btns.find(b => (b.innerText || '').toLowerCase().trim() === 'iniciar sesión' || (b.innerText || '').toLowerCase().trim() === 'iniciar sesion') ||
-                document.querySelector('button[type="submit"]');
-            if (btn) btn.click();
-        });
-        await sleep(4000);
-
-        // Comprobar verificación humana tras login
-        await handlePerimeterXIfPresent(page);
-
-        // 7. Paso 5: Pantalla de confirmación "¡Tu televisor está listo para ver ViX!"
+        // 4. Esperar confirmación de activación en TV
         console.log('[BOT-VIX] ⏳ Esperando confirmación de activación en TV...');
         let confirmed = false;
-        for (let wait = 0; wait < 20; wait++) {
+        for (let wait = 0; wait < 25; wait++) {
             confirmed = await page.evaluate(() => {
                 const txt = (document.body.innerText || '').toLowerCase();
-                return txt.includes('listo para ver vix') || txt.includes('código qr') || txt.includes('actualiza automáticamente') || txt.includes('abrir o descargar la app') || txt.includes('continuar desde la web');
+                return txt.includes('listo para ver vix') ||
+                       txt.includes('código qr') ||
+                       txt.includes('actualiza automáticamente') ||
+                       txt.includes('abrir o descargar la app') ||
+                       txt.includes('continuar desde la web') ||
+                       txt.includes('disfruta') ||
+                       txt.includes('éxito') ||
+                       txt.includes('exito') ||
+                       txt.includes('activado') ||
+                       txt.includes('vinculad');
             });
             if (confirmed) break;
             await sleep(1000);
         }
 
-        // 8. Limpiar y cerrar sesión
+        // 5. Limpiar y cerrar sesión
         console.log('[BOT-VIX] 🧹 Limpiando y cerrando sesión de ViX...');
         try {
             const client = await page.target().createCDPSession();
