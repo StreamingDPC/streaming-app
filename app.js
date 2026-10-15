@@ -15,24 +15,25 @@ window.DPCBillingEngine = {
         const fva = new Date(fechaVencimientoActual);
         const diaOriginal = fco.getDate();
 
-        let prox = new Date(fva);
-        // Avanzamos un mes real
-        prox.setMonth(prox.getMonth() + 1);
+        let targetYear = fva.getFullYear();
+        let targetMonth = fva.getMonth() + 1; // Avanzamos exactamente 1 mes
 
-        // Obtenemos cual es el ultimo dia de ese nuevo mes
-        const ultimoDiaMesProx = new Date(prox.getFullYear(), prox.getMonth() + 1, 0).getDate();
-
-        // Si el dia original existe en el nuevo mes, lo asignamos. Si no, lo topamos al ultimo dia.
-        if (diaOriginal <= ultimoDiaMesProx) {
-            prox.setDate(diaOriginal);
-        } else {
-            prox.setDate(ultimoDiaMesProx);
+        if (targetMonth > 11) {
+            targetMonth = 0;
+            targetYear++;
         }
 
-        // Fijar exactamente a las 23:59:59 (para que el cliente tenga servicio todo ese día pase lo que pase)
-        prox.setHours(23, 59, 59, 999);
+        // Averiguar cuántos días tiene el mes destino
+        const maxDaysNextMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
-        return prox;
+        // El día final a cobrar (Cap al final del mes si el original era 31 y el nuevo tiene 30)
+        let finalDay = diaOriginal;
+        if (diaOriginal > maxDaysNextMonth) {
+            finalDay = maxDaysNextMonth;
+        }
+
+        // Fijar exactamente a las 23:59:59.999
+        return new Date(targetYear, targetMonth, finalDay, 23, 59, 59, 999);
     }
 };
 
@@ -4037,17 +4038,18 @@ function setupEventListeners() {
         }
 
         if (prevExp && !isNaN(prevExp)) {
-            saleAnchor = prevOrig || prevStart || prevExp;
+            // 🎯 El día de corte para la renovación es el día de la fecha fin registrada (prevExp)
+            saleAnchor = prevExp;
             // Si la fecha registrada de vencimiento es hoy o futura (o está dentro de las últimas 24 horas de gracia):
             // La renovación inicia exactamente en la fecha de vencimiento que ya tenía registrada (ej: 16 de octubre)
             // y se vence un mes después anclada a ese mismo día registrado (ej: 16 de noviembre)
             if (prevExp >= (Date.now() - 24 * 60 * 60 * 1000)) {
                 saleDate = prevExp;
-                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(saleAnchor, prevExp).getTime();
+                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(prevExp, prevExp).getTime();
             } else {
-                // Si ya estaba vencida hace más tiempo, arranca desde hoy pero anclado al día de corte original
+                // Si ya estaba vencida hace más tiempo, arranca desde hoy pero anclado al día de corte registrado
                 saleDate = Date.now();
-                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(saleAnchor, Date.now()).getTime();
+                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(prevExp, Date.now()).getTime();
             }
         }
 

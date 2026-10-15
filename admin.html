@@ -5609,8 +5609,8 @@
                     if (clientSales[cleanPhone] && clientSales[cleanPhone][saleId]) {
                         const s = clientSales[cleanPhone][saleId];
                         const currentExp = parseInt(s.expirationDate) || Date.now();
-                        const anchorDate = s.fechaCompraOriginal || s.date || currentExp;
-                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(anchorDate, currentExp).getTime();
+                        const anchorDate = currentExp;
+                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(currentExp, currentExp).getTime();
 
                         finalMsgTS = newExp; // Guarda para el WhatsApp
                         updates[`clientSales/${cleanPhone}/${saleId}/date`] = currentExp;
@@ -5632,8 +5632,8 @@
                     } else if (sourceType === 'seller' && sellerSales[sourceName] && sellerSales[sourceName][saleId]) {
                         const s = sellerSales[sourceName][saleId];
                         const currentExp = parseInt(s.expirationDate) || Date.now();
-                        const anchorDate = s.fechaCompraOriginal || s.date || currentExp;
-                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(anchorDate, currentExp).getTime();
+                        const anchorDate = currentExp;
+                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(currentExp, currentExp).getTime();
 
                         finalMsgTS = newExp; // Guarda para el WhatsApp
                         updates[`sellerSales/${sourceName}/${saleId}/date`] = currentExp;
