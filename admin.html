@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.27 (Marketing Clientes)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.28 (Exclusión Clientes Vendedores)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -1296,6 +1296,23 @@
                         </h3>
                         <div style="font-size:0.85rem; color:#ccc;">
                             Seleccionados: <strong id="mkt-selected-count" style="color:#00d2d3; font-size:1rem;">0</strong> de <span id="mkt-total-filtered">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Filtro de Origen (Separar Clientes Directos vs Vendedores) -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem; background:rgba(0,0,0,0.3); border:1px solid rgba(0, 210, 211, 0.3); border-radius:12px; padding:10px 14px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <label style="color:#00d2d3; font-weight:bold; font-size:0.9rem; margin:0; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-filter"></i> Cartera de Clientes:
+                            </label>
+                            <select id="mkt-origin-filter" onchange="onMarketingOriginFilterChange()" style="padding:6px 12px; border-radius:8px; background:rgba(0,0,0,0.8); border:1px solid #00d2d3; color:white; font-size:0.85rem; font-weight:bold; cursor:pointer;">
+                                <option value="direct" selected>🏢 Solo Clientes Directos (Página Web / Admin) [Recomendado]</option>
+                                <option value="all">👥 Todos (Directos + Clientes de Vendedores)</option>
+                                <option value="seller">👔 Solo Clientes de Vendedores</option>
+                            </select>
+                        </div>
+                        <div style="color:#aaa; font-size:0.78rem;">
+                            🔒 <em>Por defecto se excluyen clientes de vendedores para no invadir su cartera privada.</em>
                         </div>
                     </div>
 
@@ -8678,11 +8695,50 @@
             }
         };
 
-        // Recopila todos los clientes segmentados por estado
+        // Helper para identificar si una venta corresponde a venta directa (Página Web / Admin)
+        function isDirectMarketingSale(s) {
+            if (!s) return true;
+            const sn = (s.sellerName || '').trim().toLowerCase();
+            return !sn || sn === 'página web oficial' || sn === 'pagina web oficial' || sn === 'admin' || sn === 'oficial' || sn === 'directo';
+        }
+
+        // Obtiene la audiencia filtrada según el origen seleccionado (Directos vs Vendedores vs Todos)
+        window.getAudienceFilteredByOrigin = function () {
+            const originFilter = document.getElementById('mkt-origin-filter')?.value || 'direct';
+            const all = _mktState.allAudience || [];
+            if (originFilter === 'direct') {
+                return all.filter(c => !c.isSellerClient);
+            } else if (originFilter === 'seller') {
+                return all.filter(c => c.isSellerClient);
+            }
+            return all;
+        };
+
+        // Evento al cambiar el selector de origen de clientes
+        window.onMarketingOriginFilterChange = function () {
+            setMarketingSegment(_mktState.currentSegment || 'active', false);
+        };
+
+        // Recopila todos los clientes segmentados por estado y clasifica su origen (Directo vs Vendedor)
         function getMarketingAudience() {
             try {
                 const clientsMap = {};
                 const now = Date.now();
+
+                // Identificar teléfonos propios de los vendedores para excluirlos de envíos de marketing
+                const sellerPhones = new Set();
+                const sellersRaw = (storeConfig && storeConfig.sellers) || [];
+                const sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
+                sellers.forEach(s => {
+                    if (!s) return;
+                    ['whatsapp', 'phone', 'tel', 'celular'].forEach(k => {
+                        if (s[k]) {
+                            let p = s[k].toString().replace(/\D/g, '');
+                            if (p.length === 10 && p.startsWith('3')) p = '57' + p;
+                            if (p) sellerPhones.add(p);
+                        }
+                    });
+                });
 
                 // 1. De clientProfiles
                 const profiles = window.allClientProfiles || allClientProfiles || (window.lastFirebaseData && window.lastFirebaseData.clientProfiles) || {};
@@ -8758,16 +8814,24 @@
                         if (sale.clientName && (clientsMap[p].name === 'Cliente' || !clientsMap[p].name)) {
                             clientsMap[p].name = safeDecode(sale.clientName);
                         }
-                        clientsMap[p].sales.push(sale);
+                        const saleWithSeller = { ...sale, sellerName: sale.sellerName || sellerName };
+                        clientsMap[p].sales.push(saleWithSeller);
                     });
                 });
 
-                // 4. Evaluar el estado de cada cliente
-                const list = Object.values(clientsMap).map(c => {
+                // 4. Evaluar el estado y origen de cada cliente
+                const list = [];
+                Object.values(clientsMap).forEach(c => {
+                    // Excluir a los vendedores para no enviarles promociones a sus propias líneas
+                    if (sellerPhones.has(c.phone)) return;
+
                     let hasActive = false;
                     let activeItems = [];
                     let expiredItems = [];
                     let latestExpiry = 0;
+
+                    // Ordenar compras por fecha descendente
+                    c.sales.sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
 
                     c.sales.forEach(sale => {
                         if (!sale || sale.isPaid === false) return;
@@ -8799,14 +8863,24 @@
                         c.status = 'prospect'; // Registrado sin compras
                     }
 
+                    // Determinar origen del cliente: Directo vs Vendedor
+                    const latestSale = c.sales[0];
+                    const hasSellerSale = c.sales.some(s => !isDirectMarketingSale(s));
+                    c.isSellerClient = (latestSale ? !isDirectMarketingSale(latestSale) : false) || hasSellerSale;
+                    c.sellerName = c.isSellerClient 
+                        ? (latestSale && !isDirectMarketingSale(latestSale) ? latestSale.sellerName : (c.sales.find(s => !isDirectMarketingSale(s))?.sellerName || 'Vendedor'))
+                        : 'Página Web Oficial';
+
                     c.latestExpiry = latestExpiry;
                     c.platforms = hasActive ? activeItems : (expiredItems.length > 0 ? expiredItems : []);
-                    return c;
+                    list.push(c);
                 });
 
                 // Ordenar alfabéticamente por nombre
                 list.sort((a, b) => a.name.localeCompare(b.name));
-                console.log("Marketing audience loaded:", list.length, "Active:", list.filter(c => c.status === 'active').length, "Inactive:", list.filter(c => c.status !== 'active').length);
+                console.log("Marketing audience loaded:", list.length, 
+                    "Directos:", list.filter(c => !c.isSellerClient).length, 
+                    "Vendedores:", list.filter(c => c.isSellerClient).length);
                 return list;
             } catch (err) {
                 console.error("Error computing marketing audience:", err);
@@ -8817,24 +8891,11 @@
         window.initMarketingPanel = function () {
             _mktState.allAudience = getMarketingAudience();
 
-            // Actualizar contadores de las tarjetas de segmento
-            const activeCount = _mktState.allAudience.filter(c => c.status === 'active').length;
-            const inactiveCount = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect').length;
-            const totalCount = _mktState.allAudience.length;
-
-            const badgeActive = document.getElementById('mkt-count-active');
-            const badgeInactive = document.getElementById('mkt-count-inactive');
-            const badgeAll = document.getElementById('mkt-count-all');
-
-            if (badgeActive) badgeActive.innerText = activeCount;
-            if (badgeInactive) badgeInactive.innerText = inactiveCount;
-            if (badgeAll) badgeAll.innerText = totalCount;
-
             // Cargar configuración guardada
             loadMarketingSettings();
 
-            // Renderizar segmento actual
-            setMarketingSegment(_mktState.currentSegment || 'active', true);
+            // Renderizar segmento actual respetando el filtro de origen (por defecto "direct")
+            setMarketingSegment(_mktState.currentSegment || 'active', false);
             updateMktDailyLimitDisplay();
         };
 
@@ -8846,10 +8907,12 @@
                 _mktState.allAudience = getMarketingAudience();
             }
 
-            // Actualizar contadores de las tarjetas de segmento siempre
-            const activeCount = _mktState.allAudience.filter(c => c.status === 'active').length;
-            const inactiveCount = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect').length;
-            const totalCount = _mktState.allAudience.length;
+            const currentOriginAudience = getAudienceFilteredByOrigin();
+
+            // Actualizar contadores de las tarjetas de segmento según el origen seleccionado
+            const activeCount = currentOriginAudience.filter(c => c.status === 'active').length;
+            const inactiveCount = currentOriginAudience.filter(c => c.status === 'inactive' || c.status === 'prospect').length;
+            const totalCount = currentOriginAudience.length;
 
             const badgeActive = document.getElementById('mkt-count-active');
             const badgeInactive = document.getElementById('mkt-count-inactive');
@@ -8865,14 +8928,14 @@
                 if (el) el.classList.toggle('active', s === segment);
             });
 
-            // Filtrar clientes
+            // Filtrar clientes dentro del origen actual
             let filtered = [];
             if (segment === 'active') {
-                filtered = _mktState.allAudience.filter(c => c.status === 'active');
+                filtered = currentOriginAudience.filter(c => c.status === 'active');
             } else if (segment === 'inactive') {
-                filtered = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
+                filtered = currentOriginAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
             } else {
-                filtered = _mktState.allAudience;
+                filtered = currentOriginAudience;
             }
 
             // Si no mantenemos selección previa, seleccionamos todos por defecto
@@ -8890,18 +8953,19 @@
 
             const searchTerm = (document.getElementById('mkt-filter-search')?.value || '').toLowerCase().trim();
             const segment = _mktState.currentSegment;
+            const currentOriginAudience = getAudienceFilteredByOrigin();
 
             let filtered = [];
             if (segment === 'active') {
-                filtered = _mktState.allAudience.filter(c => c.status === 'active');
+                filtered = currentOriginAudience.filter(c => c.status === 'active');
             } else if (segment === 'inactive') {
-                filtered = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
+                filtered = currentOriginAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
             } else {
-                filtered = _mktState.allAudience;
+                filtered = currentOriginAudience;
             }
 
             if (searchTerm) {
-                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm));
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm) || (c.sellerName && c.sellerName.toLowerCase().includes(searchTerm)));
             }
 
             const totalFilteredEl = document.getElementById('mkt-total-filtered');
@@ -8913,7 +8977,7 @@
             if (btnCountEl) btnCountEl.innerText = _mktState.selectedPhones.size;
 
             if (filtered.length === 0) {
-                listDiv.innerHTML = '<p style="color:#777; font-size:0.85rem; text-align:center; padding:1.5rem;">No se encontraron clientes para este segmento o búsqueda.</p>';
+                listDiv.innerHTML = '<p style="color:#777; font-size:0.85rem; text-align:center; padding:1.5rem;">No se encontraron clientes para este segmento o filtro de origen.</p>';
                 return;
             }
 
@@ -8930,6 +8994,13 @@
                 item.style.borderRadius = '8px';
                 item.style.gap = '10px';
                 item.style.transition = 'all 0.2s ease';
+
+                let originBadge = '';
+                if (c.isSellerClient) {
+                    originBadge = `<span style="font-size:0.75rem; color:#f39c12; background:rgba(243,156,18,0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-user-tie"></i> Vendedor: ${c.sellerName}</span>`;
+                } else {
+                    originBadge = `<span style="font-size:0.75rem; color:#00d2d3; background:rgba(0,210,211,0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-globe"></i> Directo Tienda</span>`;
+                }
 
                 let statusBadge = '';
                 if (c.status === 'active') {
@@ -8950,7 +9021,10 @@
                             <span style="font-size:0.8rem; color:#aaa; margin-left:8px;">📱 +${c.phone}</span>
                         </div>
                     </label>
-                    <div>${statusBadge}</div>
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        ${originBadge}
+                        ${statusBadge}
+                    </div>
                 `;
                 listDiv.appendChild(item);
             });
@@ -8971,18 +9045,19 @@
         window.toggleSelectAllMarketing = function (shouldSelectAll) {
             const searchTerm = (document.getElementById('mkt-filter-search')?.value || '').toLowerCase().trim();
             const segment = _mktState.currentSegment;
+            const currentOriginAudience = getAudienceFilteredByOrigin();
 
             let filtered = [];
             if (segment === 'active') {
-                filtered = _mktState.allAudience.filter(c => c.status === 'active');
+                filtered = currentOriginAudience.filter(c => c.status === 'active');
             } else if (segment === 'inactive') {
-                filtered = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
+                filtered = currentOriginAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
             } else {
-                filtered = _mktState.allAudience;
+                filtered = currentOriginAudience;
             }
 
             if (searchTerm) {
-                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm));
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm) || (c.sellerName && c.sellerName.toLowerCase().includes(searchTerm)));
             }
 
             filtered.forEach(c => {
@@ -9188,8 +9263,9 @@
                 }
             }
 
-            // Construir la cola de clientes a enviar
-            const targetList = _mktState.allAudience.filter(c => _mktState.selectedPhones.has(c.phone));
+            // Construir la cola de clientes a enviar (respetando la selección y el filtro de origen)
+            const currentOriginAudience = getAudienceFilteredByOrigin();
+            const targetList = currentOriginAudience.filter(c => _mktState.selectedPhones.has(c.phone));
             _mktState.campaignQueue = targetList;
             _mktState.currentIndex = 0;
             _mktState.currentBatchCount = 0;
