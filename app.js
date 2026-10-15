@@ -3,7 +3,8 @@
 // DPC BILLING ENGINE v1.0 (Cap Month)
 // ============================================
 window.DPCBillingEngine = {
-    calcularProximoVencimiento: function (fechaCompraOriginal, fechaVencimientoActual) {
+    calcularProximoVencimiento: function (fechaCompraOriginal, fechaVencimientoActual, monthsToAdd = 1) {
+        monthsToAdd = parseInt(monthsToAdd) || 1;
         if (!fechaCompraOriginal || isNaN(new Date(fechaCompraOriginal).getTime())) {
             fechaCompraOriginal = fechaVencimientoActual || Date.now();
         }
@@ -16,10 +17,10 @@ window.DPCBillingEngine = {
         const diaOriginal = fco.getDate();
 
         let targetYear = fva.getFullYear();
-        let targetMonth = fva.getMonth() + 1; // Avanzamos exactamente 1 mes
+        let targetMonth = fva.getMonth() + monthsToAdd; // Avanzamos los meses indicados
 
-        if (targetMonth > 11) {
-            targetMonth = 0;
+        while (targetMonth > 11) {
+            targetMonth -= 12;
             targetYear++;
         }
 
@@ -669,6 +670,7 @@ function renderProducts(category) {
         card.innerHTML = `
             ${imgHtml}
             <span class="brand-badge">${product.brand}</span>
+            ${product.months && product.months > 1 ? `<span style="background: rgba(0, 210, 211, 0.2); color: #00d2d3; border: 1px solid #00d2d3; border-radius: 12px; padding: 2px 8px; font-size: 0.72rem; font-weight: bold; margin-left: 0.35rem;"><i class="fa-solid fa-calendar-days"></i> ${product.months} Meses</span>` : ''}
             <h3 class="product-title">${product.name}</h3>
             <p class="product-desc" style="margin-bottom: 0.5rem">${product.desc || 'Pantalla original premium con garantía.'}</p>
             ${isSellerMode ? `<div style="color: #00d2d3; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.4rem;"><i class="fa-solid fa-tag"></i> Sugerido al Cliente: $${product.price.toLocaleString()}</div>` : ''}
@@ -4007,7 +4009,22 @@ function setupEventListeners() {
         // 🔄 LÓGICA DE RENOVACIÓN DE FECHAS (Cap Month anclado a la fecha registrada)
         let saleDate = Date.now();
         let saleAnchor = Date.now();
-        let saleExp = window.DPCBillingEngine.calcularProximoVencimiento(saleAnchor, saleDate).getTime();
+
+        // 🎯 Detectar la duración en meses del producto comprado (1, 2, 3, 6, etc.)
+        let productMonths = 1;
+        if (stats.processedCart && stats.processedCart.length > 0) {
+            const monthsFound = stats.processedCart.map(item => {
+                if (item.months && !isNaN(item.months) && parseInt(item.months) > 0) {
+                    return parseInt(item.months);
+                }
+                const match = (item.name || '').match(/(\d+)\s*meses?/i);
+                if (match) return parseInt(match[1]);
+                return 1;
+            });
+            productMonths = Math.max(1, ...monthsFound);
+        }
+
+        let saleExp = window.DPCBillingEngine.calcularProximoVencimiento(saleAnchor, saleDate, productMonths).getTime();
 
         const isRenewalChecked = document.getElementById('is-renewal') && document.getElementById('is-renewal').checked;
         const cleanPhoneTracking = cPhone ? cPhone.replace(/\D/g, '') : '';
@@ -4042,14 +4059,14 @@ function setupEventListeners() {
             saleAnchor = prevExp;
             // Si la fecha registrada de vencimiento es hoy o futura (o está dentro de las últimas 24 horas de gracia):
             // La renovación inicia exactamente en la fecha de vencimiento que ya tenía registrada (ej: 16 de octubre)
-            // y se vence un mes después anclada a ese mismo día registrado (ej: 16 de noviembre)
+            // y se vence X meses después anclada a ese mismo día registrado (ej: 16 de noviembre o 16 de enero)
             if (prevExp >= (Date.now() - 24 * 60 * 60 * 1000)) {
                 saleDate = prevExp;
-                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(prevExp, prevExp).getTime();
+                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(prevExp, prevExp, productMonths).getTime();
             } else {
                 // Si ya estaba vencida hace más tiempo, arranca desde hoy pero anclado al día de corte registrado
                 saleDate = Date.now();
-                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(prevExp, Date.now()).getTime();
+                saleExp = window.DPCBillingEngine.calcularProximoVencimiento(prevExp, Date.now(), productMonths).getTime();
             }
         }
 
@@ -4060,11 +4077,13 @@ function setupEventListeners() {
             date: saleDate,
             expirationDate: saleExp,
             fechaCompraOriginal: saleAnchor, // Cap Month
+            months: productMonths,
             items: stats.processedCart.map(item => ({
                 id: item.id || Date.now(),
                 name: item.customName ? `${item.name} (${item.customName})` : (item.name || 'Pantalla'),
                 customName: item.customName || null,
                 category: item.category || 'individual',
+                months: item.months || productMonths,
                 finalPrice: isNaN(item.finalPrice) ? 0 : item.finalPrice
             })),
             total: isNaN(total) ? 0 : total,

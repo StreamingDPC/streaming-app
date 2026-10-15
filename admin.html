@@ -328,6 +328,22 @@
                             <option value="promociones">Promociones del mes</option>
                         </select>
                     </div>
+                    <div class="form-col">
+                        <label style="color: #00d2d3; font-weight: bold;"><i class="fa-solid fa-calendar-days"></i> Duración / Meses</label>
+                        <select id="new-months" onchange="onProductMonthsChange(this.value)" style="border: 1px solid #00d2d3;">
+                            <option value="1">1 Mes (Estándar)</option>
+                            <option value="2">2 Meses</option>
+                            <option value="3">3 Meses</option>
+                            <option value="6">6 Meses</option>
+                            <option value="12">12 Meses (1 Año)</option>
+                        </select>
+                        <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem;">
+                            <button type="button" class="btn-month-pill" onclick="selectProductMonths(1)" id="pill-m-1" style="flex:1; padding:4px 6px; font-size:0.75rem; border-radius:6px; cursor:pointer; background:linear-gradient(135deg, #00d2d3, #0984e3); color:white; border:none; font-weight:bold;">1 Mes</button>
+                            <button type="button" class="btn-month-pill" onclick="selectProductMonths(2)" id="pill-m-2" style="flex:1; padding:4px 6px; font-size:0.75rem; border-radius:6px; cursor:pointer; background:#34495e; color:#ccc; border:none;">2 Meses</button>
+                            <button type="button" class="btn-month-pill" onclick="selectProductMonths(3)" id="pill-m-3" style="flex:1; padding:4px 6px; font-size:0.75rem; border-radius:6px; cursor:pointer; background:#34495e; color:#ccc; border:none;">3 Meses</button>
+                            <button type="button" class="btn-month-pill" onclick="selectProductMonths(6)" id="pill-m-6" style="flex:1; padding:4px 6px; font-size:0.75rem; border-radius:6px; cursor:pointer; background:#34495e; color:#ccc; border:none;">6 Meses</button>
+                        </div>
+                    </div>
                     <div class="form-col" id="owner-col" style="display:none;">
                         <label>Vendedor Dueño (solo Ventas Extras)</label>
                         <select id="new-owner">
@@ -2488,16 +2504,16 @@
     <script>
         // --- INYECCIÓN DEL MOTOR DE FACTURACIÓN CAP MONTH ---
         window.DPCBillingEngine = {
-            calcularProximoVencimiento: function (fechaOriginalMs, fechaVencimientoActualMs) {
+            calcularProximoVencimiento: function (fechaOriginalMs, fechaVencimientoActualMs, monthsToAdd = 1) {
+                monthsToAdd = parseInt(monthsToAdd) || 1;
                 const F_ORIGEN = new Date(fechaOriginalMs);
                 const F_ACTUAL = new Date(fechaVencimientoActualMs);
                 let diaOriginal = F_ORIGEN.getDate();
                 let targetYear = F_ACTUAL.getFullYear();
-                let targetMonth = F_ACTUAL.getMonth() + 1; // Avanzar exactamente 1 mes
+                let targetMonth = F_ACTUAL.getMonth() + monthsToAdd; // Avanzar los meses correspondientes
 
-                // Si pasamos diciembre, ajustar al año siguiente
-                if (targetMonth > 11) {
-                    targetMonth = 0;
+                while (targetMonth > 11) {
+                    targetMonth -= 12;
                     targetYear++;
                 }
 
@@ -4229,6 +4245,113 @@
             document.getElementById('owner-col').style.display = this.value === 'ventas_extras' ? 'block' : 'none';
         });
 
+        // 🎯 GESTOR DE MESES / DURACIÓN EN PRODUCTOS
+        window.lastSelectedMonths = 1;
+
+        window.updateMonthPillUI = function (m) {
+            m = parseInt(m) || 1;
+            [1, 2, 3, 6].forEach(val => {
+                const btn = document.getElementById('pill-m-' + val);
+                if (btn) {
+                    if (val === m) {
+                        btn.style.background = 'linear-gradient(135deg, #00d2d3, #0984e3)';
+                        btn.style.color = '#fff';
+                        btn.style.fontWeight = 'bold';
+                    } else {
+                        btn.style.background = '#34495e';
+                        btn.style.color = '#ccc';
+                        btn.style.fontWeight = 'normal';
+                    }
+                }
+            });
+        };
+
+        window.selectProductMonths = function (m) {
+            const select = document.getElementById('new-months');
+            if (select) {
+                select.value = m;
+                window.onProductMonthsChange(m);
+            }
+        };
+
+        window.onProductMonthsChange = function (m) {
+            m = parseInt(m) || 1;
+            window.updateMonthPillUI(m);
+
+            // 1. Manejo del Nombre del Producto: agregar o actualizar "(X Meses)"
+            const nameInput = document.getElementById('new-name');
+            if (nameInput) {
+                let currentName = nameInput.value.trim();
+                if (currentName) {
+                    let baseName = currentName.replace(/\s*[-–(]?\s*\d+\s*meses?\s*[)]?/gi, '').trim();
+                    if (m > 1) {
+                        nameInput.value = `${baseName} (${m} Meses)`;
+                    } else {
+                        nameInput.value = baseName;
+                    }
+                }
+            }
+
+            // 2. Manejo Inteligente de Precios Proporcionales (si el usuario ya escribió precio de 1 mes)
+            const priceInput = document.getElementById('new-price');
+            const sellerPriceInput = document.getElementById('new-seller-price');
+            const purchasePriceInput = document.getElementById('new-purchase-price');
+
+            if (priceInput && (!priceInput.dataset.basePrice || window.lastSelectedMonths === 1)) {
+                if (priceInput.value) priceInput.dataset.basePrice = priceInput.value;
+            }
+            if (sellerPriceInput && (!sellerPriceInput.dataset.basePrice || window.lastSelectedMonths === 1)) {
+                if (sellerPriceInput.value) sellerPriceInput.dataset.basePrice = sellerPriceInput.value;
+            }
+            if (purchasePriceInput && (!purchasePriceInput.dataset.basePrice || window.lastSelectedMonths === 1)) {
+                if (purchasePriceInput.value) purchasePriceInput.dataset.basePrice = purchasePriceInput.value;
+            }
+
+            if (priceInput && priceInput.dataset.basePrice) {
+                const base = parseInt(priceInput.dataset.basePrice);
+                if (!isNaN(base) && base > 0) priceInput.value = base * m;
+            }
+            if (sellerPriceInput && sellerPriceInput.dataset.basePrice) {
+                const base = parseInt(sellerPriceInput.dataset.basePrice);
+                if (!isNaN(base) && base > 0) sellerPriceInput.value = base * m;
+            }
+            if (purchasePriceInput && purchasePriceInput.dataset.basePrice) {
+                const base = parseInt(purchasePriceInput.dataset.basePrice);
+                if (!isNaN(base) && base > 0) purchasePriceInput.value = base * m;
+            }
+
+            window.lastSelectedMonths = m;
+        };
+
+        // Guardar basePrice cuando el usuario escribe manualmente en modo 1 Mes
+        setTimeout(() => {
+            ['new-price', 'new-seller-price', 'new-purchase-price'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', function () {
+                        const m = parseInt(document.getElementById('new-months') ? document.getElementById('new-months').value : 1) || 1;
+                        if (m === 1) {
+                            this.dataset.basePrice = this.value;
+                        }
+                    });
+                }
+            });
+
+            const nameEl = document.getElementById('new-name');
+            if (nameEl) {
+                nameEl.addEventListener('blur', function () {
+                    const m = parseInt(document.getElementById('new-months') ? document.getElementById('new-months').value : 1) || 1;
+                    if (m > 1 && this.value.trim()) {
+                        const regex = new RegExp(`\\(${m}\\s*Meses\\)`, 'i');
+                        if (!regex.test(this.value)) {
+                            let baseName = this.value.replace(/\s*[-–(]?\s*\d+\s*meses?\s*[)]?/gi, '').trim();
+                            this.value = `${baseName} (${m} Meses)`;
+                        }
+                    }
+                });
+            }
+        }, 500);
+
         function renderAdminList() {
             if (window.renderManualClientProducts) window.renderManualClientProducts();
             populateOwnerSelect();
@@ -4256,6 +4379,7 @@
                     </div>
                     <div>
                         <strong style="color: ${isActive ? 'white' : '#a0a0a0'}">${p.name}</strong> 
+                        ${p.months && p.months > 1 ? `<span style="background:rgba(0, 210, 211, 0.15); color:#00d2d3; border:1px solid #00d2d3; border-radius:10px; padding:1px 7px; font-size:0.75rem; font-weight:bold; margin-left:6px;"><i class="fa-solid fa-calendar-days"></i> ${p.months} Meses</span>` : ''}
                         <br>
                         <span style="font-size: 0.8rem; color: var(--text-primary)">$${p.price.toLocaleString()}</span> - 
                         <span style="font-size: 0.8rem; color: #ccc;">${p.category} | ${p.brand}</span>
@@ -4326,6 +4450,11 @@
             document.getElementById('new-seller-price').value = p.sellerPrice || p.price;
             document.getElementById('new-purchase-price').value = p.purchasePrice || 0;
             document.getElementById('new-category').value = p.category;
+            const m = p.months || 1;
+            if (document.getElementById('new-months')) {
+                document.getElementById('new-months').value = m;
+                if (window.updateMonthPillUI) window.updateMonthPillUI(m);
+            }
             populateOwnerSelect();
             document.getElementById('new-owner').value = p.owner || 'admin';
             document.getElementById('owner-col').style.display = p.category === 'ventas_extras' ? 'block' : 'none';
@@ -4374,6 +4503,14 @@
             document.getElementById('new-image').value = '';
             document.getElementById('new-desc').value = '';
             document.getElementById('new-stock').value = '0';
+            if (document.getElementById('new-months')) {
+                document.getElementById('new-months').value = '1';
+                if (window.updateMonthPillUI) window.updateMonthPillUI(1);
+            }
+            if (document.getElementById('new-price')) delete document.getElementById('new-price').dataset.basePrice;
+            if (document.getElementById('new-seller-price')) delete document.getElementById('new-seller-price').dataset.basePrice;
+            if (document.getElementById('new-purchase-price')) delete document.getElementById('new-purchase-price').dataset.basePrice;
+
             if (document.getElementById('new-allow-exhausted-seller')) {
                 const sel = document.getElementById('new-allow-exhausted-seller');
                 Array.from(sel.options).forEach(opt => opt.selected = false);
@@ -4395,6 +4532,7 @@
             const sellerPrice = parseInt(document.getElementById('new-seller-price').value) || price;
             const purchasePrice = parseInt(document.getElementById('new-purchase-price').value) || 0;
             const category = document.getElementById('new-category').value;
+            const months = parseInt(document.getElementById('new-months') ? document.getElementById('new-months').value : 1) || 1;
             const owner = category === 'ventas_extras' ? document.getElementById('new-owner').value : null;
             const brand = document.getElementById('new-brand').value;
             const desc = document.getElementById('new-desc').value.trim();
@@ -4453,6 +4591,7 @@
                     sellerPrice,
                     purchasePrice,
                     category,
+                    months,
                     owner,
                     brand,
                     desc,
@@ -4468,6 +4607,7 @@
                 dynamicProducts[editIndex].price = price;
                 dynamicProducts[editIndex].sellerPrice = sellerPrice;
                 dynamicProducts[editIndex].category = category;
+                dynamicProducts[editIndex].months = months;
                 dynamicProducts[editIndex].owner = owner || null;
                 dynamicProducts[editIndex].brand = brand;
                 dynamicProducts[editIndex].desc = desc;
@@ -5610,7 +5750,8 @@
                         const s = clientSales[cleanPhone][saleId];
                         const currentExp = parseInt(s.expirationDate) || Date.now();
                         const anchorDate = currentExp;
-                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(currentExp, currentExp).getTime();
+                        const sMonths = s.months || (s.items && s.items[0] && s.items[0].months) || 1;
+                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(currentExp, currentExp, sMonths).getTime();
 
                         finalMsgTS = newExp; // Guarda para el WhatsApp
                         updates[`clientSales/${cleanPhone}/${saleId}/date`] = currentExp;
@@ -5633,7 +5774,8 @@
                         const s = sellerSales[sourceName][saleId];
                         const currentExp = parseInt(s.expirationDate) || Date.now();
                         const anchorDate = currentExp;
-                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(currentExp, currentExp).getTime();
+                        const sMonths = s.months || (s.items && s.items[0] && s.items[0].months) || 1;
+                        const newExp = window.DPCBillingEngine.calcularProximoVencimiento(currentExp, currentExp, sMonths).getTime();
 
                         finalMsgTS = newExp; // Guarda para el WhatsApp
                         updates[`sellerSales/${sourceName}/${saleId}/date`] = currentExp;
