@@ -669,8 +669,10 @@ function renderProducts(category) {
 
         card.innerHTML = `
             ${imgHtml}
-            <span class="brand-badge">${product.brand}</span>
-            ${product.months && product.months > 1 ? `<span style="background: rgba(0, 210, 211, 0.2); color: #00d2d3; border: 1px solid #00d2d3; border-radius: 12px; padding: 2px 8px; font-size: 0.72rem; font-weight: bold; margin-left: 0.35rem;"><i class="fa-solid fa-calendar-days"></i> ${product.months} Meses</span>` : ''}
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem;">
+                ${product.brand ? `<span class="brand-badge" style="margin-bottom: 0;">${product.brand}</span>` : ''}
+                ${product.months && product.months > 1 ? `<span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(0, 210, 211, 0.15); color: #00d2d3; border: 1px solid #00d2d3; border-radius: 20px; padding: 3px 10px; font-size: 0.72rem; font-weight: bold;"><i class="fa-solid fa-calendar-days"></i> ${product.months} Meses</span>` : ''}
+            </div>
             <h3 class="product-title">${product.name}</h3>
             <p class="product-desc" style="margin-bottom: 0.5rem">${product.desc || 'Pantalla original premium con garantía.'}</p>
             ${isSellerMode ? `<div style="color: #00d2d3; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.4rem;"><i class="fa-solid fa-tag"></i> Sugerido al Cliente: $${product.price.toLocaleString()}</div>` : ''}
