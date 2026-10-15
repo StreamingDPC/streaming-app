@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.29 (Marketing Actualización En Vivo)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.30 (Marketing Persistencia & AutoResponder)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -1408,15 +1408,26 @@
                             <label id="mkt-main-text-label" style="font-weight:bold; color:white; font-size:0.9rem;">
                                 <i class="fa-solid fa-envelope-open-text"></i> Mensaje Promocional Completo (Texto de la oferta):
                             </label>
-                            <!-- Chips para insertar variables -->
+                            <!-- Chips para insertar variables y botón copiar -->
                             <div style="display:flex; gap:6px; flex-wrap:wrap;">
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{cliente}')">+ {cliente}</button>
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{pantallas}')">+ {pantallas}</button>
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{telefono}')">+ {telefono}</button>
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{Hola|Buenas|Hola qué tal}')" title="Variación aleatoria de saludos">+ Spintax {Hola|Buenas}</button>
+                                <button type="button" class="mkt-chip" onclick="copyMktPromoForAutoResponder()" style="background:rgba(46,204,113,0.18); border-color:#2ecc71; color:#2ecc71; font-weight:bold;" title="Copiar este texto con las fotos para pegarlo en tu app AutoResponder de Android o en Respuestas Rápidas de WhatsApp"><i class="fa-solid fa-copy"></i> Copiar para AutoResponder</button>
                             </div>
                         </div>
                         <textarea id="mkt-promo-text" rows="5" style="width:100%; border-radius:10px; padding:12px; background:rgba(0,0,0,0.6); color:white; border:1px solid var(--glass-border); font-size:0.92rem; line-height:1.4;" placeholder="Ej: ¡Hola {cliente}! 🎉 Mira estas súper promociones en pantallas originales:\n\n🔥 Netflix 1 Pantalla: $16.000 (¡Promo 3 Meses x $42.000!)\n🎬 Max Premium 4K: $12.000\n🍿 Disney+ Premium: $14.000\n\n📌 Cuentas estables con garantía total.\n¿Cuál deseas activar hoy?"></textarea>
+                        
+                        <!-- Guía explicativa para Modo Auto-Respuesta -->
+                        <div id="mkt-autoresponder-tip" style="margin-top:8px; background:rgba(46, 204, 113, 0.08); border:1px solid rgba(46, 204, 113, 0.25); border-radius:10px; padding:10px 14px; font-size:0.8rem; color:#eee;">
+                            <strong style="color:#2ecc71;"><i class="fa-solid fa-circle-info"></i> ¿Cómo funciona la respuesta automática al recibir 'SÍ' o '1'?</strong><br>
+                            El panel de control envía el mensaje inicial por WhatsApp. Para que WhatsApp le entregue esta lista de combos y fotos <strong>automáticamente cuando el cliente responda 'SÍ' o '1'</strong>, tienes 2 opciones sencillas:<br>
+                            <div style="margin:4px 0 0 0; padding-left:8px; line-height:1.5;">
+                                📱 <strong>1. Con AutoResponder (App Android en tu celular):</strong> Pulsa el botón verde <em>"Copiar para AutoResponder"</em> y crea una regla en la app con disparador: <code>Si, 1, sí</code>. Tu celular responderá solo en 1 segundo con los combos y fotos.<br>
+                                ⚡ <strong>2. Sin apps extras ("Modo Promoción Directa"):</strong> Si no quieres configurar nada en tu celular y prefieres que el cliente reciba los combos y las fotos de una vez en el primer envío, selecciona arriba la opción <strong>"Modo Promoción Directa"</strong>.
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Múltiples Fotos / Galería -->
@@ -1432,7 +1443,7 @@
                                 </button>
                             </div>
                         </div>
-                        <input type="text" id="mkt-photo-urls-input" placeholder="O pega URLs de imágenes separadas por coma (Ej: https://i.ibb.co/foto1.jpg, https://...)" onchange="syncMktPhotoUrls()" style="width:100%; margin-bottom:8px; padding:10px; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white; font-size:0.85rem;">
+                        <input type="text" id="mkt-photo-urls-input" placeholder="O pega URLs de imágenes separadas por coma (Ej: https://i.ibb.co/foto1.jpg, https://...)" oninput="syncMktPhotoUrls()" style="width:100%; margin-bottom:8px; padding:10px; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white; font-size:0.85rem;">
                         
                         <!-- Galería de miniaturas -->
                         <div id="mkt-photos-preview-gallery" style="display:flex; gap:10px; flex-wrap:wrap; min-height:40px; align-items:center;">
@@ -9058,13 +9069,39 @@
             const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
             const hookContainer = document.getElementById('mkt-hook-container');
             const mainLabel = document.getElementById('mkt-main-text-label');
+            const tipBox = document.getElementById('mkt-autoresponder-tip');
 
             if (mode === 'interactive') {
                 if (hookContainer) hookContainer.style.display = 'block';
+                if (tipBox) tipBox.style.display = 'block';
                 if (mainLabel) mainLabel.innerHTML = '<i class="fa-solid fa-envelope-open-text"></i> Mensaje de Entrega / Auto-Respuesta (Al responder el cliente):';
             } else {
                 if (hookContainer) hookContainer.style.display = 'none';
+                if (tipBox) tipBox.style.display = 'none';
                 if (mainLabel) mainLabel.innerHTML = '<i class="fa-solid fa-envelope-open-text"></i> Mensaje Promocional Directo (Texto Completo):';
+            }
+        };
+
+        window.copyMktPromoForAutoResponder = function () {
+            syncMktPhotoUrls();
+            let text = (document.getElementById('mkt-promo-text')?.value || '').trim();
+            if (_mktState.photos.length > 0) {
+                text += "\n\n📸 *FOTOS DE LA PROMOCIÓN:*";
+                _mktState.photos.forEach((url, i) => {
+                    text += `\n🔗 Foto ${i + 1}: ${url}`;
+                });
+            }
+            if (!text) {
+                return alert('⚠️ No hay texto de promoción para copiar.');
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('📋 ¡Texto de la promoción y enlaces de fotos copiados al portapapeles!\n\n👉 Pégalo en tu app AutoResponder (Android) con la regla para responder a: Si, 1, sí\n👉 O en WhatsApp Business en Respuestas Rápidas (/promo).');
+                }).catch(() => {
+                    prompt('Copia el texto para tu AutoResponder:', text);
+                });
+            } else {
+                prompt('Copia el texto para tu AutoResponder:', text);
             }
         };
 
@@ -9107,16 +9144,20 @@
             if (!input) return;
 
             const urls = input.value.split(/[,\n]/).map(u => u.trim()).filter(u => u.startsWith('http://') || u.startsWith('https://'));
+            const uploadedBase64 = _mktState.photos.filter(p => p.startsWith('data:image'));
+            const combined = [...uploadedBase64];
             urls.forEach(u => {
-                if (!_mktState.photos.includes(u)) {
-                    _mktState.photos.push(u);
-                }
+                if (!combined.includes(u)) combined.push(u);
             });
+            _mktState.photos = combined;
             renderMktPhotosPreview();
         };
 
         window.removeMktPhoto = function (index) {
             _mktState.photos.splice(index, 1);
+            const remainingUrls = _mktState.photos.filter(p => p.startsWith('http'));
+            const input = document.getElementById('mkt-photo-urls-input');
+            if (input) input.value = remainingUrls.join(', ');
             renderMktPhotosPreview();
         };
 
@@ -9143,6 +9184,8 @@
         }
 
         window.saveMarketingSettings = function () {
+            syncMktPhotoUrls();
+
             const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
             const hookText = document.getElementById('mkt-hook-text')?.value || '';
             const promoText = document.getElementById('mkt-promo-text')?.value || '';
@@ -9151,6 +9194,7 @@
             const delaySeconds = parseInt(document.getElementById('mkt-delay-seconds')?.value) || 15;
             const randomJitter = document.getElementById('mkt-random-jitter')?.checked ?? true;
             const dailyLimit = parseInt(document.getElementById('mkt-daily-limit')?.value) || 40;
+            const rawPhotoUrlsText = document.getElementById('mkt-photo-urls-input')?.value || '';
 
             const settings = {
                 mode,
@@ -9161,16 +9205,35 @@
                 delaySeconds,
                 randomJitter,
                 dailyLimit,
-                photoUrls: _mktState.photos.filter(p => p.startsWith('http'))
+                photoUrls: _mktState.photos.filter(p => p.startsWith('http')),
+                rawPhotoUrlsText
             };
 
+            // 1. Guardar en localStorage
             localStorage.setItem('streaming_dpc_mkt_config', JSON.stringify(settings));
-            alert('✅ Plantilla y configuración de Marketing guardadas correctamente.');
+
+            // 2. Guardar en Firebase para persistencia permanente en la nube
+            if (typeof db !== 'undefined' && db.ref) {
+                db.ref('storeConfig/marketingSettings').set(settings).then(() => {
+                    console.log('Marketing settings saved to Firebase.');
+                }).catch(err => {
+                    console.warn('Error saving marketingSettings to Firebase:', err);
+                });
+            }
+
+            alert('✅ Plantilla, enlaces de fotos y configuración guardadas correctamente.');
         };
 
         window.loadMarketingSettings = function () {
             try {
-                const saved = localStorage.getItem('streaming_dpc_mkt_config');
+                let saved = null;
+                if (storeConfig && storeConfig.marketingSettings) {
+                    saved = storeConfig.marketingSettings;
+                } else {
+                    const localRaw = localStorage.getItem('streaming_dpc_mkt_config');
+                    if (localRaw) saved = JSON.parse(localRaw);
+                }
+
                 if (!saved) {
                     // Valores iniciales recomendados
                     if (document.getElementById('mkt-hook-text')) {
@@ -9182,7 +9245,7 @@
                     return;
                 }
 
-                const s = JSON.parse(saved);
+                const s = saved;
                 if (s.mode) {
                     const r = document.querySelector(`input[name="mkt-send-mode"][value="${s.mode}"]`);
                     if (r) r.checked = true;
@@ -9212,6 +9275,10 @@
                 if (Array.isArray(s.photoUrls)) {
                     _mktState.photos = [...s.photoUrls];
                     renderMktPhotosPreview();
+                }
+                const photoInput = document.getElementById('mkt-photo-urls-input');
+                if (photoInput) {
+                    photoInput.value = s.rawPhotoUrlsText || (Array.isArray(s.photoUrls) ? s.photoUrls.join(', ') : '');
                 }
             } catch (err) {
                 console.warn('Error loading marketing settings:', err);
