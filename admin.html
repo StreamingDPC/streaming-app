@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.31 (Control Detener y Cierre Campaña)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.32 (Bloqueo Anti Doble Envío Mismo Día)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -1294,8 +1294,11 @@
                         <h3 style="margin:0; font-size:1.1rem; color:white; display:flex; align-items:center; gap:8px;">
                             <i class="fa-solid fa-users-viewfinder" style="color:#00d2d3;"></i> 1. Segmentación de Clientes
                         </h3>
-                        <div style="font-size:0.85rem; color:#ccc;">
-                            Seleccionados: <strong id="mkt-selected-count" style="color:#00d2d3; font-size:1rem;">0</strong> de <span id="mkt-total-filtered">0</span>
+                        <div style="font-size:0.85rem; color:#ccc; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <span>Seleccionados: <strong id="mkt-selected-count" style="color:#00d2d3; font-size:1rem;">0</strong> de <span id="mkt-total-filtered">0</span></span>
+                            <span id="mkt-already-sent-today-badge" style="display:none; font-size:0.78rem; color:#f1c40f; background:rgba(241,196,15,0.15); border:1px solid rgba(241,196,15,0.3); padding:2px 8px; border-radius:10px; font-weight:bold;">
+                                <i class="fa-solid fa-envelope-circle-check"></i> <span id="mkt-already-sent-today-count">0</span> ya enviados hoy
+                            </span>
                         </div>
                     </div>
 
@@ -8665,10 +8668,50 @@
             });
         }
 
-        // Obtener la fecha de hoy para el contador diario YYYY-MM-DD
-        function getMktTodayDateKey() {
+        // Obtener la fecha de hoy en formato local YYYY-MM-DD
+        function getMktTodayDateString() {
             const d = new Date();
-            return `mkt_daily_sent_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // Claves de almacenamiento diario en localStorage
+        function getMktTodayDateKey() {
+            return `mkt_daily_sent_${getMktTodayDateString()}`;
+        }
+
+        function getMktTodaySentPhonesKey() {
+            return `mkt_sent_phones_${getMktTodayDateString()}`;
+        }
+
+        function getMktTodaySentPhones() {
+            try {
+                const raw = localStorage.getItem(getMktTodaySentPhonesKey());
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function isPhoneSentToday(phone) {
+            if (!phone) return false;
+            const sentMap = getMktTodaySentPhones();
+            return !!sentMap[phone];
+        }
+
+        function markPhoneSentToday(phone, name) {
+            if (!phone) return;
+            try {
+                const key = getMktTodaySentPhonesKey();
+                const data = getMktTodaySentPhones();
+                data[phone] = {
+                    sentAt: Date.now(),
+                    timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    name: name || ''
+                };
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Error saving sent phone:', e);
+            }
         }
 
         function getSentTodayCount() {
@@ -8685,10 +8728,12 @@
         }
 
         window.resetDailyMktCounter = function () {
-            if (confirm('¿Deseas reiniciar el contador de envíos realizados hoy a 0?')) {
+            if (confirm('¿Deseas reiniciar el contador de envíos y el registro de clientes enviados hoy a 0?\n\nEsto reactivará nuevamente las casillas de selección para hoy.')) {
                 const key = getMktTodayDateKey();
                 localStorage.setItem(key, 0);
+                localStorage.removeItem(getMktTodaySentPhonesKey());
                 updateMktDailyLimitDisplay();
+                renderMarketingAudienceList();
             }
         };
 
@@ -8945,10 +8990,15 @@
                 filtered = currentOriginAudience;
             }
 
-            // Si no mantenemos selección previa, seleccionamos todos por defecto
+            // Si no mantenemos selección previa, seleccionamos todos por defecto (excepto los ya enviados hoy)
             if (!keepSelection) {
                 _mktState.selectedPhones.clear();
-                filtered.forEach(c => _mktState.selectedPhones.add(c.phone));
+                const sentTodayMap = getMktTodaySentPhones();
+                filtered.forEach(c => {
+                    if (!sentTodayMap[c.phone]) {
+                        _mktState.selectedPhones.add(c.phone);
+                    }
+                });
             }
 
             renderMarketingAudienceList();
@@ -8975,9 +9025,30 @@
                 filtered = filtered.filter(c => c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm) || (c.sellerName && c.sellerName.toLowerCase().includes(searchTerm)));
             }
 
+            const sentTodayMap = getMktTodaySentPhones();
+            const sentTodayCountInList = filtered.filter(c => sentTodayMap[c.phone]).length;
+
             const totalFilteredEl = document.getElementById('mkt-total-filtered');
             const selectedCountEl = document.getElementById('mkt-selected-count');
             const btnCountEl = document.getElementById('mkt-btn-count');
+            const alreadySentBadge = document.getElementById('mkt-already-sent-today-badge');
+            const alreadySentCountEl = document.getElementById('mkt-already-sent-today-count');
+
+            if (alreadySentBadge && alreadySentCountEl) {
+                if (sentTodayCountInList > 0) {
+                    alreadySentCountEl.innerText = sentTodayCountInList;
+                    alreadySentBadge.style.display = 'inline-flex';
+                } else {
+                    alreadySentBadge.style.display = 'none';
+                }
+            }
+
+            // Asegurar que ningún cliente ya enviado hoy quede en selectedPhones
+            filtered.forEach(c => {
+                if (sentTodayMap[c.phone] && _mktState.selectedPhones.has(c.phone)) {
+                    _mktState.selectedPhones.delete(c.phone);
+                }
+            });
 
             if (totalFilteredEl) totalFilteredEl.innerText = filtered.length;
             if (selectedCountEl) selectedCountEl.innerText = _mktState.selectedPhones.size;
@@ -8990,17 +9061,31 @@
 
             listDiv.innerHTML = '';
             filtered.forEach(c => {
-                const isSelected = _mktState.selectedPhones.has(c.phone);
+                const isSentToday = !!sentTodayMap[c.phone];
+                const isSelected = !isSentToday && _mktState.selectedPhones.has(c.phone);
+
                 const item = document.createElement('div');
                 item.style.display = 'flex';
                 item.style.alignItems = 'center';
                 item.style.justifyContent = 'space-between';
                 item.style.padding = '8px 12px';
-                item.style.background = isSelected ? 'rgba(0, 210, 211, 0.08)' : 'rgba(255, 255, 255, 0.02)';
-                item.style.border = isSelected ? '1px solid rgba(0, 210, 211, 0.4)' : '1px solid rgba(255, 255, 255, 0.05)';
                 item.style.borderRadius = '8px';
                 item.style.gap = '10px';
                 item.style.transition = 'all 0.2s ease';
+
+                if (isSentToday) {
+                    item.style.background = 'rgba(255, 255, 255, 0.015)';
+                    item.style.border = '1px solid rgba(255, 255, 255, 0.04)';
+                    item.style.opacity = '0.72';
+                } else if (isSelected) {
+                    item.style.background = 'rgba(0, 210, 211, 0.08)';
+                    item.style.border = '1px solid rgba(0, 210, 211, 0.4)';
+                    item.style.opacity = '1';
+                } else {
+                    item.style.background = 'rgba(255, 255, 255, 0.02)';
+                    item.style.border = '1px solid rgba(255, 255, 255, 0.05)';
+                    item.style.opacity = '1';
+                }
 
                 let originBadge = '';
                 if (c.isSellerClient) {
@@ -9020,15 +9105,30 @@
                     statusBadge = `<span style="font-size:0.75rem; color:#2ab7ca; background:rgba(42, 183, 202, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-user-plus"></i> Prospecto (Sin compras)</span>`;
                 }
 
+                let sentTodayBadge = '';
+                if (isSentToday) {
+                    const sentInfo = sentTodayMap[c.phone] || {};
+                    const timeLabel = sentInfo.timeStr ? ` ${sentInfo.timeStr}` : '';
+                    sentTodayBadge = `<span style="font-size:0.75rem; color:#f1c40f; background:rgba(241, 196, 15, 0.15); border:1px solid rgba(241, 196, 15, 0.35); padding:2px 8px; border-radius:10px; font-weight:bold;" title="Ya se le envió mensaje hoy${timeLabel ? ' a las ' + timeLabel : ''}. Se reactivará mañana para evitar spam y bloqueos."><i class="fa-solid fa-envelope-circle-check"></i> 📨 Enviado hoy${timeLabel}</span>`;
+                }
+
+                const checkboxHtml = isSentToday
+                    ? `<input type="checkbox" disabled style="width:18px; height:18px; cursor:not-allowed; opacity:0.35;" title="Ya se le envió hoy. Se reactivará mañana automáticamente.">`
+                    : `<input type="checkbox" ${isSelected ? 'checked' : ''} onchange="onMarketingClientCheckboxChange('${c.phone}', this.checked)" style="width:18px; height:18px; accent-color:#00d2d3; cursor:pointer;">`;
+
+                const labelCursor = isSentToday ? 'cursor:not-allowed;' : 'cursor:pointer;';
+                const nameStyle = isSentToday ? 'color:#888;' : 'color:white;';
+
                 item.innerHTML = `
-                    <label style="display:flex; align-items:center; gap:10px; margin:0; cursor:pointer; flex:1;">
-                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="onMarketingClientCheckboxChange('${c.phone}', this.checked)" style="width:18px; height:18px; accent-color:#00d2d3; cursor:pointer;">
+                    <label style="display:flex; align-items:center; gap:10px; margin:0; ${labelCursor} flex:1;" ${isSentToday ? 'title="Ya se le envió hoy. Se reactivará mañana automáticamente."' : ''}>
+                        ${checkboxHtml}
                         <div>
-                            <strong style="color:white; font-size:0.9rem;">${c.name}</strong>
-                            <span style="font-size:0.8rem; color:#aaa; margin-left:8px;">📱 +${c.phone}</span>
+                            <strong style="${nameStyle} font-size:0.9rem;">${c.name}</strong>
+                            <span style="font-size:0.8rem; color:#777; margin-left:8px;">📱 +${c.phone}</span>
                         </div>
                     </label>
                     <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        ${sentTodayBadge}
                         ${originBadge}
                         ${statusBadge}
                     </div>
@@ -9038,6 +9138,11 @@
         };
 
         window.onMarketingClientCheckboxChange = function (phone, isChecked) {
+            if (isPhoneSentToday(phone)) {
+                _mktState.selectedPhones.delete(phone);
+                renderMarketingAudienceList();
+                return;
+            }
             if (isChecked) {
                 _mktState.selectedPhones.add(phone);
             } else {
@@ -9053,6 +9158,7 @@
             const searchTerm = (document.getElementById('mkt-filter-search')?.value || '').toLowerCase().trim();
             const segment = _mktState.currentSegment;
             const currentOriginAudience = getAudienceFilteredByOrigin();
+            const sentTodayMap = getMktTodaySentPhones();
 
             let filtered = [];
             if (segment === 'active') {
@@ -9068,6 +9174,11 @@
             }
 
             filtered.forEach(c => {
+                if (sentTodayMap[c.phone]) {
+                    // Si ya fue enviado hoy, jamás se selecciona
+                    _mktState.selectedPhones.delete(c.phone);
+                    return;
+                }
                 if (shouldSelectAll) _mktState.selectedPhones.add(c.phone);
                 else _mktState.selectedPhones.delete(c.phone);
             });
@@ -9326,9 +9437,14 @@
                 }
             }
 
-            // Construir la cola de clientes a enviar (respetando la selección y el filtro de origen)
+            // Construir la cola de clientes a enviar (respetando la selección, filtro de origen y sin duplicados de hoy)
             const currentOriginAudience = getAudienceFilteredByOrigin();
-            const targetList = currentOriginAudience.filter(c => _mktState.selectedPhones.has(c.phone));
+            const sentTodayMap = getMktTodaySentPhones();
+            const targetList = currentOriginAudience.filter(c => _mktState.selectedPhones.has(c.phone) && !sentTodayMap[c.phone]);
+
+            if (targetList.length === 0) {
+                return alert('⚠️ No hay clientes disponibles para enviar.\n\nTodos los seleccionados ya recibieron mensaje hoy o no seleccionaste ninguno.');
+            }
             _mktState.campaignQueue = targetList;
             _mktState.currentIndex = 0;
             _mktState.currentBatchCount = 0;
@@ -9480,14 +9596,18 @@
                 window.openWhatsapp(waPhone, personalizedText);
             }
 
-            // Incrementar contadores
+            // Incrementar contadores y registrar cliente enviado hoy
             incrementSentTodayCount();
+            markPhoneSentToday(target.phone, target.name);
+            _mktState.selectedPhones.delete(target.phone);
+
             _mktState.currentIndex++;
             _mktState.currentBatchCount++;
             _mktState.sentCountSession++;
 
             addMktLog(`✅ Enviado a: ${target.name} (+${target.phone})`, true);
             updateMarketingProgressUI();
+            renderMarketingAudienceList();
 
             // Si quedan más mensajes, calcular tiempo de espera y arrancar cuenta regresiva
             if (_mktState.currentIndex < _mktState.campaignQueue.length) {
