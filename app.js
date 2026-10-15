@@ -3820,7 +3820,7 @@ function setupEventListeners() {
     }
 
     // Checkout
-    checkoutBtn.addEventListener('click', () => {
+    checkoutBtn.addEventListener('click', async () => {
         const policyCheck = document.getElementById('accept-billing-policy');
         if (policyCheck && !policyCheck.checked) {
             alert('Debe aceptar la Política de Fechas de Corte Fijas para continuar con su pedido.');
