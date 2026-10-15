@@ -231,6 +231,15 @@
             color: #4cd137;
         }
 
+        .btn-duplicate {
+            color: #00d2d3;
+        }
+
+        .btn-duplicate:hover {
+            background: #00d2d3 !important;
+            color: black !important;
+        }
+
         .btn-toggle {
             color: #f39c12;
         }
@@ -286,7 +295,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#4cd137;">v3.9.24 (Métodos de Pago)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.25 (Duplicar Productos)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -4420,7 +4429,7 @@
                         <button class="btn-icon btn-toggle" style="color: ${inStock ? '#4cd137' : '#ff4d4d'}" onclick="toggleStock(${index})" title="${inStock ? 'Marcar Agotado' : 'Marcar Disponible'}">
                             <i class="fa-solid ${inStock ? 'fa-box-open' : 'fa-box'}"></i>
                         </button>
-                        <button class="btn-icon" style="color: #00d2d3;" onclick="duplicateProduct(${index})" title="Duplicar Producto (Copiar datos)">
+                        <button class="btn-icon btn-duplicate" onclick="duplicateProduct(${index})" title="Duplicar Producto (Copiar datos)">
                             <i class="fa-solid fa-copy"></i>
                         </button>
                         <button class="btn-icon btn-edit" onclick="editProduct(${index})" title="Editar">
