@@ -38,27 +38,47 @@
 
         .admin-tabs {
             display: flex;
-            gap: 1rem;
+            flex-direction: column;
+            gap: 0.6rem;
             margin-bottom: 2rem;
             border-bottom: 1px solid var(--glass-border);
             padding-bottom: 1rem;
         }
 
+        .admin-tabs-row {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
         .admin-tab {
-            background: none;
-            border: none;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.95rem;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             font-weight: 600;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            border-radius: 10px;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .admin-tab:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
         }
 
         .admin-tab.active {
-            background: var(--text-primary);
-            color: var(--bg-dark);
+            background: white !important;
+            color: #0f1016 !important;
+            border-color: white !important;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
         }
 
         .tab-content {
@@ -276,21 +296,25 @@
         </div>
 
         <div class="admin-tabs">
-            <button class="admin-tab active" onclick="switchTab('productos', this)">📦 Productos</button>
-            <button class="admin-tab" onclick="switchTab('estrenos', this)">🎬 Estrenos</button>
-            <button class="admin-tab" onclick="switchTab('banners', this)">🖼️ Banners</button>
-            <button class="admin-tab" onclick="switchTab('vendedores', this)">👔 Vendedores</button>
-            <button class="admin-tab" onclick="switchTab('clientes', this)">👥 Clientes</button>
-            <button class="admin-tab" onclick="switchTab('ventas', this)">📈 Ventas</button>
-            <button class="admin-tab" onclick="switchTab('historial', this); renderGlobalHistory();"
-                style="border: 1px solid rgba(255, 77, 77, 0.4);"><i class="fa-solid fa-clock-rotate-left"
-                    style="color:#ff4d4d;"></i> Historial</button>
-            <button class="admin-tab" onclick="switchTab('stats', this); renderStats();">📊 Estadísticas</button>
-            <button class="admin-tab" onclick="switchTab('crm', this)">💬 Respuestas CRM</button>
-            <button class="admin-tab" onclick="switchTab('polla', this)"
-                style="border: 1px solid rgba(76, 209, 55, 0.4);"><i class="fa-solid fa-trophy"
-                    style="color: #4cd137;"></i> Polla</button>
-            <button class="admin-tab" onclick="switchTab('configuracion', this)">⚙️ Configuración</button>
+            <div class="admin-tabs-row">
+                <button class="admin-tab active" data-tab="productos" onclick="switchTab('productos', this)">📦 Productos</button>
+                <button class="admin-tab" data-tab="estrenos" onclick="switchTab('estrenos', this)">🎬 Estrenos</button>
+                <button class="admin-tab" data-tab="banners" onclick="switchTab('banners', this)">🖼️ Banners</button>
+                <button class="admin-tab" data-tab="vendedores" onclick="switchTab('vendedores', this)">👔 Vendedores</button>
+                <button class="admin-tab" data-tab="clientes" onclick="switchTab('clientes', this)">👥 Clientes</button>
+                <button class="admin-tab" data-tab="ventas" onclick="switchTab('ventas', this)">📈 Ventas</button>
+            </div>
+            <div class="admin-tabs-row">
+                <button class="admin-tab" data-tab="historial" onclick="switchTab('historial', this); renderGlobalHistory();"
+                    style="border: 1px solid rgba(255, 77, 77, 0.4);"><i class="fa-solid fa-clock-rotate-left"
+                        style="color:#ff4d4d;"></i> Historial</button>
+                <button class="admin-tab" data-tab="stats" onclick="switchTab('stats', this); renderStats();">📊 Estadísticas</button>
+                <button class="admin-tab" id="tab-btn-crm" data-tab="crm" onclick="switchTab('crm', this)">💬 Respuestas CRM</button>
+                <button class="admin-tab" data-tab="polla" onclick="switchTab('polla', this)"
+                    style="border: 1px solid rgba(76, 209, 55, 0.4);"><i class="fa-solid fa-trophy"
+                        style="color: #4cd137;"></i> Polla</button>
+                <button class="admin-tab" data-tab="configuracion" onclick="switchTab('configuracion', this)">⚙️ Configuración</button>
+            </div>
         </div>
 
         <!-- TAB PRODUCTOS -->
@@ -1174,7 +1198,7 @@
                         style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Accesos
                         / Seguridad</button>
                     <button class="save-btn sub-conf-btn" id="btn-conf-mensajes"
-                        onclick="switchTab('crm', document.querySelector('.admin-tab:nth-child(7)'))"
+                        onclick="switchTab('crm')"
                         style="margin:0; width:auto; border-radius:8px; padding: 10px 15px; background:var(--glass); color:var(--text-secondary);">Mensajes
                         / CRM</button>
                     <button class="save-btn sub-conf-btn" id="btn-conf-emails" onclick="showSubConf('emails', this)"
@@ -1281,7 +1305,7 @@
                 <div id="sub-conf-mensajes" class="sub-conf-content" style="display:none;">
                     <h3><i class="fa-solid fa-comment-dots"></i> Configuración Mensajes / CRM</h3>
                     <button class="save-btn"
-                        onclick="switchTab('crm', document.querySelector('.admin-tab:nth-child(7)'))">Ir a la nueva
+                        onclick="switchTab('crm')">Ir a la nueva
                         pestaña CRM</button>
                 </div>
 
@@ -3947,8 +3971,11 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
 
-            document.getElementById('tab-' + tabId).classList.add('active');
-            btn.classList.add('active');
+            const tabEl = document.getElementById('tab-' + tabId);
+            if (tabEl) tabEl.classList.add('active');
+
+            const targetBtn = btn || document.querySelector(`.admin-tab[data-tab="${tabId}"]`);
+            if (targetBtn) targetBtn.classList.add('active');
         }
 
         function showSubConf(subId, btn) {
