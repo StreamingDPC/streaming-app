@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.30 (Marketing Persistencia & AutoResponder)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.31 (Control Detener y Cierre Campaña)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -1510,10 +1510,13 @@
 
                     <!-- Panel de Ejecución Activa (oculto por defecto) -->
                     <div id="mkt-execution-panel" style="display:none; margin-top:1.5rem; border-top:1px solid var(--glass-border); padding-top:1.2rem;">
-                        <!-- Barra de progreso -->
-                        <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:bold; margin-bottom:6px;">
-                            <span id="mkt-progress-status-text" style="color:#00d2d3;">🚀 Campaña en progreso...</span>
-                            <span id="mkt-progress-percentage" style="color:white;">0%</span>
+                        <!-- Barra de progreso y botón de cerrar -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span id="mkt-progress-status-text" style="color:#00d2d3; font-size:1rem; font-weight:bold;">🚀 Campaña en progreso...</span>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span id="mkt-progress-percentage" style="color:white; font-size:1rem; font-weight:bold;">0%</span>
+                                <button type="button" onclick="closeMarketingExecutionPanel()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; width:30px; height:30px; border-radius:50%; cursor:pointer; font-weight:bold; font-size:1rem; display:flex; align-items:center; justify-content:center; transition:all 0.2s;" title="Cerrar panel de envíos">✕</button>
+                            </div>
                         </div>
                         <div style="width:100%; height:14px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; margin-bottom:1rem; position:relative;">
                             <div id="mkt-progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #00d2d3, #4cd137); transition:width 0.3s ease; box-shadow:0 0 10px rgba(0,210,211,0.5);"></div>
@@ -1552,16 +1555,23 @@
                             </button>
                         </div>
 
-                        <!-- Botones de Control de la Campaña -->
-                        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+                        <!-- Botones de Control de la Campaña (mientras corre) -->
+                        <div id="mkt-controls-running" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
                             <button id="btn-mkt-pause" type="button" class="save-btn" onclick="togglePauseMarketingCampaign()" style="margin:0; width:auto; padding:10px 20px; background:#f39c12; color:black; font-weight:bold; border-radius:8px;">
                                 <i class="fa-solid fa-pause"></i> Pausar
                             </button>
                             <button id="btn-mkt-skip-delay" type="button" class="save-btn" onclick="skipMarketingDelay()" style="margin:0; width:auto; padding:10px 20px; background:#2e86de; color:white; font-weight:bold; border-radius:8px;">
                                 <i class="fa-solid fa-forward-step"></i> Enviar Siguiente Inmediatamente
                             </button>
-                            <button type="button" class="save-btn" onclick="stopMarketingCampaign()" style="margin:0; width:auto; padding:10px 20px; background:#ff4d4d; color:white; font-weight:bold; border-radius:8px;">
+                            <button id="btn-mkt-stop" type="button" class="save-btn" onclick="stopMarketingCampaign()" style="margin:0; width:auto; padding:10px 20px; background:#ff4d4d; color:white; font-weight:bold; border-radius:8px;">
                                 <i class="fa-solid fa-stop"></i> Detener Campaña
+                            </button>
+                        </div>
+
+                        <!-- Botón de Terminado / Cerrar (visible al finalizar o detener) -->
+                        <div id="mkt-controls-finished" style="display:none; text-align:center;">
+                            <button type="button" class="save-btn" onclick="closeMarketingExecutionPanel()" style="margin:0 auto; width:auto; padding:12px 32px; background:linear-gradient(135deg, #4cd137, #00d2d3); color:#111; font-weight:bold; font-size:1.05rem; border-radius:10px; box-shadow:0 4px 15px rgba(76, 209, 55, 0.4); cursor:pointer;">
+                                <i class="fa-solid fa-circle-check"></i> ✅ Terminado (Cerrar Pantalla)
                             </button>
                         </div>
 
@@ -9334,6 +9344,15 @@
                 execPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
 
+            const runningCtrl = document.getElementById('mkt-controls-running');
+            const finishedCtrl = document.getElementById('mkt-controls-finished');
+            if (runningCtrl) runningCtrl.style.display = 'flex';
+            if (finishedCtrl) finishedCtrl.style.display = 'none';
+            const alertBox = document.getElementById('mkt-batch-alert');
+            if (alertBox) alertBox.style.display = 'none';
+            const statusText = document.getElementById('mkt-progress-status-text');
+            if (statusText) statusText.innerHTML = '🚀 Campaña en progreso...';
+
             const logsDiv = document.getElementById('mkt-live-logs');
             if (logsDiv) logsDiv.innerHTML = '';
             addMktLog(`🚀 Campaña iniciada con ${_mktState.campaignQueue.length} destinatarios. Modo: ${mode.toUpperCase()}.`);
@@ -9385,10 +9404,22 @@
             // Verificar si terminó la cola
             if (_mktState.currentIndex >= _mktState.campaignQueue.length) {
                 _mktState.isRunning = false;
-                addMktLog(`🎉 ¡Campaña completada exitosamente! Se despacharon ${_mktState.currentIndex} mensajes.`, true);
-                alert(`🎉 ¡Campaña de difusión finalizada con éxito!\n\nSe enviaron ${_mktState.currentIndex} promociones.`);
+                _mktState.isPaused = false;
+                _mktState.isBatchPaused = false;
+                if (_mktState.timerId) clearTimeout(_mktState.timerId);
+                if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+
                 const statusText = document.getElementById('mkt-progress-status-text');
-                if (statusText) statusText.innerText = '✅ Campaña Finalizada';
+                if (statusText) statusText.innerHTML = '<span style="color:#4cd137;"><i class="fa-solid fa-circle-check"></i> ✅ ¡Campaña Finalizada con Éxito!</span>';
+                const cdEl = document.getElementById('mkt-live-countdown');
+                if (cdEl) cdEl.innerText = '--';
+
+                const runningCtrl = document.getElementById('mkt-controls-running');
+                const finishedCtrl = document.getElementById('mkt-controls-finished');
+                if (runningCtrl) runningCtrl.style.display = 'none';
+                if (finishedCtrl) finishedCtrl.style.display = 'block';
+
+                addMktLog(`🎉 ¡Campaña completada exitosamente! Se despacharon ${_mktState.currentIndex} mensajes.`, true);
                 return;
             }
 
@@ -9473,6 +9504,21 @@
             } else {
                 updateMarketingProgressUI();
                 _mktState.isRunning = false;
+                _mktState.isPaused = false;
+                _mktState.isBatchPaused = false;
+                if (_mktState.timerId) clearTimeout(_mktState.timerId);
+                if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+
+                const statusText = document.getElementById('mkt-progress-status-text');
+                if (statusText) statusText.innerHTML = '<span style="color:#4cd137;"><i class="fa-solid fa-circle-check"></i> ✅ ¡Campaña Finalizada con Éxito!</span>';
+                const cdEl = document.getElementById('mkt-live-countdown');
+                if (cdEl) cdEl.innerText = '--';
+
+                const runningCtrl = document.getElementById('mkt-controls-running');
+                const finishedCtrl = document.getElementById('mkt-controls-finished');
+                if (runningCtrl) runningCtrl.style.display = 'none';
+                if (finishedCtrl) finishedCtrl.style.display = 'block';
+
                 addMktLog(`🎉 ¡Campaña finalizada! Todos los destinatarios fueron procesados.`, true);
             }
         };
@@ -9531,21 +9577,45 @@
         };
 
         window.stopMarketingCampaign = function () {
-            if (!_mktState.isRunning) return;
-            if (confirm('¿Deseas detener completamente la campaña actual?')) {
-                _mktState.isRunning = false;
-                _mktState.isPaused = false;
-                _mktState.isBatchPaused = false;
-                if (_mktState.timerId) clearTimeout(_mktState.timerId);
-                if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+            // Detención inmediata e incondicional (sin confirm() modal que congele el navegador)
+            _mktState.isRunning = false;
+            _mktState.isPaused = false;
+            _mktState.isBatchPaused = false;
+            if (_mktState.timerId) clearTimeout(_mktState.timerId);
+            if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
 
-                const statusText = document.getElementById('mkt-progress-status-text');
-                if (statusText) statusText.innerText = '⏹️ Campaña Detenida';
-                const cdEl = document.getElementById('mkt-live-countdown');
-                if (cdEl) cdEl.innerText = '--';
+            const alertBox = document.getElementById('mkt-batch-alert');
+            if (alertBox) alertBox.style.display = 'none';
 
-                addMktLog(`⏹️ Campaña detenida por el usuario.`);
-            }
+            const statusText = document.getElementById('mkt-progress-status-text');
+            if (statusText) statusText.innerHTML = '<span style="color:#ff4d4d;"><i class="fa-solid fa-circle-stop"></i> ⏹️ Campaña Detenida</span>';
+            const cdEl = document.getElementById('mkt-live-countdown');
+            if (cdEl) cdEl.innerText = '--';
+
+            const runningCtrl = document.getElementById('mkt-controls-running');
+            const finishedCtrl = document.getElementById('mkt-controls-finished');
+            if (runningCtrl) runningCtrl.style.display = 'none';
+            if (finishedCtrl) finishedCtrl.style.display = 'block';
+
+            addMktLog(`⏹️ Campaña detenida por el usuario.`);
+        };
+
+        window.closeMarketingExecutionPanel = function () {
+            // Detener cualquier temporizador residual si seguía activo
+            _mktState.isRunning = false;
+            _mktState.isPaused = false;
+            _mktState.isBatchPaused = false;
+            if (_mktState.timerId) clearTimeout(_mktState.timerId);
+            if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+
+            const execPanel = document.getElementById('mkt-execution-panel');
+            if (execPanel) execPanel.style.display = 'none';
+
+            // Restaurar controles para la próxima ejecución
+            const runningCtrl = document.getElementById('mkt-controls-running');
+            const finishedCtrl = document.getElementById('mkt-controls-finished');
+            if (runningCtrl) runningCtrl.style.display = 'flex';
+            if (finishedCtrl) finishedCtrl.style.display = 'none';
         };
     </script>
 </body>
