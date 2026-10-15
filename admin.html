@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.26 (Marketing WhatsApp)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.27 (Marketing Clientes)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -4156,6 +4156,8 @@
         let editEstrenoIndex = -1;
         let editSellerIndex = -1;
         let allClientSalesMap = {}; // local copy for history
+        let allClientProfiles = {};
+        let globalSellerSalesDataStore = {};
 
         // Firebase Initialization
         const firebaseConfig = {
@@ -4207,6 +4209,9 @@
                 if (!adminInitialized) {
                     adminInitialized = true;
                     init();
+                    if (window.initMarketingPanel) {
+                        initMarketingPanel();
+                    }
                 } else {
                     renderAdminList();
                     renderEstrenosList();
@@ -4216,7 +4221,7 @@
                     renderManualClientProducts();
                     renderAllClientsList();
                     renderSellerSalesStats();
-                    if (document.getElementById('tab-marketing')?.classList.contains('active')) {
+                    if (window.initMarketingPanel) {
                         initMarketingPanel();
                     }
                 }
@@ -5605,7 +5610,7 @@
             }
         }
 
-        let globalSellerSalesDataStore = {};
+        // globalSellerSalesDataStore declarada arriba
         function fetchSellerSalesStats() {
             renderSellerSalesStats();
         }
@@ -6737,7 +6742,7 @@
             });
         }
 
-        let allClientProfiles = {};
+        // allClientProfiles declarada arriba
         function fetchClientSalesHistory() {
             renderAllClientsList();
         }
@@ -8675,73 +8680,20 @@
 
         // Recopila todos los clientes segmentados por estado
         function getMarketingAudience() {
-            const clientsMap = {};
-            const now = Date.now();
+            try {
+                const clientsMap = {};
+                const now = Date.now();
 
-            // 1. De clientProfiles
-            const profiles = window.allClientProfiles || {};
-            Object.keys(profiles).forEach(rawPhone => {
-                let p = rawPhone.toString().replace(/\D/g, '');
-                if (!p) return;
-                if (p.length === 10 && p.startsWith('3')) p = '57' + p;
-                if (!clientsMap[p]) {
-                    clientsMap[p] = {
-                        phone: p,
-                        name: safeDecode((profiles[rawPhone] && profiles[rawPhone].name) || 'Cliente'),
-                        sales: [],
-                        activeCount: 0,
-                        expiredCount: 0,
-                        status: 'prospect',
-                        platforms: []
-                    };
-                }
-            });
-
-            // 2. De clientSales (Directos)
-            const directSalesMap = window.allClientSalesMap || {};
-            Object.keys(directSalesMap).forEach(rawPhone => {
-                let p = rawPhone.toString().replace(/\D/g, '');
-                if (!p) return;
-                if (p.length === 10 && p.startsWith('3')) p = '57' + p;
-                const salesObj = directSalesMap[rawPhone] || {};
-                const salesArr = Array.isArray(salesObj) ? salesObj : Object.values(salesObj);
-
-                if (!clientsMap[p]) {
-                    clientsMap[p] = {
-                        phone: p,
-                        name: 'Cliente',
-                        sales: [],
-                        activeCount: 0,
-                        expiredCount: 0,
-                        status: 'prospect',
-                        platforms: []
-                    };
-                }
-
-                salesArr.forEach(sale => {
-                    if (!sale) return;
-                    if (sale.clientName && (clientsMap[p].name === 'Cliente' || !clientsMap[p].name)) {
-                        clientsMap[p].name = safeDecode(sale.clientName);
-                    }
-                    clientsMap[p].sales.push(sale);
-                });
-            });
-
-            // 3. De sellerSales (Vendedores)
-            const sellerSalesData = window.globalSellerSalesDataStore || {};
-            Object.keys(sellerSalesData).forEach(sellerName => {
-                const salesMap = sellerSalesData[sellerName] || {};
-                const salesArr = Array.isArray(salesMap) ? salesMap : Object.values(salesMap);
-                salesArr.forEach(sale => {
-                    if (!sale || !sale.clientPhone) return;
-                    let p = sale.clientPhone.toString().replace(/\D/g, '');
+                // 1. De clientProfiles
+                const profiles = window.allClientProfiles || allClientProfiles || (window.lastFirebaseData && window.lastFirebaseData.clientProfiles) || {};
+                Object.keys(profiles).forEach(rawPhone => {
+                    let p = rawPhone.toString().replace(/\D/g, '');
                     if (!p) return;
                     if (p.length === 10 && p.startsWith('3')) p = '57' + p;
-
                     if (!clientsMap[p]) {
                         clientsMap[p] = {
                             phone: p,
-                            name: safeDecode(sale.clientName || 'Cliente'),
+                            name: safeDecode((profiles[rawPhone] && profiles[rawPhone].name) || 'Cliente'),
                             sales: [],
                             activeCount: 0,
                             expiredCount: 0,
@@ -8749,58 +8701,117 @@
                             platforms: []
                         };
                     }
-                    if (sale.clientName && (clientsMap[p].name === 'Cliente' || !clientsMap[p].name)) {
-                        clientsMap[p].name = safeDecode(sale.clientName);
-                    }
-                    clientsMap[p].sales.push(sale);
-                });
-            });
-
-            // 4. Evaluar el estado de cada cliente
-            const list = Object.values(clientsMap).map(c => {
-                let hasActive = false;
-                let activeItems = [];
-                let expiredItems = [];
-                let latestExpiry = 0;
-
-                c.sales.forEach(sale => {
-                    if (!sale || sale.isPaid === false) return;
-                    const exp = Number(sale.expirationDate) || 0;
-                    if (exp > latestExpiry) latestExpiry = exp;
-
-                    let itemName = '';
-                    if (sale.items && Array.isArray(sale.items)) {
-                        itemName = sale.items.map(i => i.name || i.title || '').filter(Boolean).join(', ');
-                    } else if (sale.item || sale.product) {
-                        itemName = sale.item || sale.product;
-                    }
-
-                    if (exp > now) {
-                        hasActive = true;
-                        c.activeCount++;
-                        if (itemName && !activeItems.includes(itemName)) activeItems.push(itemName);
-                    } else if (exp > 0) {
-                        c.expiredCount++;
-                        if (itemName && !expiredItems.includes(itemName)) expiredItems.push(itemName);
-                    }
                 });
 
-                if (hasActive) {
-                    c.status = 'active'; // Pantalla Activa
-                } else if (c.sales.length > 0) {
-                    c.status = 'inactive'; // Vencido / Inactivo
-                } else {
-                    c.status = 'prospect'; // Registrado sin compras
-                }
+                // 2. De clientSales (Directos)
+                const directSalesMap = window.allClientSalesMap || allClientSalesMap || (window.lastFirebaseData && window.lastFirebaseData.clientSales) || {};
+                Object.keys(directSalesMap).forEach(rawPhone => {
+                    let p = rawPhone.toString().replace(/\D/g, '');
+                    if (!p) return;
+                    if (p.length === 10 && p.startsWith('3')) p = '57' + p;
+                    const salesObj = directSalesMap[rawPhone] || {};
+                    const salesArr = Array.isArray(salesObj) ? salesObj : Object.values(salesObj);
 
-                c.latestExpiry = latestExpiry;
-                c.platforms = hasActive ? activeItems : (expiredItems.length > 0 ? expiredItems : []);
-                return c;
-            });
+                    if (!clientsMap[p]) {
+                        clientsMap[p] = {
+                            phone: p,
+                            name: 'Cliente',
+                            sales: [],
+                            activeCount: 0,
+                            expiredCount: 0,
+                            status: 'prospect',
+                            platforms: []
+                        };
+                    }
 
-            // Ordenar alfabéticamente por nombre
-            list.sort((a, b) => a.name.localeCompare(b.name));
-            return list;
+                    salesArr.forEach(sale => {
+                        if (!sale) return;
+                        if (sale.clientName && (clientsMap[p].name === 'Cliente' || !clientsMap[p].name)) {
+                            clientsMap[p].name = safeDecode(sale.clientName);
+                        }
+                        clientsMap[p].sales.push(sale);
+                    });
+                });
+
+                // 3. De sellerSales (Vendedores)
+                const sellerSalesData = window.globalSellerSalesDataStore || globalSellerSalesDataStore || (window.lastFirebaseData && window.lastFirebaseData.sellerSales) || {};
+                Object.keys(sellerSalesData).forEach(sellerName => {
+                    const salesMap = sellerSalesData[sellerName] || {};
+                    const salesArr = Array.isArray(salesMap) ? salesMap : Object.values(salesMap);
+                    salesArr.forEach(sale => {
+                        if (!sale || !sale.clientPhone) return;
+                        let p = sale.clientPhone.toString().replace(/\D/g, '');
+                        if (!p) return;
+                        if (p.length === 10 && p.startsWith('3')) p = '57' + p;
+
+                        if (!clientsMap[p]) {
+                            clientsMap[p] = {
+                                phone: p,
+                                name: safeDecode(sale.clientName || 'Cliente'),
+                                sales: [],
+                                activeCount: 0,
+                                expiredCount: 0,
+                                status: 'prospect',
+                                platforms: []
+                            };
+                        }
+                        if (sale.clientName && (clientsMap[p].name === 'Cliente' || !clientsMap[p].name)) {
+                            clientsMap[p].name = safeDecode(sale.clientName);
+                        }
+                        clientsMap[p].sales.push(sale);
+                    });
+                });
+
+                // 4. Evaluar el estado de cada cliente
+                const list = Object.values(clientsMap).map(c => {
+                    let hasActive = false;
+                    let activeItems = [];
+                    let expiredItems = [];
+                    let latestExpiry = 0;
+
+                    c.sales.forEach(sale => {
+                        if (!sale || sale.isPaid === false) return;
+                        const exp = Number(sale.expirationDate) || 0;
+                        if (exp > latestExpiry) latestExpiry = exp;
+
+                        let itemName = '';
+                        if (sale.items && Array.isArray(sale.items)) {
+                            itemName = sale.items.map(i => i.name || i.title || '').filter(Boolean).join(', ');
+                        } else if (sale.item || sale.product) {
+                            itemName = sale.item || sale.product;
+                        }
+
+                        if (exp > now) {
+                            hasActive = true;
+                            c.activeCount++;
+                            if (itemName && !activeItems.includes(itemName)) activeItems.push(itemName);
+                        } else if (exp > 0) {
+                            c.expiredCount++;
+                            if (itemName && !expiredItems.includes(itemName)) expiredItems.push(itemName);
+                        }
+                    });
+
+                    if (hasActive) {
+                        c.status = 'active'; // Pantalla Activa
+                    } else if (c.sales.length > 0) {
+                        c.status = 'inactive'; // Vencido / Inactivo
+                    } else {
+                        c.status = 'prospect'; // Registrado sin compras
+                    }
+
+                    c.latestExpiry = latestExpiry;
+                    c.platforms = hasActive ? activeItems : (expiredItems.length > 0 ? expiredItems : []);
+                    return c;
+                });
+
+                // Ordenar alfabéticamente por nombre
+                list.sort((a, b) => a.name.localeCompare(b.name));
+                console.log("Marketing audience loaded:", list.length, "Active:", list.filter(c => c.status === 'active').length, "Inactive:", list.filter(c => c.status !== 'active').length);
+                return list;
+            } catch (err) {
+                console.error("Error computing marketing audience:", err);
+                return [];
+            }
         }
 
         window.initMarketingPanel = function () {
@@ -8829,6 +8840,24 @@
 
         window.setMarketingSegment = function (segment, keepSelection) {
             _mktState.currentSegment = segment;
+
+            // Si la audiencia está vacía, refrescarla desde la base de datos
+            if (!_mktState.allAudience || _mktState.allAudience.length === 0) {
+                _mktState.allAudience = getMarketingAudience();
+            }
+
+            // Actualizar contadores de las tarjetas de segmento siempre
+            const activeCount = _mktState.allAudience.filter(c => c.status === 'active').length;
+            const inactiveCount = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect').length;
+            const totalCount = _mktState.allAudience.length;
+
+            const badgeActive = document.getElementById('mkt-count-active');
+            const badgeInactive = document.getElementById('mkt-count-inactive');
+            const badgeAll = document.getElementById('mkt-count-all');
+
+            if (badgeActive) badgeActive.innerText = activeCount;
+            if (badgeInactive) badgeInactive.innerText = inactiveCount;
+            if (badgeAll) badgeAll.innerText = totalCount;
 
             // Actualizar clases de tarjetas
             ['active', 'inactive', 'all'].forEach(s => {
