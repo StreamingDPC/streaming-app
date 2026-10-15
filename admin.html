@@ -244,6 +244,100 @@
             color: #f39c12;
         }
 
+        /* Marketing Module Styles */
+        .mkt-seg-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .mkt-seg-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 210, 211, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .mkt-seg-card.active {
+            background: rgba(0, 210, 211, 0.12);
+            border-color: #00d2d3;
+            box-shadow: 0 4px 15px rgba(0, 210, 211, 0.25);
+        }
+
+        .mkt-badge {
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .mkt-mode-option {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            align-items: flex-start;
+            transition: all 0.2s ease;
+        }
+
+        .mkt-mode-option:hover {
+            border-color: #00d2d3;
+        }
+
+        .mkt-chip {
+            background: rgba(0, 210, 211, 0.12);
+            border: 1px solid rgba(0, 210, 211, 0.35);
+            color: #00d2d3;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .mkt-chip:hover {
+            background: #00d2d3;
+            color: #111;
+        }
+
+        .mkt-photo-thumb {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #00d2d3;
+            background: #111;
+            flex-shrink: 0;
+        }
+
+        .mkt-photo-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .mkt-photo-thumb .mkt-photo-del {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(255, 77, 77, 0.9);
+            color: white;
+            border: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .search-bar {
             margin-bottom: 1rem;
             display: flex;
@@ -295,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.25 (Duplicar Productos)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.26 (Marketing WhatsApp)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -319,6 +413,8 @@
                         style="color:#ff4d4d;"></i> Historial</button>
                 <button class="admin-tab" data-tab="stats" onclick="switchTab('stats', this); renderStats();">📊 Estadísticas</button>
                 <button class="admin-tab" id="tab-btn-crm" data-tab="crm" onclick="switchTab('crm', this)">💬 Respuestas CRM</button>
+                <button class="admin-tab" id="tab-btn-marketing" data-tab="marketing" onclick="switchTab('marketing', this); initMarketingPanel();"
+                    style="border: 1px solid rgba(0, 210, 211, 0.5);"><i class="fa-solid fa-bullhorn" style="color:#00d2d3;"></i> Marketing</button>
                 <button class="admin-tab" data-tab="polla" onclick="switchTab('polla', this)"
                     style="border: 1px solid rgba(76, 209, 55, 0.4);"><i class="fa-solid fa-trophy"
                         style="color: #4cd137;"></i> Polla</button>
@@ -1167,6 +1263,289 @@
                 <button class="save-btn" onclick="saveConfig()"
                     style="margin-top:1rem; background:#9b59b6; height:50px; font-size:1.1rem; font-weight:bold;"><i
                         class="fa-solid fa-floppy-disk"></i> Guardar Todo el CRM</button>
+            </div>
+        </div>
+
+        <!-- TAB MARKETING -->
+        <div id="tab-marketing" class="tab-content">
+            <div class="admin-form" style="padding-bottom: 2rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:1rem;">
+                    <div>
+                        <h2 style="margin:0; color:#00d2d3; display:flex; align-items:center; gap:10px;">
+                            <i class="fa-solid fa-bullhorn"></i> Sistema de Marketing & Difusión WhatsApp
+                        </h2>
+                        <p style="color:#a0a0a0; margin:0.3rem 0 0 0; font-size:0.9rem;">
+                            Envía promociones personalizadas a clientes activos o inactivos con protección inteligente anti-bloqueo.
+                        </p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div id="mkt-daily-counter-badge" style="background:rgba(0, 210, 211, 0.1); border:1px solid #00d2d3; border-radius:10px; padding:6px 14px; font-size:0.85rem; color:#00d2d3; font-weight:bold;">
+                            <i class="fa-solid fa-shield-halved"></i> Envíos hoy: <span id="mkt-sent-today-count">0</span> / <span id="mkt-sent-today-limit">40</span>
+                        </div>
+                        <button type="button" class="btn-icon" onclick="resetDailyMktCounter()" title="Reiniciar contador de hoy" style="width:auto; padding:6px 10px; font-size:0.8rem; border-radius:8px;">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 1. SEGMENTACIÓN DE AUDIENCIA -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+                        <h3 style="margin:0; font-size:1.1rem; color:white; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-users-viewfinder" style="color:#00d2d3;"></i> 1. Segmentación de Clientes
+                        </h3>
+                        <div style="font-size:0.85rem; color:#ccc;">
+                            Seleccionados: <strong id="mkt-selected-count" style="color:#00d2d3; font-size:1rem;">0</strong> de <span id="mkt-total-filtered">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Segmento -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:1rem;">
+                        <div class="mkt-seg-card active" id="mkt-seg-active" onclick="setMarketingSegment('active')">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="color:#4cd137;"><i class="fa-solid fa-circle-check"></i> Pantallas Activas</strong>
+                                <span class="mkt-badge" id="mkt-count-active" style="background:#4cd137; color:#111;">0</span>
+                            </div>
+                            <p style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Clientes con servicios vigentes hoy. Ideal para combos, renovaciones anticipadas y más meses.</p>
+                        </div>
+                        <div class="mkt-seg-card" id="mkt-seg-inactive" onclick="setMarketingSegment('inactive')">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="color:#ff6b6b;"><i class="fa-solid fa-circle-pause"></i> Sin Compras / Inactivos</strong>
+                                <span class="mkt-badge" id="mkt-count-inactive" style="background:#ff6b6b; color:#fff;">0</span>
+                            </div>
+                            <p style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Cuentas vencidas o usuarios registrados que no han comprado. Ideal para ofertas de rescate.</p>
+                        </div>
+                        <div class="mkt-seg-card" id="mkt-seg-all" onclick="setMarketingSegment('all')">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="color:#2ab7ca;"><i class="fa-solid fa-users"></i> Todos los Clientes</strong>
+                                <span class="mkt-badge" id="mkt-count-all" style="background:#2ab7ca; color:#111;">0</span>
+                            </div>
+                            <p style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Base completa de clientes registrados en el sistema.</p>
+                        </div>
+                    </div>
+
+                    <!-- Buscador y selección rápida -->
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:0.8rem;">
+                        <div style="flex:1; min-width:220px; position:relative;">
+                            <input type="text" id="mkt-filter-search" placeholder="🔍 Filtrar por nombre o celular..." oninput="renderMarketingAudienceList()" style="width:100%; margin:0; padding:10px 14px; border-radius:10px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white;">
+                        </div>
+                        <button type="button" class="btn-icon" onclick="toggleSelectAllMarketing(true)" style="width:auto; padding:8px 14px; border-radius:8px; font-size:0.85rem; background:rgba(255,255,255,0.08); color:white;">
+                            <i class="fa-solid fa-check-double"></i> Marcar Todos
+                        </button>
+                        <button type="button" class="btn-icon" onclick="toggleSelectAllMarketing(false)" style="width:auto; padding:8px 14px; border-radius:8px; font-size:0.85rem; background:rgba(255,255,255,0.08); color:#ccc;">
+                            <i class="fa-solid fa-xmark"></i> Desmarcar
+                        </button>
+                    </div>
+
+                    <!-- Lista de Clientes con Checkbox -->
+                    <div id="mkt-audience-list" style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:6px; border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:8px; background:rgba(0,0,0,0.3);">
+                        <p style="color:#aaa; font-size:0.85rem; text-align:center; padding:1rem;">Cargando audiencia...</p>
+                    </div>
+                </div>
+
+                <!-- 2. ESTRATEGIA ANTI-BLOQUEO & REDACTOR DE MENSAJE -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
+                    <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:white; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-shield-virus" style="color:#00d2d3;"></i> 2. Estrategia Anti-Bloqueo de WhatsApp
+                    </h3>
+
+                    <!-- Selector de Modo de Envío -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; margin-bottom:1.2rem;">
+                        <label class="mkt-mode-option" style="cursor:pointer;">
+                            <input type="radio" name="mkt-send-mode" value="interactive" checked onchange="onMarketingModeChange()" style="margin-right:8px; accent-color:#00d2d3;">
+                            <span>
+                                <strong style="color:#00d2d3;"><i class="fa-solid fa-comments"></i> Modo Auto-Respuesta / Gancho (Recomendado)</strong>
+                                <small style="display:block; color:#aaa; margin-top:4px;">Envía primero una pregunta/saludo corto. Al responder el cliente ('SÍ' o '1'), la conversación se autentica y nunca te bloquean al entregarle la promo completa.</small>
+                            </span>
+                        </label>
+                        <label class="mkt-mode-option" style="cursor:pointer;">
+                            <input type="radio" name="mkt-send-mode" value="direct" onchange="onMarketingModeChange()" style="margin-right:8px; accent-color:#f39c12;">
+                            <span>
+                                <strong style="color:#f39c12;"><i class="fa-solid fa-bolt"></i> Modo Promoción Directa</strong>
+                                <small style="display:block; color:#aaa; margin-top:4px;">Envía el mensaje completo con texto y enlaces a las fotos directamente en un solo envío.</small>
+                            </span>
+                        </label>
+                        <label class="mkt-mode-option" style="cursor:pointer;">
+                            <input type="radio" name="mkt-send-mode" value="robot" onchange="onMarketingModeChange()" style="margin-right:8px; accent-color:#2ecc71;">
+                            <span>
+                                <strong style="color:#2ecc71;"><i class="fa-solid fa-robot"></i> Modo Robot Local / AutoResponder</strong>
+                                <small style="display:block; color:#aaa; margin-top:4px;">Envía comando CMD_MKT@@@ a tu propio número para que tu bot local o AutoResponder en Android despache.</small>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Mensaje de Gancho (Visible si interactive) -->
+                    <div id="mkt-hook-container" style="margin-bottom:1rem; background:rgba(0, 210, 211, 0.05); border:1px solid rgba(0, 210, 211, 0.3); border-radius:12px; padding:12px;">
+                        <label style="color:#00d2d3; font-weight:bold; font-size:0.9rem; display:block; margin-bottom:6px;">
+                            <i class="fa-solid fa-hand-holding-hand"></i> Mensaje de Apertura / Gancho (Lo primero que recibe el cliente):
+                        </label>
+                        <textarea id="mkt-hook-text" rows="2" style="width:100%; border-radius:8px; padding:10px; background:rgba(0,0,0,0.6); color:white; border:1px solid rgba(0, 210, 211, 0.4); font-size:0.9rem;" placeholder="Ej: ¡Hola {cliente}! 👋 Tenemos una promo exclusiva hoy en pantallas de streaming 🎬. ¿Te gustaría conocerla? Responde 'SÍ' o '1' para enviarte los detalles y fotos 👇"></textarea>
+                        <div style="font-size:0.75rem; color:#aaa; margin-top:4px;">
+                            💡 <em>Al responder el cliente voluntariamente, WhatsApp registra consentimiento mutuo y no clasifica el chat como spam.</em>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje Promocional Principal -->
+                    <div style="margin-bottom:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                            <label id="mkt-main-text-label" style="font-weight:bold; color:white; font-size:0.9rem;">
+                                <i class="fa-solid fa-envelope-open-text"></i> Mensaje Promocional Completo (Texto de la oferta):
+                            </label>
+                            <!-- Chips para insertar variables -->
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <button type="button" class="mkt-chip" onclick="insertMktVar('{cliente}')">+ {cliente}</button>
+                                <button type="button" class="mkt-chip" onclick="insertMktVar('{pantallas}')">+ {pantallas}</button>
+                                <button type="button" class="mkt-chip" onclick="insertMktVar('{telefono}')">+ {telefono}</button>
+                                <button type="button" class="mkt-chip" onclick="insertMktVar('{Hola|Buenas|Hola qué tal}')" title="Variación aleatoria de saludos">+ Spintax {Hola|Buenas}</button>
+                            </div>
+                        </div>
+                        <textarea id="mkt-promo-text" rows="5" style="width:100%; border-radius:10px; padding:12px; background:rgba(0,0,0,0.6); color:white; border:1px solid var(--glass-border); font-size:0.92rem; line-height:1.4;" placeholder="Ej: ¡Hola {cliente}! 🎉 Mira estas súper promociones en pantallas originales:\n\n🔥 Netflix 1 Pantalla: $16.000 (¡Promo 3 Meses x $42.000!)\n🎬 Max Premium 4K: $12.000\n🍿 Disney+ Premium: $14.000\n\n📌 Cuentas estables con garantía total.\n¿Cuál deseas activar hoy?"></textarea>
+                    </div>
+
+                    <!-- Múltiples Fotos / Galería -->
+                    <div style="background:rgba(0,0,0,0.4); border:1px dashed var(--glass-border); border-radius:12px; padding:14px; margin-bottom:1rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+                            <label style="font-weight:bold; color:white; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-images" style="color:#00d2d3;"></i> Adjuntar Fotos / Imágenes de la Promoción
+                            </label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="file" id="mkt-file-input" accept="image/*" multiple style="display:none;" onchange="handleMktPhotoUpload(this)">
+                                <button type="button" class="btn-icon" onclick="document.getElementById('mkt-file-input').click()" style="width:auto; padding:6px 12px; border-radius:8px; font-size:0.85rem; background:rgba(0,210,211,0.15); color:#00d2d3; border:1px solid #00d2d3;">
+                                    <i class="fa-solid fa-upload"></i> Subir Fotos desde PC
+                                </button>
+                            </div>
+                        </div>
+                        <input type="text" id="mkt-photo-urls-input" placeholder="O pega URLs de imágenes separadas por coma (Ej: https://i.ibb.co/foto1.jpg, https://...)" onchange="syncMktPhotoUrls()" style="width:100%; margin-bottom:8px; padding:10px; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white; font-size:0.85rem;">
+                        
+                        <!-- Galería de miniaturas -->
+                        <div id="mkt-photos-preview-gallery" style="display:flex; gap:10px; flex-wrap:wrap; min-height:40px; align-items:center;">
+                            <span id="mkt-no-photos-msg" style="font-size:0.8rem; color:#777;">(Sin fotos adjuntas. Puedes agregar varias fotos de tus promociones o combos)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CONFIGURACIÓN ANTI-BLOQUEO (Tandas, Lapsos y Límites) -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
+                    <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:white; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-stopwatch" style="color:#00d2d3;"></i> 3. Control de Cadencia & Límites Anti-Bloqueo
+                    </h3>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                        <!-- Tandas de 5 en 5 -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:12px; padding:12px;">
+                            <label style="font-weight:bold; font-size:0.85rem; color:#00d2d3; display:block; margin-bottom:6px;">
+                                <i class="fa-solid fa-layer-group"></i> Envíos por Lote (Tanda):
+                            </label>
+                            <input type="number" id="mkt-batch-size" value="5" min="1" max="20" style="width:100%; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); border:1px solid var(--glass-border); color:white; font-size:1rem; font-weight:bold;">
+                            <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:#ccc; margin-top:8px; cursor:pointer;">
+                                <input type="checkbox" id="mkt-pause-batch" checked> Pausar cada 5 clientes para descanso
+                            </label>
+                        </div>
+
+                        <!-- Lapso de tiempo -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:12px; padding:12px;">
+                            <label style="font-weight:bold; font-size:0.85rem; color:#00d2d3; display:block; margin-bottom:6px;">
+                                <i class="fa-solid fa-hourglass-half"></i> Lapso entre Envíos (Segundos):
+                            </label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="number" id="mkt-delay-seconds" value="15" min="5" max="120" style="flex:1; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); border:1px solid var(--glass-border); color:white; font-size:1rem; font-weight:bold;">
+                                <span style="font-size:0.85rem; color:#aaa;">seg</span>
+                            </div>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:#ccc; margin-top:8px; cursor:pointer;">
+                                <input type="checkbox" id="mkt-random-jitter" checked> Variación aleatoria humana (±3-5s)
+                            </label>
+                        </div>
+
+                        <!-- Límite diario -->
+                        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); border-radius:12px; padding:12px;">
+                            <label style="font-weight:bold; font-size:0.85rem; color:#00d2d3; display:block; margin-bottom:6px;">
+                                <i class="fa-solid fa-gauge-high"></i> Límite Permitido por Día:
+                            </label>
+                            <input type="number" id="mkt-daily-limit" value="40" min="5" max="300" onchange="updateMktDailyLimitDisplay()" style="width:100%; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); border:1px solid var(--glass-border); color:white; font-size:1rem; font-weight:bold;">
+                            <div style="font-size:0.75rem; color:#f39c12; margin-top:8px;">
+                                ⚠️ <em>Recomendado: 30 a 50 envíos al día para evitar reportes de spam en Meta.</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. CONSOLA DE LANZAMIENTO Y PROGRESO EN VIVO -->
+                <div style="background:rgba(0,0,0,0.5); border:2px solid #00d2d3; border-radius:16px; padding:1.4rem;">
+                    <!-- Botón Principal -->
+                    <div id="mkt-launch-bar" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <button id="btn-mkt-start" type="button" class="save-btn" onclick="startMarketingCampaign()" style="flex:2; min-width:260px; margin:0; height:54px; font-size:1.1rem; font-weight:bold; background:linear-gradient(135deg, #00d2d3, #2e86de); color:white; border-radius:12px; box-shadow:0 4px 20px rgba(0, 210, 211, 0.4); display:flex; align-items:center; justify-content:center; gap:10px;">
+                            <i class="fa-solid fa-paper-plane"></i> INICIAR CAMPAÑA (<span id="mkt-btn-count">0</span> CLIENTES)
+                        </button>
+                        <button type="button" class="save-btn" onclick="saveMarketingSettings()" style="flex:1; min-width:180px; margin:0; height:54px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); color:white; border-radius:12px; font-size:0.9rem;">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Plantilla
+                        </button>
+                    </div>
+
+                    <!-- Panel de Ejecución Activa (oculto por defecto) -->
+                    <div id="mkt-execution-panel" style="display:none; margin-top:1.5rem; border-top:1px solid var(--glass-border); padding-top:1.2rem;">
+                        <!-- Barra de progreso -->
+                        <div style="display:flex; justify-content:space-between; font-size:0.9rem; font-weight:bold; margin-bottom:6px;">
+                            <span id="mkt-progress-status-text" style="color:#00d2d3;">🚀 Campaña en progreso...</span>
+                            <span id="mkt-progress-percentage" style="color:white;">0%</span>
+                        </div>
+                        <div style="width:100%; height:14px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; margin-bottom:1rem; position:relative;">
+                            <div id="mkt-progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #00d2d3, #4cd137); transition:width 0.3s ease; box-shadow:0 0 10px rgba(0,210,211,0.5);"></div>
+                        </div>
+
+                        <!-- Estadísticas y cuenta regresiva -->
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:1rem;">
+                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; text-align:center;">
+                                <div style="font-size:0.75rem; color:#aaa;">Enviados</div>
+                                <div id="mkt-live-sent" style="font-size:1.3rem; font-weight:bold; color:#4cd137;">0</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; text-align:center;">
+                                <div style="font-size:0.75rem; color:#aaa;">Pendientes</div>
+                                <div id="mkt-live-pending" style="font-size:1.3rem; font-weight:bold; color:#f39c12;">0</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; text-align:center;">
+                                <div style="font-size:0.75rem; color:#aaa;">Lote Actual</div>
+                                <div id="mkt-live-batch" style="font-size:1.3rem; font-weight:bold; color:#00d2d3;">1 (0/5)</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; text-align:center;">
+                                <div style="font-size:0.75rem; color:#aaa;">Próximo Envío en</div>
+                                <div id="mkt-live-countdown" style="font-size:1.3rem; font-weight:bold; color:#fff;">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Caja de Alerta del Lote / Pausa -->
+                        <div id="mkt-batch-alert" style="display:none; background:rgba(243, 156, 18, 0.15); border:1px solid #f39c12; border-radius:10px; padding:12px; margin-bottom:1rem; text-align:center;">
+                            <strong style="color:#f39c12; font-size:1rem; display:block; margin-bottom:4px;">
+                                ☕ ¡Lote de 5 clientes completado con éxito!
+                            </strong>
+                            <p style="font-size:0.85rem; color:#ccc; margin:0 0 10px 0;">
+                                Pausa de descanso para proteger tu WhatsApp de bloqueos. Pulsa continuar cuando desees enviar el siguiente lote de 5.
+                            </p>
+                            <button type="button" class="save-btn" onclick="resumeNextMarketingBatch()" style="margin:0 auto; width:auto; padding:10px 24px; background:#f39c12; color:black; font-weight:bold; border-radius:8px;">
+                                <i class="fa-solid fa-forward"></i> Continuar Siguiente Lote (5)
+                            </button>
+                        </div>
+
+                        <!-- Botones de Control de la Campaña -->
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+                            <button id="btn-mkt-pause" type="button" class="save-btn" onclick="togglePauseMarketingCampaign()" style="margin:0; width:auto; padding:10px 20px; background:#f39c12; color:black; font-weight:bold; border-radius:8px;">
+                                <i class="fa-solid fa-pause"></i> Pausar
+                            </button>
+                            <button id="btn-mkt-skip-delay" type="button" class="save-btn" onclick="skipMarketingDelay()" style="margin:0; width:auto; padding:10px 20px; background:#2e86de; color:white; font-weight:bold; border-radius:8px;">
+                                <i class="fa-solid fa-forward-step"></i> Enviar Siguiente Inmediatamente
+                            </button>
+                            <button type="button" class="save-btn" onclick="stopMarketingCampaign()" style="margin:0; width:auto; padding:10px 20px; background:#ff4d4d; color:white; font-weight:bold; border-radius:8px;">
+                                <i class="fa-solid fa-stop"></i> Detener Campaña
+                            </button>
+                        </div>
+
+                        <!-- Log en Vivo -->
+                        <div style="margin-top:1.2rem;">
+                            <label style="font-size:0.85rem; color:#aaa; font-weight:bold;">Registro de Envíos en Tiempo Real:</label>
+                            <div id="mkt-live-logs" style="max-height:160px; overflow-y:auto; background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px; margin-top:4px; font-family:monospace; font-size:0.8rem; display:flex; flex-direction:column; gap:4px;">
+                                <span style="color:#777;">Esperando inicio...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -3837,6 +4216,9 @@
                     renderManualClientProducts();
                     renderAllClientsList();
                     renderSellerSalesStats();
+                    if (document.getElementById('tab-marketing')?.classList.contains('active')) {
+                        initMarketingPanel();
+                    }
                 }
             } else {
                 console.warn("Snapshot is EMPTY (null)!");
@@ -3985,6 +4367,10 @@
 
             const targetBtn = btn || document.querySelector(`.admin-tab[data-tab="${tabId}"]`);
             if (targetBtn) targetBtn.classList.add('active');
+
+            if (tabId === 'marketing' && window.initMarketingPanel) {
+                window.initMarketingPanel();
+            }
         }
 
         function showSubConf(subId, btn) {
@@ -8195,8 +8581,812 @@
                 }
             } catch (err) {
                 statusDiv.style.background = 'rgba(229,9,20,0.15)'; statusDiv.style.color = '#e50914';
-                statusDiv.innerText = 'Error de conexi\u00f3n: ' + err.message;
+                statusDiv.innerText = 'Error de conexión: ' + err.message;
                 btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-play"></i> Activar TV';
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // 📢 SISTEMA DE MARKETING & DIFUSIÓN WHATSAPP CON ANTI-BLOQUEO
+        // ═══════════════════════════════════════════════════════════════
+        window._mktState = {
+            currentSegment: 'active', // 'active' | 'inactive' | 'all'
+            allAudience: [],
+            selectedPhones: new Set(),
+            photos: [],
+            campaignQueue: [],
+            isRunning: false,
+            isPaused: false,
+            isBatchPaused: false,
+            timerId: null,
+            countdownTimerId: null,
+            currentIndex: 0,
+            currentBatchCount: 0,
+            sentCountSession: 0
+        };
+
+        // Función para resolver y parsear spintax {Hola|Buenas|Hola qué tal}
+        function parseSpintax(text) {
+            if (!text) return "";
+            return text.replace(/\{([^{}]+)\}/g, (match, choices) => {
+                const lower = choices.toLowerCase().trim();
+                // Si es una variable del sistema, no es spintax
+                if (['cliente', 'nombre', 'pantallas', 'pantalla', 'telefono', 'celular'].includes(lower)) {
+                    return match;
+                }
+                if (choices.includes('|')) {
+                    const parts = choices.split('|');
+                    return parts[Math.floor(Math.random() * parts.length)].trim();
+                }
+                return match;
+            });
+        }
+
+        // Obtener la fecha de hoy para el contador diario YYYY-MM-DD
+        function getMktTodayDateKey() {
+            const d = new Date();
+            return `mkt_daily_sent_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function getSentTodayCount() {
+            const key = getMktTodayDateKey();
+            return parseInt(localStorage.getItem(key)) || 0;
+        }
+
+        function incrementSentTodayCount() {
+            const key = getMktTodayDateKey();
+            const curr = getSentTodayCount() + 1;
+            localStorage.setItem(key, curr);
+            updateMktDailyLimitDisplay();
+            return curr;
+        }
+
+        window.resetDailyMktCounter = function () {
+            if (confirm('¿Deseas reiniciar el contador de envíos realizados hoy a 0?')) {
+                const key = getMktTodayDateKey();
+                localStorage.setItem(key, 0);
+                updateMktDailyLimitDisplay();
+            }
+        };
+
+        window.updateMktDailyLimitDisplay = function () {
+            const countEl = document.getElementById('mkt-sent-today-count');
+            const limitEl = document.getElementById('mkt-sent-today-limit');
+            const inputLimit = document.getElementById('mkt-daily-limit');
+            const limit = inputLimit ? parseInt(inputLimit.value) || 40 : 40;
+            const sentToday = getSentTodayCount();
+
+            if (countEl) countEl.innerText = sentToday;
+            if (limitEl) limitEl.innerText = limit;
+
+            const badge = document.getElementById('mkt-daily-counter-badge');
+            if (badge) {
+                if (sentToday >= limit) {
+                    badge.style.background = 'rgba(255, 77, 77, 0.2)';
+                    badge.style.borderColor = '#ff4d4d';
+                    badge.style.color = '#ff4d4d';
+                } else {
+                    badge.style.background = 'rgba(0, 210, 211, 0.1)';
+                    badge.style.borderColor = '#00d2d3';
+                    badge.style.color = '#00d2d3';
+                }
+            }
+        };
+
+        // Recopila todos los clientes segmentados por estado
+        function getMarketingAudience() {
+            const clientsMap = {};
+            const now = Date.now();
+
+            // 1. De clientProfiles
+            const profiles = window.allClientProfiles || {};
+            Object.keys(profiles).forEach(rawPhone => {
+                let p = rawPhone.toString().replace(/\D/g, '');
+                if (!p) return;
+                if (p.length === 10 && p.startsWith('3')) p = '57' + p;
+                if (!clientsMap[p]) {
+                    clientsMap[p] = {
+                        phone: p,
+                        name: safeDecode((profiles[rawPhone] && profiles[rawPhone].name) || 'Cliente'),
+                        sales: [],
+                        activeCount: 0,
+                        expiredCount: 0,
+                        status: 'prospect',
+                        platforms: []
+                    };
+                }
+            });
+
+            // 2. De clientSales (Directos)
+            const directSalesMap = window.allClientSalesMap || {};
+            Object.keys(directSalesMap).forEach(rawPhone => {
+                let p = rawPhone.toString().replace(/\D/g, '');
+                if (!p) return;
+                if (p.length === 10 && p.startsWith('3')) p = '57' + p;
+                const salesObj = directSalesMap[rawPhone] || {};
+                const salesArr = Array.isArray(salesObj) ? salesObj : Object.values(salesObj);
+
+                if (!clientsMap[p]) {
+                    clientsMap[p] = {
+                        phone: p,
+                        name: 'Cliente',
+                        sales: [],
+                        activeCount: 0,
+                        expiredCount: 0,
+                        status: 'prospect',
+                        platforms: []
+                    };
+                }
+
+                salesArr.forEach(sale => {
+                    if (!sale) return;
+                    if (sale.clientName && (clientsMap[p].name === 'Cliente' || !clientsMap[p].name)) {
+                        clientsMap[p].name = safeDecode(sale.clientName);
+                    }
+                    clientsMap[p].sales.push(sale);
+                });
+            });
+
+            // 3. De sellerSales (Vendedores)
+            const sellerSalesData = window.globalSellerSalesDataStore || {};
+            Object.keys(sellerSalesData).forEach(sellerName => {
+                const salesMap = sellerSalesData[sellerName] || {};
+                const salesArr = Array.isArray(salesMap) ? salesMap : Object.values(salesMap);
+                salesArr.forEach(sale => {
+                    if (!sale || !sale.clientPhone) return;
+                    let p = sale.clientPhone.toString().replace(/\D/g, '');
+                    if (!p) return;
+                    if (p.length === 10 && p.startsWith('3')) p = '57' + p;
+
+                    if (!clientsMap[p]) {
+                        clientsMap[p] = {
+                            phone: p,
+                            name: safeDecode(sale.clientName || 'Cliente'),
+                            sales: [],
+                            activeCount: 0,
+                            expiredCount: 0,
+                            status: 'prospect',
+                            platforms: []
+                        };
+                    }
+                    if (sale.clientName && (clientsMap[p].name === 'Cliente' || !clientsMap[p].name)) {
+                        clientsMap[p].name = safeDecode(sale.clientName);
+                    }
+                    clientsMap[p].sales.push(sale);
+                });
+            });
+
+            // 4. Evaluar el estado de cada cliente
+            const list = Object.values(clientsMap).map(c => {
+                let hasActive = false;
+                let activeItems = [];
+                let expiredItems = [];
+                let latestExpiry = 0;
+
+                c.sales.forEach(sale => {
+                    if (!sale || sale.isPaid === false) return;
+                    const exp = Number(sale.expirationDate) || 0;
+                    if (exp > latestExpiry) latestExpiry = exp;
+
+                    let itemName = '';
+                    if (sale.items && Array.isArray(sale.items)) {
+                        itemName = sale.items.map(i => i.name || i.title || '').filter(Boolean).join(', ');
+                    } else if (sale.item || sale.product) {
+                        itemName = sale.item || sale.product;
+                    }
+
+                    if (exp > now) {
+                        hasActive = true;
+                        c.activeCount++;
+                        if (itemName && !activeItems.includes(itemName)) activeItems.push(itemName);
+                    } else if (exp > 0) {
+                        c.expiredCount++;
+                        if (itemName && !expiredItems.includes(itemName)) expiredItems.push(itemName);
+                    }
+                });
+
+                if (hasActive) {
+                    c.status = 'active'; // Pantalla Activa
+                } else if (c.sales.length > 0) {
+                    c.status = 'inactive'; // Vencido / Inactivo
+                } else {
+                    c.status = 'prospect'; // Registrado sin compras
+                }
+
+                c.latestExpiry = latestExpiry;
+                c.platforms = hasActive ? activeItems : (expiredItems.length > 0 ? expiredItems : []);
+                return c;
+            });
+
+            // Ordenar alfabéticamente por nombre
+            list.sort((a, b) => a.name.localeCompare(b.name));
+            return list;
+        }
+
+        window.initMarketingPanel = function () {
+            _mktState.allAudience = getMarketingAudience();
+
+            // Actualizar contadores de las tarjetas de segmento
+            const activeCount = _mktState.allAudience.filter(c => c.status === 'active').length;
+            const inactiveCount = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect').length;
+            const totalCount = _mktState.allAudience.length;
+
+            const badgeActive = document.getElementById('mkt-count-active');
+            const badgeInactive = document.getElementById('mkt-count-inactive');
+            const badgeAll = document.getElementById('mkt-count-all');
+
+            if (badgeActive) badgeActive.innerText = activeCount;
+            if (badgeInactive) badgeInactive.innerText = inactiveCount;
+            if (badgeAll) badgeAll.innerText = totalCount;
+
+            // Cargar configuración guardada
+            loadMarketingSettings();
+
+            // Renderizar segmento actual
+            setMarketingSegment(_mktState.currentSegment || 'active', true);
+            updateMktDailyLimitDisplay();
+        };
+
+        window.setMarketingSegment = function (segment, keepSelection) {
+            _mktState.currentSegment = segment;
+
+            // Actualizar clases de tarjetas
+            ['active', 'inactive', 'all'].forEach(s => {
+                const el = document.getElementById('mkt-seg-' + s);
+                if (el) el.classList.toggle('active', s === segment);
+            });
+
+            // Filtrar clientes
+            let filtered = [];
+            if (segment === 'active') {
+                filtered = _mktState.allAudience.filter(c => c.status === 'active');
+            } else if (segment === 'inactive') {
+                filtered = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
+            } else {
+                filtered = _mktState.allAudience;
+            }
+
+            // Si no mantenemos selección previa, seleccionamos todos por defecto
+            if (!keepSelection) {
+                _mktState.selectedPhones.clear();
+                filtered.forEach(c => _mktState.selectedPhones.add(c.phone));
+            }
+
+            renderMarketingAudienceList();
+        };
+
+        window.renderMarketingAudienceList = function () {
+            const listDiv = document.getElementById('mkt-audience-list');
+            if (!listDiv) return;
+
+            const searchTerm = (document.getElementById('mkt-filter-search')?.value || '').toLowerCase().trim();
+            const segment = _mktState.currentSegment;
+
+            let filtered = [];
+            if (segment === 'active') {
+                filtered = _mktState.allAudience.filter(c => c.status === 'active');
+            } else if (segment === 'inactive') {
+                filtered = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
+            } else {
+                filtered = _mktState.allAudience;
+            }
+
+            if (searchTerm) {
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm));
+            }
+
+            const totalFilteredEl = document.getElementById('mkt-total-filtered');
+            const selectedCountEl = document.getElementById('mkt-selected-count');
+            const btnCountEl = document.getElementById('mkt-btn-count');
+
+            if (totalFilteredEl) totalFilteredEl.innerText = filtered.length;
+            if (selectedCountEl) selectedCountEl.innerText = _mktState.selectedPhones.size;
+            if (btnCountEl) btnCountEl.innerText = _mktState.selectedPhones.size;
+
+            if (filtered.length === 0) {
+                listDiv.innerHTML = '<p style="color:#777; font-size:0.85rem; text-align:center; padding:1.5rem;">No se encontraron clientes para este segmento o búsqueda.</p>';
+                return;
+            }
+
+            listDiv.innerHTML = '';
+            filtered.forEach(c => {
+                const isSelected = _mktState.selectedPhones.has(c.phone);
+                const item = document.createElement('div');
+                item.style.display = 'flex';
+                item.style.alignItems = 'center';
+                item.style.justifyContent = 'space-between';
+                item.style.padding = '8px 12px';
+                item.style.background = isSelected ? 'rgba(0, 210, 211, 0.08)' : 'rgba(255, 255, 255, 0.02)';
+                item.style.border = isSelected ? '1px solid rgba(0, 210, 211, 0.4)' : '1px solid rgba(255, 255, 255, 0.05)';
+                item.style.borderRadius = '8px';
+                item.style.gap = '10px';
+                item.style.transition = 'all 0.2s ease';
+
+                let statusBadge = '';
+                if (c.status === 'active') {
+                    const platStr = c.platforms.length > 0 ? c.platforms.slice(0, 2).join(', ') : 'Servicio activo';
+                    statusBadge = `<span style="font-size:0.75rem; color:#4cd137; background:rgba(76, 209, 55, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> Activo: ${platStr}</span>`;
+                } else if (c.status === 'inactive') {
+                    const platStr = c.platforms.length > 0 ? c.platforms.slice(0, 2).join(', ') : 'Vencido';
+                    statusBadge = `<span style="font-size:0.75rem; color:#ff6b6b; background:rgba(255, 107, 107, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-clock-rotate-left"></i> Vencido: ${platStr}</span>`;
+                } else {
+                    statusBadge = `<span style="font-size:0.75rem; color:#2ab7ca; background:rgba(42, 183, 202, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-user-plus"></i> Prospecto (Sin compras)</span>`;
+                }
+
+                item.innerHTML = `
+                    <label style="display:flex; align-items:center; gap:10px; margin:0; cursor:pointer; flex:1;">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="onMarketingClientCheckboxChange('${c.phone}', this.checked)" style="width:18px; height:18px; accent-color:#00d2d3; cursor:pointer;">
+                        <div>
+                            <strong style="color:white; font-size:0.9rem;">${c.name}</strong>
+                            <span style="font-size:0.8rem; color:#aaa; margin-left:8px;">📱 +${c.phone}</span>
+                        </div>
+                    </label>
+                    <div>${statusBadge}</div>
+                `;
+                listDiv.appendChild(item);
+            });
+        };
+
+        window.onMarketingClientCheckboxChange = function (phone, isChecked) {
+            if (isChecked) {
+                _mktState.selectedPhones.add(phone);
+            } else {
+                _mktState.selectedPhones.delete(phone);
+            }
+            const selEl = document.getElementById('mkt-selected-count');
+            const btnEl = document.getElementById('mkt-btn-count');
+            if (selEl) selEl.innerText = _mktState.selectedPhones.size;
+            if (btnEl) btnEl.innerText = _mktState.selectedPhones.size;
+        };
+
+        window.toggleSelectAllMarketing = function (shouldSelectAll) {
+            const searchTerm = (document.getElementById('mkt-filter-search')?.value || '').toLowerCase().trim();
+            const segment = _mktState.currentSegment;
+
+            let filtered = [];
+            if (segment === 'active') {
+                filtered = _mktState.allAudience.filter(c => c.status === 'active');
+            } else if (segment === 'inactive') {
+                filtered = _mktState.allAudience.filter(c => c.status === 'inactive' || c.status === 'prospect');
+            } else {
+                filtered = _mktState.allAudience;
+            }
+
+            if (searchTerm) {
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm));
+            }
+
+            filtered.forEach(c => {
+                if (shouldSelectAll) _mktState.selectedPhones.add(c.phone);
+                else _mktState.selectedPhones.delete(c.phone);
+            });
+
+            renderMarketingAudienceList();
+        };
+
+        window.onMarketingModeChange = function () {
+            const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
+            const hookContainer = document.getElementById('mkt-hook-container');
+            const mainLabel = document.getElementById('mkt-main-text-label');
+
+            if (mode === 'interactive') {
+                if (hookContainer) hookContainer.style.display = 'block';
+                if (mainLabel) mainLabel.innerHTML = '<i class="fa-solid fa-envelope-open-text"></i> Mensaje de Entrega / Auto-Respuesta (Al responder el cliente):';
+            } else {
+                if (hookContainer) hookContainer.style.display = 'none';
+                if (mainLabel) mainLabel.innerHTML = '<i class="fa-solid fa-envelope-open-text"></i> Mensaje Promocional Directo (Texto Completo):';
+            }
+        };
+
+        window.insertMktVar = function (varText) {
+            const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
+            const textarea = (mode === 'interactive') ? document.getElementById('mkt-hook-text') : document.getElementById('mkt-promo-text');
+            if (!textarea) return;
+
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            textarea.value = text.substring(0, start) + varText + text.substring(end);
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = start + varText.length;
+        };
+
+        window.handleMktPhotoUpload = function (fileInput) {
+            if (!fileInput.files || fileInput.files.length === 0) return;
+
+            Array.from(fileInput.files).forEach(file => {
+                if (file.size > 2 * 1024 * 1024) {
+                    alert(`La imagen "${file.name}" supera los 2MB. Por favor selecciona imágenes más ligeras.`);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const dataUrl = e.target.result;
+                    if (!_mktState.photos.includes(dataUrl)) {
+                        _mktState.photos.push(dataUrl);
+                        renderMktPhotosPreview();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            fileInput.value = '';
+        };
+
+        window.syncMktPhotoUrls = function () {
+            const input = document.getElementById('mkt-photo-urls-input');
+            if (!input) return;
+
+            const urls = input.value.split(/[,\n]/).map(u => u.trim()).filter(u => u.startsWith('http://') || u.startsWith('https://'));
+            urls.forEach(u => {
+                if (!_mktState.photos.includes(u)) {
+                    _mktState.photos.push(u);
+                }
+            });
+            renderMktPhotosPreview();
+        };
+
+        window.removeMktPhoto = function (index) {
+            _mktState.photos.splice(index, 1);
+            renderMktPhotosPreview();
+        };
+
+        function renderMktPhotosPreview() {
+            const gallery = document.getElementById('mkt-photos-preview-gallery');
+            if (!gallery) return;
+
+            gallery.innerHTML = '';
+            if (_mktState.photos.length === 0) {
+                gallery.innerHTML = '<span id="mkt-no-photos-msg" style="font-size:0.8rem; color:#777;">(Sin fotos adjuntas. Puedes agregar varias fotos de tus promociones o combos)</span>';
+                return;
+            }
+
+            _mktState.photos.forEach((photoUrl, idx) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'mkt-photo-thumb';
+                thumb.title = `Foto ${idx + 1}`;
+                thumb.innerHTML = `
+                    <img src="${photoUrl}" alt="Foto ${idx + 1}" onerror="this.src='assets/logo.png'">
+                    <button type="button" class="mkt-photo-del" onclick="removeMktPhoto(${idx})" title="Eliminar foto">✕</button>
+                `;
+                gallery.appendChild(thumb);
+            });
+        }
+
+        window.saveMarketingSettings = function () {
+            const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
+            const hookText = document.getElementById('mkt-hook-text')?.value || '';
+            const promoText = document.getElementById('mkt-promo-text')?.value || '';
+            const batchSize = parseInt(document.getElementById('mkt-batch-size')?.value) || 5;
+            const pauseBatch = document.getElementById('mkt-pause-batch')?.checked ?? true;
+            const delaySeconds = parseInt(document.getElementById('mkt-delay-seconds')?.value) || 15;
+            const randomJitter = document.getElementById('mkt-random-jitter')?.checked ?? true;
+            const dailyLimit = parseInt(document.getElementById('mkt-daily-limit')?.value) || 40;
+
+            const settings = {
+                mode,
+                hookText,
+                promoText,
+                batchSize,
+                pauseBatch,
+                delaySeconds,
+                randomJitter,
+                dailyLimit,
+                photoUrls: _mktState.photos.filter(p => p.startsWith('http'))
+            };
+
+            localStorage.setItem('streaming_dpc_mkt_config', JSON.stringify(settings));
+            alert('✅ Plantilla y configuración de Marketing guardadas correctamente.');
+        };
+
+        window.loadMarketingSettings = function () {
+            try {
+                const saved = localStorage.getItem('streaming_dpc_mkt_config');
+                if (!saved) {
+                    // Valores iniciales recomendados
+                    if (document.getElementById('mkt-hook-text')) {
+                        document.getElementById('mkt-hook-text').value = "¡Hola {cliente}! 👋 Tenemos un beneficio y promoción exclusiva para ti hoy en pantallas de streaming 🎬. ¿Te gustaría conocerla? Responde 'SÍ' o '1' para enviarte los detalles y fotos 👇";
+                    }
+                    if (document.getElementById('mkt-promo-text')) {
+                        document.getElementById('mkt-promo-text').value = "¡Hola {cliente}! 🎉 Mira estas súper promociones para tus pantallas favoritas:\n\n🔥 Netflix 1 Pantalla: $16.000 (¡Promo 3 Meses x $42.000!)\n🎬 Max Premium 4K: $12.000\n🍿 Disney+ Premium: $14.000\n\n📌 Cuentas originales y estables con garantía total.\n¿Cuál deseas disfrutar hoy?";
+                    }
+                    return;
+                }
+
+                const s = JSON.parse(saved);
+                if (s.mode) {
+                    const r = document.querySelector(`input[name="mkt-send-mode"][value="${s.mode}"]`);
+                    if (r) r.checked = true;
+                    onMarketingModeChange();
+                }
+                if (s.hookText && document.getElementById('mkt-hook-text')) {
+                    document.getElementById('mkt-hook-text').value = s.hookText;
+                }
+                if (s.promoText && document.getElementById('mkt-promo-text')) {
+                    document.getElementById('mkt-promo-text').value = s.promoText;
+                }
+                if (s.batchSize && document.getElementById('mkt-batch-size')) {
+                    document.getElementById('mkt-batch-size').value = s.batchSize;
+                }
+                if (s.pauseBatch !== undefined && document.getElementById('mkt-pause-batch')) {
+                    document.getElementById('mkt-pause-batch').checked = s.pauseBatch;
+                }
+                if (s.delaySeconds && document.getElementById('mkt-delay-seconds')) {
+                    document.getElementById('mkt-delay-seconds').value = s.delaySeconds;
+                }
+                if (s.randomJitter !== undefined && document.getElementById('mkt-random-jitter')) {
+                    document.getElementById('mkt-random-jitter').checked = s.randomJitter;
+                }
+                if (s.dailyLimit && document.getElementById('mkt-daily-limit')) {
+                    document.getElementById('mkt-daily-limit').value = s.dailyLimit;
+                }
+                if (Array.isArray(s.photoUrls)) {
+                    _mktState.photos = [...s.photoUrls];
+                    renderMktPhotosPreview();
+                }
+            } catch (err) {
+                console.warn('Error loading marketing settings:', err);
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════
+        // MOTOR DE EJECUCIÓN ANTI-BLOQUEO (CADENCIA, LOTES Y LÍMITES)
+        // ═══════════════════════════════════════════════════════════════
+        window.startMarketingCampaign = function () {
+            if (_mktState.isRunning) {
+                return alert('⚠️ Ya hay una campaña de marketing en ejecución. Puedes pausarla o detenerla.');
+            }
+
+            if (_mktState.selectedPhones.size === 0) {
+                return alert('⚠️ Por favor selecciona al menos un cliente en la lista para enviar.');
+            }
+
+            const promoText = (document.getElementById('mkt-promo-text')?.value || '').trim();
+            const hookText = (document.getElementById('mkt-hook-text')?.value || '').trim();
+            const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
+
+            if (mode === 'interactive' && !hookText) {
+                return alert('⚠️ En el Modo Auto-Respuesta debes escribir el Mensaje de Apertura / Gancho.');
+            }
+            if (mode !== 'interactive' && !promoText) {
+                return alert('⚠️ Debes escribir el texto de la promoción para enviar.');
+            }
+
+            const dailyLimit = parseInt(document.getElementById('mkt-daily-limit')?.value) || 40;
+            const sentToday = getSentTodayCount();
+            if (sentToday >= dailyLimit) {
+                if (!confirm(`⚠️ Ya alcanzaste el límite de seguridad de ${dailyLimit} envíos realizados hoy.\n\nPara proteger tu línea de WhatsApp se recomienda no superar el límite.\n\n¿Deseas continuar de todas formas?`)) {
+                    return;
+                }
+            }
+
+            // Construir la cola de clientes a enviar
+            const targetList = _mktState.allAudience.filter(c => _mktState.selectedPhones.has(c.phone));
+            _mktState.campaignQueue = targetList;
+            _mktState.currentIndex = 0;
+            _mktState.currentBatchCount = 0;
+            _mktState.isRunning = true;
+            _mktState.isPaused = false;
+            _mktState.isBatchPaused = false;
+            _mktState.sentCountSession = 0;
+
+            // Mostrar el panel de ejecución en vivo
+            const execPanel = document.getElementById('mkt-execution-panel');
+            if (execPanel) {
+                execPanel.style.display = 'block';
+                execPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            const logsDiv = document.getElementById('mkt-live-logs');
+            if (logsDiv) logsDiv.innerHTML = '';
+            addMktLog(`🚀 Campaña iniciada con ${_mktState.campaignQueue.length} destinatarios. Modo: ${mode.toUpperCase()}.`);
+
+            updateMarketingProgressUI();
+            dispatchNextMarketingMessage();
+        };
+
+        function addMktLog(message, isSuccess) {
+            const logsDiv = document.getElementById('mkt-live-logs');
+            if (!logsDiv) return;
+
+            const timeStr = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.style.color = isSuccess ? '#4cd137' : (message.includes('Lote') ? '#f39c12' : '#00d2d3');
+            line.innerText = `[${timeStr}] ${message}`;
+            logsDiv.appendChild(line);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function updateMarketingProgressUI() {
+            const total = _mktState.campaignQueue.length;
+            const current = _mktState.currentIndex;
+            const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+
+            const bar = document.getElementById('mkt-progress-bar');
+            const pctEl = document.getElementById('mkt-progress-percentage');
+            const sentEl = document.getElementById('mkt-live-sent');
+            const pendingEl = document.getElementById('mkt-live-pending');
+            const batchEl = document.getElementById('mkt-live-batch');
+
+            if (bar) bar.style.width = pct + '%';
+            if (pctEl) pctEl.innerText = pct + '%';
+            if (sentEl) sentEl.innerText = current;
+            if (pendingEl) pendingEl.innerText = Math.max(0, total - current);
+
+            const batchSize = parseInt(document.getElementById('mkt-batch-size')?.value) || 5;
+            const currentBatchNum = Math.floor(current / batchSize) + 1;
+            if (batchEl) batchEl.innerText = `Lote ${currentBatchNum} (${_mktState.currentBatchCount}/${batchSize})`;
+        }
+
+        window.dispatchNextMarketingMessage = function () {
+            if (!_mktState.isRunning || _mktState.isPaused || _mktState.isBatchPaused) return;
+
+            // Limpiar temporizadores previos
+            if (_mktState.timerId) clearTimeout(_mktState.timerId);
+            if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+
+            // Verificar si terminó la cola
+            if (_mktState.currentIndex >= _mktState.campaignQueue.length) {
+                _mktState.isRunning = false;
+                addMktLog(`🎉 ¡Campaña completada exitosamente! Se despacharon ${_mktState.currentIndex} mensajes.`, true);
+                alert(`🎉 ¡Campaña de difusión finalizada con éxito!\n\nSe enviaron ${_mktState.currentIndex} promociones.`);
+                const statusText = document.getElementById('mkt-progress-status-text');
+                if (statusText) statusText.innerText = '✅ Campaña Finalizada';
+                return;
+            }
+
+            // Verificar límite diario
+            const dailyLimit = parseInt(document.getElementById('mkt-daily-limit')?.value) || 40;
+            if (getSentTodayCount() >= dailyLimit) {
+                _mktState.isPaused = true;
+                addMktLog(`⚠️ Límite diario alcanzado (${dailyLimit} envíos). Pausado por seguridad.`, false);
+                alert(`⚠️ Se alcanzó el límite diario de ${dailyLimit} envíos para proteger tu cuenta de WhatsApp.\n\nCampaña en pausa preventiva.`);
+                return;
+            }
+
+            // Verificar pausa por lote de 5
+            const batchSize = parseInt(document.getElementById('mkt-batch-size')?.value) || 5;
+            const pauseBatchEnabled = document.getElementById('mkt-pause-batch')?.checked ?? true;
+
+            if (pauseBatchEnabled && _mktState.currentBatchCount >= batchSize) {
+                _mktState.isBatchPaused = true;
+                const alertBox = document.getElementById('mkt-batch-alert');
+                if (alertBox) alertBox.style.display = 'block';
+                addMktLog(`☕ Lote de ${batchSize} clientes completado. Pausa preventiva anti-bloqueo activa.`);
+                return;
+            }
+
+            // Cliente objetivo actual
+            const target = _mktState.campaignQueue[_mktState.currentIndex];
+            const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
+            const hookTemplate = document.getElementById('mkt-hook-text')?.value || '';
+            const promoTemplate = document.getElementById('mkt-promo-text')?.value || '';
+
+            // Construir texto personalizado con Spintax y variables
+            let rawText = (mode === 'interactive') ? hookTemplate : promoTemplate;
+            let textWithSpintax = parseSpintax(rawText);
+
+            let personalizedText = textWithSpintax
+                .replace(/\{cliente\}|\{nombre\}/gi, target.name || 'Cliente')
+                .replace(/\{telefono\}|\{celular\}/gi, target.phone || '')
+                .replace(/\{pantallas\}|\{pantalla\}/gi, (target.platforms && target.platforms.length > 0) ? target.platforms.join(', ') : 'pantallas de streaming');
+
+            // Si es directo y tiene fotos, agregar los enlaces directos
+            if (mode === 'direct' && _mktState.photos.length > 0) {
+                personalizedText += "\n\n📸 *FOTOS DE LA PROMOCIÓN:*";
+                _mktState.photos.forEach((url, i) => {
+                    personalizedText += `\n🔗 Foto ${i + 1}: ${url}`;
+                });
+            }
+
+            // Despachar el mensaje
+            if (mode === 'robot') {
+                const adminPhone = storeConfig.whatsappNumber || '';
+                let cleanAdmin = adminPhone.toString().replace(/\D/g, '');
+                if (cleanAdmin.length === 10 && cleanAdmin.startsWith('3')) cleanAdmin = '57' + cleanAdmin;
+                const command = `CMD_MKT@@@TEL:${target.phone}@@@TX:${personalizedText}@@@IMG:${_mktState.photos.join(',')}`;
+                window.openWhatsapp(cleanAdmin, command);
+            } else {
+                let waPhone = target.phone.replace(/\D/g, '');
+                if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
+                window.openWhatsapp(waPhone, personalizedText);
+            }
+
+            // Incrementar contadores
+            incrementSentTodayCount();
+            _mktState.currentIndex++;
+            _mktState.currentBatchCount++;
+            _mktState.sentCountSession++;
+
+            addMktLog(`✅ Enviado a: ${target.name} (+${target.phone})`, true);
+            updateMarketingProgressUI();
+
+            // Si quedan más mensajes, calcular tiempo de espera y arrancar cuenta regresiva
+            if (_mktState.currentIndex < _mktState.campaignQueue.length) {
+                let delay = parseInt(document.getElementById('mkt-delay-seconds')?.value) || 15;
+                const jitter = document.getElementById('mkt-random-jitter')?.checked ?? true;
+                if (jitter) {
+                    // Variación aleatoria entre -3 y +5 segundos
+                    const offset = Math.floor(Math.random() * 9) - 3;
+                    delay = Math.max(5, delay + offset);
+                }
+
+                startMktCountdown(delay);
+                _mktState.timerId = setTimeout(dispatchNextMarketingMessage, delay * 1000);
+            } else {
+                updateMarketingProgressUI();
+                _mktState.isRunning = false;
+                addMktLog(`🎉 ¡Campaña finalizada! Todos los destinatarios fueron procesados.`, true);
+            }
+        };
+
+        function startMktCountdown(totalSeconds) {
+            let remaining = totalSeconds;
+            const cdEl = document.getElementById('mkt-live-countdown');
+            if (cdEl) cdEl.innerText = `${remaining}s`;
+
+            if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+            _mktState.countdownTimerId = setInterval(() => {
+                remaining--;
+                if (cdEl) cdEl.innerText = `${remaining}s`;
+                if (remaining <= 0) {
+                    clearInterval(_mktState.countdownTimerId);
+                    if (cdEl) cdEl.innerText = 'Enviando...';
+                }
+            }, 1000);
+        }
+
+        window.resumeNextMarketingBatch = function () {
+            _mktState.isBatchPaused = false;
+            _mktState.currentBatchCount = 0;
+            const alertBox = document.getElementById('mkt-batch-alert');
+            if (alertBox) alertBox.style.display = 'none';
+
+            addMktLog(`▶️ Reanudando con el siguiente lote de clientes...`);
+            updateMarketingProgressUI();
+            dispatchNextMarketingMessage();
+        };
+
+        window.togglePauseMarketingCampaign = function () {
+            const btn = document.getElementById('btn-mkt-pause');
+            if (_mktState.isPaused) {
+                _mktState.isPaused = false;
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
+                addMktLog(`▶️ Campaña reanudada por el usuario.`);
+                dispatchNextMarketingMessage();
+            } else {
+                _mktState.isPaused = true;
+                if (_mktState.timerId) clearTimeout(_mktState.timerId);
+                if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Reanudar';
+                const cdEl = document.getElementById('mkt-live-countdown');
+                if (cdEl) cdEl.innerText = 'PAUSADO';
+                addMktLog(`⏸️ Campaña pausada manualmente.`);
+            }
+        };
+
+        window.skipMarketingDelay = function () {
+            if (!_mktState.isRunning) return;
+            if (_mktState.timerId) clearTimeout(_mktState.timerId);
+            if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+            addMktLog(`⏩ Tiempo de espera saltado. Enviando siguiente de inmediato.`);
+            dispatchNextMarketingMessage();
+        };
+
+        window.stopMarketingCampaign = function () {
+            if (!_mktState.isRunning) return;
+            if (confirm('¿Deseas detener completamente la campaña actual?')) {
+                _mktState.isRunning = false;
+                _mktState.isPaused = false;
+                _mktState.isBatchPaused = false;
+                if (_mktState.timerId) clearTimeout(_mktState.timerId);
+                if (_mktState.countdownTimerId) clearInterval(_mktState.countdownTimerId);
+
+                const statusText = document.getElementById('mkt-progress-status-text');
+                if (statusText) statusText.innerText = '⏹️ Campaña Detenida';
+                const cdEl = document.getElementById('mkt-live-countdown');
+                if (cdEl) cdEl.innerText = '--';
+
+                addMktLog(`⏹️ Campaña detenida por el usuario.`);
             }
         };
     </script>
