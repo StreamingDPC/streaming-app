@@ -4420,6 +4420,9 @@
                         <button class="btn-icon btn-toggle" style="color: ${inStock ? '#4cd137' : '#ff4d4d'}" onclick="toggleStock(${index})" title="${inStock ? 'Marcar Agotado' : 'Marcar Disponible'}">
                             <i class="fa-solid ${inStock ? 'fa-box-open' : 'fa-box'}"></i>
                         </button>
+                        <button class="btn-icon" style="color: #00d2d3;" onclick="duplicateProduct(${index})" title="Duplicar Producto (Copiar datos)">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
                         <button class="btn-icon btn-edit" onclick="editProduct(${index})" title="Editar">
                             <i class="fa-solid fa-pen"></i>
                         </button>
@@ -4467,6 +4470,73 @@
             }
             saveProductsToStorage();
             renderAdminList();
+        }
+
+        function duplicateProduct(index) {
+            editIndex = -1; // 🎯 Nuevo producto: se guardará como nuevo sin pisar el original
+            const p = dynamicProducts[index];
+            if (!p) return;
+
+            document.getElementById('new-name').value = p.name || '';
+            document.getElementById('new-price').value = p.price !== undefined ? p.price : '';
+            document.getElementById('new-seller-price').value = p.sellerPrice || p.price || '';
+            document.getElementById('new-purchase-price').value = p.purchasePrice || 0;
+            document.getElementById('new-category').value = p.category || 'individual';
+            
+            const m = p.months || 1;
+            if (document.getElementById('new-months')) {
+                document.getElementById('new-months').value = m;
+                if (window.updateMonthPillUI) window.updateMonthPillUI(m);
+            }
+
+            populateOwnerSelect();
+            document.getElementById('new-owner').value = p.owner || 'admin';
+            document.getElementById('owner-col').style.display = p.category === 'ventas_extras' ? 'block' : 'none';
+            document.getElementById('new-brand').value = p.brand || '';
+            document.getElementById('new-image').value = p.image || '';
+            document.getElementById('new-desc').value = p.desc || '';
+            document.getElementById('new-stock').value = p.stock || 0;
+
+            if (document.getElementById('new-allow-exhausted-seller')) {
+                const sel = document.getElementById('new-allow-exhausted-seller');
+                document.getElementById('search-allow-exhausted').value = '';
+                Array.from(sel.options).forEach(opt => opt.style.display = 'block');
+
+                const allows = Object.keys(p.reserveRules || {});
+                if (allows.length === 0 && p.allowExhaustedSeller) {
+                    p.allowExhaustedSeller.split(',').map(x => x.trim()).forEach(a => {
+                        if (a) allows.push(a);
+                    });
+                }
+                Array.from(sel.options).forEach(opt => opt.selected = allows.includes(opt.value));
+
+                let defaultStock = '';
+                let defaultDate = '';
+                if (allows.length > 0 && p.reserveRules && p.reserveRules[allows[0]]) {
+                    defaultStock = p.reserveRules[allows[0]].stock !== undefined && p.reserveRules[allows[0]].stock !== null ? p.reserveRules[allows[0]].stock : '';
+                    defaultDate = p.reserveRules[allows[0]].date || '';
+                }
+                document.getElementById('new-allow-exhausted-stock').value = defaultStock;
+                document.getElementById('new-allow-exhausted-date').value = defaultDate;
+            }
+
+            // Guardar basePrice en dataset para los cálculos dinámicos de meses
+            if (p.price) document.getElementById('new-price').dataset.basePrice = Math.round(p.price / m);
+            if (p.sellerPrice) document.getElementById('new-seller-price').dataset.basePrice = Math.round(p.sellerPrice / m);
+            if (p.purchasePrice) document.getElementById('new-purchase-price').dataset.basePrice = Math.round(p.purchasePrice / m);
+
+            document.getElementById('form-title').innerText = "Duplicar Producto (Copia)";
+            document.querySelector('.save-btn').innerText = "Guardar Nuevo Producto";
+            document.getElementById('btn-cancel').style.display = "block";
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                const priceField = document.getElementById('new-price');
+                if (priceField) {
+                    priceField.focus();
+                    priceField.select();
+                }
+            }, 300);
         }
 
         function editProduct(index) {
