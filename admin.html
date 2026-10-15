@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.28 (Exclusión Clientes Vendedores)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.29 (Marketing Actualización En Vivo)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -8725,21 +8725,6 @@
                 const clientsMap = {};
                 const now = Date.now();
 
-                // Identificar teléfonos propios de los vendedores para excluirlos de envíos de marketing
-                const sellerPhones = new Set();
-                const sellersRaw = (storeConfig && storeConfig.sellers) || [];
-                const sellers = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw);
-                sellers.forEach(s => {
-                    if (!s) return;
-                    ['whatsapp', 'phone', 'tel', 'celular'].forEach(k => {
-                        if (s[k]) {
-                            let p = s[k].toString().replace(/\D/g, '');
-                            if (p.length === 10 && p.startsWith('3')) p = '57' + p;
-                            if (p) sellerPhones.add(p);
-                        }
-                    });
-                });
-
                 // 1. De clientProfiles
                 const profiles = window.allClientProfiles || allClientProfiles || (window.lastFirebaseData && window.lastFirebaseData.clientProfiles) || {};
                 Object.keys(profiles).forEach(rawPhone => {
@@ -8822,9 +8807,6 @@
                 // 4. Evaluar el estado y origen de cada cliente
                 const list = [];
                 Object.values(clientsMap).forEach(c => {
-                    // Excluir a los vendedores para no enviarles promociones a sus propias líneas
-                    if (sellerPhones.has(c.phone)) return;
-
                     let hasActive = false;
                     let activeItems = [];
                     let expiredItems = [];
@@ -8832,6 +8814,11 @@
 
                     // Ordenar compras por fecha descendente
                     c.sales.sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0));
+
+                    // El nombre más actualizado corresponde a la compra más reciente
+                    if (c.sales[0] && c.sales[0].clientName) {
+                        c.name = safeDecode(c.sales[0].clientName);
+                    }
 
                     c.sales.forEach(sale => {
                         if (!sale || sale.isPaid === false) return;
@@ -8863,12 +8850,13 @@
                         c.status = 'prospect'; // Registrado sin compras
                     }
 
-                    // Determinar origen del cliente: Directo vs Vendedor
+                    // Determinar origen del cliente según su última compra:
+                    // Si la última compra fue con un vendedor, pertenece al vendedor.
+                    // Si fue directa (Página Web / Admin) o es prospecto, pertenece a la Tienda Directa.
                     const latestSale = c.sales[0];
-                    const hasSellerSale = c.sales.some(s => !isDirectMarketingSale(s));
-                    c.isSellerClient = (latestSale ? !isDirectMarketingSale(latestSale) : false) || hasSellerSale;
+                    c.isSellerClient = latestSale ? !isDirectMarketingSale(latestSale) : false;
                     c.sellerName = c.isSellerClient 
-                        ? (latestSale && !isDirectMarketingSale(latestSale) ? latestSale.sellerName : (c.sales.find(s => !isDirectMarketingSale(s))?.sellerName || 'Vendedor'))
+                        ? (latestSale.sellerName || 'Vendedor') 
                         : 'Página Web Oficial';
 
                     c.latestExpiry = latestExpiry;
@@ -8902,10 +8890,8 @@
         window.setMarketingSegment = function (segment, keepSelection) {
             _mktState.currentSegment = segment;
 
-            // Si la audiencia está vacía, refrescarla desde la base de datos
-            if (!_mktState.allAudience || _mktState.allAudience.length === 0) {
-                _mktState.allAudience = getMarketingAudience();
-            }
+            // Siempre recargar la audiencia fresca
+            _mktState.allAudience = getMarketingAudience();
 
             const currentOriginAudience = getAudienceFilteredByOrigin();
 
