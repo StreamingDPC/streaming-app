@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         .admin-layout {
             padding: 2rem 1rem;
@@ -1605,10 +1606,17 @@
                             <i class="fa-solid fa-database"></i> Base de Datos Maestra de Clientes y Pantallas
                         </h2>
                         <p style="margin:0.3rem 0 0 0; font-size:0.88rem; color:#a0a0a0;">
-                            Control total de clientes activos y sus pantallas respectivas. Todo lo que edites y guardes aquí se actualiza en tiempo real en la cuenta del cliente y en la página de Códigos.
+                            Control total de clientes activos y sus pantallas respectivas. Conectado en tiempo real con tu archivo <code>D:\Varios\Netflix\Netflix clientes.xlsx</code> (pestañas: NO, DO, MO, PO, PA, C, V, I, Apple, Sp, Youtube).
                         </p>
+                        <div id="db-excel-sync-status" style="margin-top:6px; display:inline-flex; align-items:center; gap:6px; background:rgba(46, 204, 113, 0.12); border:1px solid rgba(46, 204, 113, 0.35); color:#2ecc71; padding:4px 10px; border-radius:20px; font-size:0.76rem; font-weight:bold;">
+                            <i class="fa-solid fa-file-excel"></i> Sincronización Automática Excel Activa (NO, DO, MO, PO, PA, C, V, I, Apple, Sp, Youtube)
+                        </div>
                     </div>
                     <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                        <input type="file" id="db-excel-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleDbExcelFileUpload(this)">
+                        <button type="button" class="save-btn" onclick="syncDatabaseFromExcelBtn(this)" style="margin:0; width:auto; padding:10px 16px; background:linear-gradient(135deg, #1d6f42, #2ecc71); color:white; font-weight:bold; font-size:0.85rem; border-radius:10px; box-shadow:0 3px 10px rgba(46, 204, 113, 0.25);" title="Sincronizar con D:\Varios\Netflix\Netflix clientes.xlsx">
+                            <i class="fa-solid fa-file-excel"></i> Sincronizar Excel (.xlsx)
+                        </button>
                         <button type="button" class="save-btn" onclick="openDbQuickNewClientModal()" style="margin:0; width:auto; padding:10px 16px; background:linear-gradient(135deg, #2ecc71, #27ae60); color:#111; font-weight:bold; font-size:0.85rem; border-radius:10px;">
                             <i class="fa-solid fa-user-plus"></i> Nuevo Cliente / Pantalla
                         </button>
@@ -10317,6 +10325,14 @@
 
             populateDbSellerDropdown();
 
+            const syncBadge = document.getElementById('db-excel-sync-status');
+            if (syncBadge && storeConfig && storeConfig.lastExcelSync) {
+                const syncTimeStr = new Date(storeConfig.lastExcelSync).toLocaleString();
+                const scCount = storeConfig.lastExcelSyncScreens || 0;
+                const clCount = storeConfig.lastExcelSyncClients || 0;
+                syncBadge.innerHTML = `<i class="fa-solid fa-file-excel"></i> Sincronizado con <b>Netflix clientes.xlsx</b> (${scCount} pantallas / ${clCount} clientes) — Última vez: ${syncTimeStr}`;
+            }
+
             const searchQ = (document.getElementById('db-filter-search')?.value || '').toLowerCase().trim();
             const statusFilter = document.getElementById('db-filter-status')?.value || 'active';
             const completionFilter = document.getElementById('db-filter-completion')?.value || 'all';
@@ -11066,6 +11082,407 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        };
+
+        // =====================================================
+        // SINCRONIZACIÓN DE ARCHIVO EXCEL DE CLIENTES (.XLSX)
+        // Pestañas: NO, DO, MO, PO, PA, C, V, I, Apple, Sp, Youtube
+        // =====================================================
+        const DB_EXCEL_SHEET_MAP = [
+            { key: 'NO', platform: 'Netflix', matchKeys: ['netflix'] },
+            { key: 'DO', platform: 'Disney+', matchKeys: ['disney'] },
+            { key: 'MO', platform: 'Max (HBO)', matchKeys: ['max', 'hbo'] },
+            { key: 'PO', platform: 'Prime Video', matchKeys: ['prime', 'amazon'] },
+            { key: 'PA', platform: 'Paramount+', matchKeys: ['paramount'] },
+            { key: 'C', platform: 'Crunchyroll', matchKeys: ['crunchy'] },
+            { key: 'V', platform: 'Vix+', matchKeys: ['vix'] },
+            { key: 'I', platform: 'IPTV', matchKeys: ['iptv', 'magis', 'flujo', 'tele'] },
+            { key: 'Apple', platform: 'Apple TV+', matchKeys: ['apple'] },
+            { key: 'Sp', platform: 'Spotify', matchKeys: ['spotify'] },
+            { key: 'Youtube', platform: 'YouTube Premium', matchKeys: ['youtube'] }
+        ];
+
+        const DB_KNOWN_SELLERS_MAP = {
+            'maac': 'Página Web Oficial',
+            'ines': 'Aleni',
+            'aleni': 'Aleni',
+            'pedro': 'Pedro',
+            'stefani': 'Stefani',
+            'angie': 'Angie',
+            'alex': 'Alex',
+            'any': 'Any',
+            'katherin': 'Katherin',
+            'darwin': 'Darwin',
+            'laura': 'Laura',
+            'hector': 'Hector',
+            'jessica': 'Jessica',
+            'diana': 'Diana',
+            'duay': 'Duay',
+            'yenfri': 'Yenfri',
+            'nelson': 'Nelson',
+            'angel': 'Angel',
+            'pablo': 'Pablo',
+            'jorge': 'Jorge',
+            'adriana': 'Adriana'
+        };
+
+        function isForbiddenExcelPass(str) {
+            if (!str) return true;
+            const low = String(str).trim().toLowerCase();
+            return low.startsWith('dl70112849') || low === 'libre' || low === 'noren' || low === 'original';
+        }
+
+        function normalizeExcelSeller(raw) {
+            if (!raw) return 'Página Web Oficial';
+            const clean = String(raw).trim();
+            const low = clean.toLowerCase();
+            if (DB_KNOWN_SELLERS_MAP[low]) return DB_KNOWN_SELLERS_MAP[low];
+            return clean.charAt(0).toUpperCase() + clean.slice(1);
+        }
+
+        window.syncDatabaseFromExcelBtn = async function (btnEl) {
+            const origHtml = btnEl ? btnEl.innerHTML : '';
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando Excel...';
+            }
+
+            try {
+                // 1. Intentar sincronizar directo desde el servicio local en la PC (lee D:\Varios\Netflix\Netflix clientes.xlsx directo)
+                const resp = await fetch('http://localhost:3099/api/sync-excel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await resp.json();
+                if (data && data.success) {
+                    showDbToast(`✅ Excel sincronizado: ${data.updatedScreensCount} pantallas en ${data.updatedClientsCount} clientes`);
+                    renderDatabaseTab();
+                    if (btnEl) {
+                        btnEl.disabled = false;
+                        btnEl.innerHTML = origHtml;
+                    }
+                    return;
+                }
+            } catch (e) {
+                // Si no responde en localhost:3099, abrir selector de archivo .xlsx del navegador
+            }
+
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerHTML = origHtml;
+            }
+            const fileInput = document.getElementById('db-excel-file-input');
+            if (fileInput) fileInput.click();
+        };
+
+        window.handleDbExcelFileUpload = async function (inputEl) {
+            const file = inputEl?.files?.[0];
+            if (!file) return;
+            inputEl.value = '';
+
+            if (typeof XLSX === 'undefined') {
+                return alert('La librería de Excel aún está cargando. Intenta de nuevo en unos segundos.');
+            }
+
+            showDbToast('⏳ Leyendo pestañas del archivo Excel...');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+                const excelRecords = [];
+
+                for (const sheetMeta of DB_EXCEL_SHEET_MAP) {
+                    const { key, platform } = sheetMeta;
+                    const actualName = wb.SheetNames.find(s => s.toLowerCase().trim() === key.toLowerCase());
+                    if (!actualName) continue;
+
+                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[actualName], { header: 1, raw: false, defval: '' });
+                    let currentAccountEmail = '';
+                    let currentAccountPass = '';
+                    let headerCols = null;
+
+                    for (let i = 0; i < rows.length; i++) {
+                        const r = rows[i].map(c => String(c || '').trim());
+                        if (r.every(c => !c)) continue;
+
+                        const lowerRow = r.map(c => c.toLowerCase());
+                        const clienteIdx = lowerRow.indexOf('cliente');
+                        const celIdx = lowerRow.indexOf('cel');
+
+                        if (clienteIdx !== -1 && celIdx !== -1) {
+                            headerCols = {
+                                usuarioIdx: lowerRow.findIndex(c => c === 'usuario' || c === 'vendedor'),
+                                ciudadIdx: lowerRow.indexOf('ciudad'),
+                                clienteIdx,
+                                celIdx,
+                                pantallasIdx: lowerRow.findIndex(c => c === 'pantallas' || c === 'dispositivo' || c === 'plataforma'),
+                                pinIdx: lowerRow.findIndex(c => c === 'pin' || c === 'perfil'),
+                                fechaIdx: lowerRow.indexOf('fecha'),
+                                finIdx: lowerRow.indexOf('fin')
+                            };
+
+                            if (i > 0) {
+                                const prev = rows[i - 1].map(c => String(c || '').trim());
+                                let emailCol = prev.findIndex(c => c.includes('@') && !isForbiddenExcelPass(c));
+                                if (emailCol === -1 && key === 'I') {
+                                    if (prev[2]) {
+                                        currentAccountEmail = prev[2];
+                                        currentAccountPass = !isForbiddenExcelPass(prev[3]) ? (prev[3] || '') : '';
+                                    }
+                                } else if (emailCol !== -1) {
+                                    currentAccountEmail = prev[emailCol];
+                                    currentAccountPass = '';
+                                    for (let k = emailCol + 1; k < prev.length; k++) {
+                                        if (prev[k] !== '') {
+                                            if (!isForbiddenExcelPass(prev[k])) {
+                                                currentAccountPass = prev[k];
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            continue;
+                        }
+
+                        if (!headerCols) continue;
+
+                        const clientName = r[headerCols.clienteIdx] || '';
+                        const rawPhone = r[headerCols.celIdx] || '';
+                        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '');
+                        if (!clientName || clientName.toLowerCase() === 'libre' || cleanPhone.length < 7) continue;
+
+                        const rawSeller = headerCols.usuarioIdx !== -1 ? r[headerCols.usuarioIdx] : '';
+                        const seller = normalizeExcelSeller(rawSeller);
+                        const city = headerCols.ciudadIdx !== -1 ? r[headerCols.ciudadIdx] : '';
+                        const rawPinCol = headerCols.pinIdx !== -1 ? r[headerCols.pinIdx] : '';
+
+                        const profileParts = [];
+                        const maxProfCol = headerCols.usuarioIdx > 0 ? headerCols.usuarioIdx : 2;
+                        for (let p = 0; p < maxProfCol; p++) {
+                            if (r[p]) profileParts.push(r[p]);
+                        }
+                        const profileName = profileParts.join(' ').trim();
+
+                        let email = currentAccountEmail;
+                        let password = currentAccountPass;
+                        let profilePin = rawPinCol;
+
+                        if (rawPinCol.includes('@')) {
+                            email = rawPinCol;
+                            profilePin = '';
+                            password = '';
+                            const startSearchCol = headerCols.finIdx !== -1 ? headerCols.finIdx + 1 : 10;
+                            for (let k = startSearchCol; k < r.length; k++) {
+                                if (r[k] && !isForbiddenExcelPass(r[k])) {
+                                    password = r[k];
+                                    break;
+                                }
+                            }
+                        }
+
+                        excelRecords.push({
+                            sheet: actualName,
+                            sheetMeta,
+                            platform,
+                            seller,
+                            city,
+                            clientName,
+                            phone: cleanPhone,
+                            email,
+                            password,
+                            profile: profileName,
+                            profilePin
+                        });
+                    }
+                }
+
+                if (excelRecords.length === 0) {
+                    return alert('⚠️ No se encontraron filas válidas en las pestañas (NO, DO, MO, PO, PA, C, V, I, Apple, Sp, Youtube).');
+                }
+
+                const byPhone = {};
+                excelRecords.forEach(r => {
+                    if (!byPhone[r.phone]) byPhone[r.phone] = [];
+                    byPhone[r.phone].push(r);
+                });
+
+                const updates = {};
+                let updatedClientsCount = 0;
+                let updatedScreensCount = 0;
+                const nowMs = Date.now();
+
+                for (const phone of Object.keys(byPhone)) {
+                    const phoneRecs = byPhone[phone];
+                    const firstRec = phoneRecs[0];
+                    const existingProf = (window.allClientProfiles && window.allClientProfiles[phone]) || {};
+
+                    if (!existingProf.name || existingProf.name === 'Cliente' || existingProf.name === 'Sin Nombre') {
+                        updates[`clientProfiles/${phone}/name`] = firstRec.clientName;
+                    }
+                    if (!existingProf.pin) {
+                        const fourDigitPin = phoneRecs.map(r => r.profilePin).find(p => /^\d{4}$/.test(p)) || phone.slice(-4);
+                        updates[`clientProfiles/${phone}/pin`] = fourDigitPin;
+                        updates[`clientProfiles/${phone}/ticketPin`] = fourDigitPin;
+                    }
+
+                    const cSalesObj = JSON.parse(JSON.stringify((window.allClientSalesMap && window.allClientSalesMap[phone]) || {}));
+                    const saleKeys = Object.keys(cSalesObj).sort((a, b) => (cSalesObj[b]?.date || 0) - (cSalesObj[a]?.date || 0));
+                    const activeSaleKeys = saleKeys.filter(k => (Number(cSalesObj[k]?.expirationDate) || 0) >= nowMs);
+                    const targetSaleKeys = activeSaleKeys.length > 0 ? activeSaleKeys : (saleKeys.length > 0 ? [saleKeys[0]] : []);
+                    const targetSet = new Set(targetSaleKeys);
+
+                    const availableSlots = [];
+                    const allClientSlots = [];
+
+                    for (const sKey of saleKeys) {
+                        const sale = cSalesObj[sKey];
+                        if (!sale) continue;
+                        let itemsArr = (!sale.items || (Array.isArray(sale.items) && sale.items.length === 0))
+                            ? [{ id: 'legacy_0', name: 'Pantalla Streaming', category: 'individual', specificEmails: [] }]
+                            : (Array.isArray(sale.items) ? sale.items : Object.values(sale.items));
+                        sale.items = itemsArr;
+
+                        itemsArr.forEach((it, itemIdx) => {
+                            const count = getScreenCount(it.category, it.name);
+                            const guesses = guessPlatforms(it.name, count);
+                            const existingSpec = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
+                            const totalScreens = Math.max(count, existingSpec.length, 1);
+                            const normSpec = [];
+                            for (let sIdx = 0; sIdx < totalScreens; sIdx++) {
+                                const sp = existingSpec[sIdx] || {};
+                                normSpec.push({
+                                    platform: (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim(),
+                                    email: (sp.email || (sIdx === 0 && totalScreens === 1 ? (sale.email || '') : '')).toString().trim(),
+                                    pass: (sp.pass || (sIdx === 0 && totalScreens === 1 ? (sale.password || '') : '')).toString().trim(),
+                                    profile: (sp.profile || (sIdx === 0 && totalScreens === 1 ? (sale.profile || '') : '')).toString().trim(),
+                                    pin: (sp.pin || '').toString().trim()
+                                });
+                                const slotRef = { saleKey: sKey, sale, itemIdx, screenIdx: sIdx, specObj: normSpec[sIdx], used: false };
+                                allClientSlots.push(slotRef);
+                                if (targetSet.has(sKey)) availableSlots.push(slotRef);
+                            }
+                            it.specificEmails = normSpec;
+                        });
+                    }
+
+                    const platMatches = (slotPlat, sheetMeta) => {
+                        const pLow = String(slotPlat || '').toLowerCase();
+                        return sheetMeta.matchKeys.some(k => pLow.includes(k));
+                    };
+
+                    const unmatchedRecs = [];
+                    for (const rec of phoneRecs) {
+                        let match = availableSlots.find(sl => !sl.used && platMatches(sl.specObj.platform, rec.sheetMeta) && sl.specObj.email.toLowerCase() === rec.email.toLowerCase());
+                        if (!match) match = availableSlots.find(sl => !sl.used && platMatches(sl.specObj.platform, rec.sheetMeta) && (sl.sale.clientName || '').toLowerCase().trim() === rec.clientName.toLowerCase().trim());
+                        if (!match) match = availableSlots.find(sl => !sl.used && platMatches(sl.specObj.platform, rec.sheetMeta));
+
+                        if (match) {
+                            match.used = true;
+                            match.specObj.email = rec.email;
+                            match.specObj.pass = rec.password;
+                            match.specObj.profile = rec.profile || match.specObj.profile || '';
+                            match.specObj.pin = rec.profilePin || match.specObj.pin || '';
+                            allClientSlots.forEach(other => {
+                                if (other !== match && platMatches(other.specObj.platform, rec.sheetMeta) && other.specObj.email.toLowerCase() === rec.email.toLowerCase()) {
+                                    other.specObj.pass = rec.password;
+                                    if (rec.profile) other.specObj.profile = rec.profile;
+                                    if (rec.profilePin) other.specObj.pin = rec.profilePin;
+                                }
+                            });
+                            updatedScreensCount++;
+                        } else {
+                            unmatchedRecs.push(rec);
+                        }
+                    }
+
+                    if (unmatchedRecs.length > 0) {
+                        if (saleKeys.length > 0) {
+                            const latestKey = saleKeys[0];
+                            const latestSale = cSalesObj[latestKey];
+                            unmatchedRecs.forEach(rec => {
+                                latestSale.items.push({
+                                    id: 'excel_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                                    name: rec.platform,
+                                    category: 'individual',
+                                    specificEmails: [{
+                                        platform: rec.platform,
+                                        email: rec.email,
+                                        pass: rec.password,
+                                        profile: rec.profile,
+                                        pin: rec.profilePin
+                                    }]
+                                });
+                                updatedScreensCount++;
+                            });
+                        } else {
+                            const newSaleKey = 'excel_' + phone + '_' + Date.now();
+                            const newSaleObj = {
+                                clientName: firstRec.clientName,
+                                clientPhone: phone,
+                                clientCity: firstRec.city || '',
+                                date: nowMs,
+                                expirationDate: nowMs + 30 * 86400000,
+                                isPaid: true,
+                                sellerName: firstRec.seller || 'Página Web Oficial',
+                                total: 0,
+                                email: firstRec.email,
+                                password: firstRec.password,
+                                profile: firstRec.profile,
+                                items: unmatchedRecs.map((rec, idx) => ({
+                                    id: 'excel_item_' + idx + '_' + Date.now(),
+                                    name: rec.platform,
+                                    category: 'individual',
+                                    specificEmails: [{
+                                        platform: rec.platform,
+                                        email: rec.email,
+                                        pass: rec.password,
+                                        profile: rec.profile,
+                                        pin: rec.profilePin
+                                    }]
+                                }))
+                            };
+                            cSalesObj[newSaleKey] = newSaleObj;
+                            if (newSaleObj.sellerName && newSaleObj.sellerName !== 'Página Web Oficial' && newSaleObj.sellerName !== 'Admin') {
+                                updates[`sellerSales/${newSaleObj.sellerName}/${newSaleKey}`] = newSaleObj;
+                            }
+                            updatedScreensCount += unmatchedRecs.length;
+                        }
+                    }
+
+                    for (const sKey of Object.keys(cSalesObj)) {
+                        updates[`clientSales/${phone}/${sKey}`] = cSalesObj[sKey];
+                        const cSale = cSalesObj[sKey];
+                        const sName = cSale.sellerName;
+                        if (sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && window.globalSellerSalesDataStore && window.globalSellerSalesDataStore[sName]) {
+                            const sStore = window.globalSellerSalesDataStore[sName];
+                            let targetSid = sKey;
+                            if (!sStore[targetSid]) {
+                                targetSid = Object.keys(sStore).find(sid => {
+                                    const ss = sStore[sid];
+                                    return ss && (window.sanitizePhone ? window.sanitizePhone(ss.clientPhone) : ss.clientPhone) === phone;
+                                });
+                            }
+                            if (targetSid && sStore[targetSid]) {
+                                updates[`sellerSales/${sName}/${targetSid}/items`] = cSale.items;
+                            }
+                        }
+                    }
+
+                    updatedClientsCount++;
+                }
+
+                updates['storeConfig/lastExcelSync'] = Date.now();
+                updates['storeConfig/lastExcelSyncScreens'] = updatedScreensCount;
+                updates['storeConfig/lastExcelSyncClients'] = updatedClientsCount;
+
+                await db.ref('/').update(updates);
+                showDbToast(`✅ Excel importado: ${updatedScreensCount} pantallas en ${updatedClientsCount} clientes`);
+                renderDatabaseTab();
+            } catch (err) {
+                console.error('[EXCEL UPLOAD ERROR]', err);
+                alert('❌ Error al leer el archivo Excel: ' + err.message);
+            }
         };
     </script>
 </body>

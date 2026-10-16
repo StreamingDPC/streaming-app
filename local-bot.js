@@ -2352,6 +2352,18 @@ app.post('/api/activate-vix', async (req, res) => {
     return res.json(result);
 });
 
+// ── ENDPOINT: Sincronizar Excel de clientes con Firebase ──────────────────
+app.post('/api/sync-excel', async (req, res) => {
+    try {
+        const { syncExcelToFirebase } = require('./excel-sync');
+        const result = await syncExcelToFirebase();
+        return res.json(result);
+    } catch (err) {
+        console.error('[EXCEL-SYNC] Error en endpoint /api/sync-excel:', err.message);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // ── Iniciar servidor ───────────────────────────────────────────────────────
 app.listen(PORT, async () => {
     const chromePath = getChromePath();
@@ -2364,6 +2376,14 @@ app.listen(PORT, async () => {
     console.log('╠════════════════════════════════════════════════╣');
     console.log('║  Deja esta ventana abierta mientras usas la app ║');
     console.log('╚════════════════════════════════════════════════╝\n');
+
+    // Iniciar vigilante automático del archivo Excel de clientes
+    try {
+        const { startExcelWatcher } = require('./excel-sync');
+        startExcelWatcher();
+    } catch (e) {
+        console.warn('[EXCEL-SYNC] No se pudo iniciar el vigilante de Excel:', e.message);
+    }
 
     // Registrar URL pública de ngrok en Firebase (si ngrok está corriendo)
     await registerNgrokUrl();
