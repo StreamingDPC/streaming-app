@@ -6635,8 +6635,12 @@
                     }
 
                     if (Object.keys(updates).length > 0) {
+                        const baseClean = cleanPhone.replace(/^57/, '');
+                        updates[`clientProfiles/${cleanPhone}/codeAttemptUsed`] = null;
+                        updates[`clientProfiles/${baseClean}/codeAttemptUsed`] = null;
+                        updates[`clientProfiles/57${baseClean}/codeAttemptUsed`] = null;
                         await db.ref('/').update(updates);
-                        alert("¡Sistema Actualizado con éxito! Fecha extendida y pago registrado.");
+                        alert("¡Sistema Actualizado con éxito! Fecha extendida, pago registrado y todos los intentos de código activados.");
                         fetchSellerSalesStats();
                         fetchClientSalesHistory();
                     } else {
@@ -7121,7 +7125,11 @@
                     let name = parts[1].trim();
                     let pin = (parts[2] || '').trim();
                     if (phone.length >= 5) { // validish phone
+                        const baseClean = phone.replace(/^57/, '');
                         updates[`clientProfiles/${phone}/name`] = name;
+                        updates[`clientProfiles/${phone}/codeAttemptUsed`] = null;
+                        updates[`clientProfiles/${baseClean}/codeAttemptUsed`] = null;
+                        updates[`clientProfiles/57${baseClean}/codeAttemptUsed`] = null;
                         if (pin) updates[`clientProfiles/${phone}/pin`] = pin;
                         count++;
                     }
@@ -8653,8 +8661,12 @@
 
             if (saleData.items.length > 0) {
                 try {
+                    const baseCleanEdit = String(currentEditingClientPhone).replace(/^57/, '');
                     await db.ref(`clientSales/${currentEditingClientPhone}`).push(saleData);
                     await db.ref(`sellerSales/${saleData.sellerName}`).push(saleData);
+                    await db.ref(`clientProfiles/${currentEditingClientPhone}/codeAttemptUsed`).remove();
+                    await db.ref(`clientProfiles/${baseCleanEdit}/codeAttemptUsed`).remove();
+                    await db.ref(`clientProfiles/57${baseCleanEdit}/codeAttemptUsed`).remove();
                     let catDebug = saleData.items.map(i => i.category || 'SIN_CATEGORIA').join(', ');
                     let combo2Val = storeConfig.incentiveCombo2;
                     let enabledFlag = storeConfig.incentiveEnabled ? 'ACTIVADO' : 'APAGADO';
@@ -8683,8 +8695,13 @@
             if (!phoneStr || phoneStr.length < 5) return alert('Debes ingresar un número válido.');
 
             try {
-                // Register Client Profile first
-                await db.ref(`clientProfiles/${phoneStr}`).update({ name: name });
+                // Register Client Profile first y activar todos los intentos de código
+                const baseCleanManual = phoneStr.replace(/^57/, '');
+                await db.ref(`clientProfiles/${phoneStr}`).update({ name: name, codeAttemptUsed: null });
+                if (baseCleanManual !== phoneStr) {
+                    await db.ref(`clientProfiles/${baseCleanManual}/codeAttemptUsed`).remove();
+                }
+                await db.ref(`clientProfiles/57${baseCleanManual}/codeAttemptUsed`).remove();
 
                 // Variables de incentivos (Uso directo sobre saleData luego)
 
@@ -10613,6 +10630,11 @@
                                     style="margin:0; width:auto; padding:9px 16px; background:linear-gradient(135deg, #2ecc71, #27ae60); color:#111; font-weight:800; font-size:0.84rem; border-radius:8px; cursor:pointer;">
                                     <i class="fa-solid fa-floppy-disk"></i> Guardar
                                 </button>
+                                <button type="button" onclick="resetDbClientCodeAttempts('${escapeAttr(client.phone)}', '${escapeAttr(client.clientName)}')"
+                                    title="Activar / Restaurar todas las veces de solicitud de código para este cliente"
+                                    style="padding:9px 12px; border-radius:8px; border:1px solid rgba(241, 196, 15, 0.5); background:rgba(241, 196, 15, 0.12); color:#f1c40f; cursor:pointer; font-size:0.82rem; font-weight:bold;">
+                                    <i class="fa-solid fa-key"></i>
+                                </button>
                                 <button type="button" onclick="deleteDbEntireClientCard('${escapeAttr(client.phone)}', '${escapeAttr(client.rawPhoneKey)}')"
                                     title="Eliminar este cliente y todas sus compras"
                                     style="padding:9px 12px; border-radius:8px; border:1px solid rgba(255, 77, 77, 0.5); background:rgba(255, 77, 77, 0.12); color:#ff4d4d; cursor:pointer; font-size:0.82rem; font-weight:bold;">
@@ -10635,6 +10657,20 @@
             container.innerHTML = html;
             if (showFeedback) {
                 showDbToast('Base de datos actualizada');
+            }
+        };
+
+        window.resetDbClientCodeAttempts = async function (phone, clientName) {
+            const cleanP = String(phone).replace(/\D/g, '').replace(/^57/, '');
+            const updates = {};
+            updates[`clientProfiles/${phone}/codeAttemptUsed`] = null;
+            updates[`clientProfiles/${cleanP}/codeAttemptUsed`] = null;
+            updates[`clientProfiles/57${cleanP}/codeAttemptUsed`] = null;
+            try {
+                await db.ref('/').update(updates);
+                showDbToast(`🔑 Todas las veces de código activadas para ${clientName || phone}`);
+            } catch (e) {
+                alert('Error al activar intentos: ' + e.message);
             }
         };
 
@@ -10909,8 +10945,14 @@
             });
 
             sale.items = itemsArr;
-            await db.ref(`clientSales/${phone}/${saleKey}/items`).set(itemsArr);
-            showDbToast('➕ Nueva fila de pantalla añadida');
+            const cleanAddP = String(phone).replace(/\D/g, '').replace(/^57/, '');
+            await db.ref('/').update({
+                [`clientSales/${phone}/${saleKey}/items`]: itemsArr,
+                [`clientProfiles/${phone}/codeAttemptUsed`]: null,
+                [`clientProfiles/${cleanAddP}/codeAttemptUsed`]: null,
+                [`clientProfiles/57${cleanAddP}/codeAttemptUsed`]: null
+            });
+            showDbToast('➕ Nueva fila de pantalla añadida y códigos activados');
             renderDatabaseTab();
         };
 
@@ -11089,16 +11131,20 @@
             };
 
             const updates = {};
+            const baseCleanNew = phone.replace(/^57/, '');
             updates[`clientProfiles/${phone}/name`] = name.trim();
             updates[`clientProfiles/${phone}/pin`] = accountPin.trim();
             updates[`clientProfiles/${phone}/ticketPin`] = accountPin.trim();
+            updates[`clientProfiles/${phone}/codeAttemptUsed`] = null;
+            updates[`clientProfiles/${baseCleanNew}/codeAttemptUsed`] = null;
+            updates[`clientProfiles/57${baseCleanNew}/codeAttemptUsed`] = null;
             updates[`clientSales/${phone}/${newSaleKey}`] = newSaleObj;
 
             try {
                 await db.ref('/').update(updates);
                 const searchInput = document.getElementById('db-filter-search');
                 if (searchInput) searchInput.value = phone;
-                showDbToast(`✅ Cliente ${name.trim()} creado. Completa sus datos en la fila.`);
+                showDbToast(`✅ Cliente ${name.trim()} creado con todos sus códigos activos.`);
                 renderDatabaseTab();
             } catch (e) {
                 alert('Error al crear cliente: ' + e.message);
@@ -11456,6 +11502,10 @@
                     }
 
                     if (unmatchedRecs.length > 0) {
+                        const baseCleanEx = phone.replace(/^57/, '');
+                        updates[`clientProfiles/${phone}/codeAttemptUsed`] = null;
+                        updates[`clientProfiles/${baseCleanEx}/codeAttemptUsed`] = null;
+                        updates[`clientProfiles/57${baseCleanEx}/codeAttemptUsed`] = null;
                         if (saleKeys.length > 0) {
                             const latestKey = saleKeys[0];
                             const latestSale = cSalesObj[latestKey];

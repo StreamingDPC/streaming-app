@@ -4457,6 +4457,13 @@ function setupEventListeners() {
                 }
             }
 
+            if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
+                const baseClean = cleanPhoneTracking.replace(/^57/, '');
+                db.ref(`clientProfiles/${cleanPhoneTracking}/codeAttemptUsed`).remove();
+                db.ref(`clientProfiles/${baseClean}/codeAttemptUsed`).remove();
+                db.ref(`clientProfiles/57${baseClean}/codeAttemptUsed`).remove();
+            }
+
             window.renewalSaleId = null;
             window.renewalSource = null;
             window.renewalSaleExp = null;
@@ -4472,10 +4479,16 @@ function setupEventListeners() {
             }
 
             if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
+                const baseClean = cleanPhoneTracking.replace(/^57/, '');
                 db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
                 db.ref(`clientProfiles/${cleanPhoneTracking}`).update({
-                    name: cName || 'Cliente'
+                    name: cName || 'Cliente',
+                    codeAttemptUsed: null
                 });
+                if (baseClean !== cleanPhoneTracking) {
+                    db.ref(`clientProfiles/${baseClean}/codeAttemptUsed`).remove();
+                }
+                db.ref(`clientProfiles/57${baseClean}/codeAttemptUsed`).remove();
             }
         }
         // Fin de guardado en DB (Detalle 1: Corregido para que guarde siempre)

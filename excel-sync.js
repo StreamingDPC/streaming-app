@@ -445,6 +445,11 @@ async function syncExcelToFirebase(customBuffer = null) {
         // Paso 3: Si hay pantallas en el Excel para este teléfono que aún no estaban en Firebase,
         // agregarlas a su venta activa o crear una venta nueva para el cliente
         if (unmatchedRecs.length > 0) {
+            const baseCleanEx = phone.replace(/^57/, '');
+            if (clientProfiles[phone]) delete clientProfiles[phone].codeAttemptUsed;
+            if (clientProfiles[baseCleanEx]) delete clientProfiles[baseCleanEx].codeAttemptUsed;
+            if (clientProfiles['57' + baseCleanEx]) delete clientProfiles['57' + baseCleanEx].codeAttemptUsed;
+
             if (saleKeys.length > 0) {
                 // Añadir como pantallas adicionales en la venta más reciente del cliente
                 const latestSaleKey = saleKeys[0];
