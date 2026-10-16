@@ -1792,11 +1792,72 @@ function setupEventListeners() {
         }
     };
 
+    // =====================================================
+    // 🎛️ CONTROL COMPARTIDO CLIENTE + VENDEDOR Y PERMISOS DE CÓDIGOS
+    // =====================================================
+    window.codeModalTargetPhone = '';
+    window.codeModalTargetClientName = '';
+    window.codeModalTargetSellerName = '';
+    window.isSellerActivatingClient = false;
+
+    window.getEffectiveCodeTargetPhone = function () {
+        if (window.isSellerActivatingClient && window.codeModalTargetPhone) {
+            return String(window.codeModalTargetPhone).trim();
+        }
+        return String(clientPhoneLoggedIn || '').trim();
+    };
+
+    window.isSellerAllowedForCodes = function (sellerName) {
+        if (!sellerName) return true;
+        const cfg = (storeConfig && storeConfig.codeActivationConfig) ? storeConfig.codeActivationConfig : {};
+        if (cfg.allowedSellers && typeof cfg.allowedSellers === 'object') {
+            const sTrim = String(sellerName).trim();
+            if (cfg.allowedSellers[sTrim] === false) return false;
+            // Búsqueda insensible a mayúsculas por seguridad
+            const matchKey = Object.keys(cfg.allowedSellers).find(k => k.toLowerCase().trim() === sTrim.toLowerCase());
+            if (matchKey && cfg.allowedSellers[matchKey] === false) return false;
+        }
+        return true;
+    };
+
+    window.canSellerUseCodeActivation = function (sellerName) {
+        const cfg = (storeConfig && storeConfig.codeActivationConfig) ? storeConfig.codeActivationConfig : {};
+        if (cfg.sellersEnabled === false) return false;
+        return window.isSellerAllowedForCodes(sellerName || currentSellerName);
+    };
+
+    window.openSellerClientCodeModal = function (clientPhone, clientName, sellerName) {
+        const sName = sellerName || currentSellerName;
+        if (!window.canSellerUseCodeActivation(sName)) {
+            alert('⚠️ La opción de activación de códigos para vendedores se encuentra desactivada por el Administrador.');
+            return;
+        }
+        const cleanP = window.sanitizePhone ? window.sanitizePhone(clientPhone) : String(clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
+        if (!cleanP) {
+            alert('⚠️ Este cliente no tiene un número de celular válido registrado.');
+            return;
+        }
+        window.isSellerActivatingClient = true;
+        window.codeModalTargetPhone = cleanP;
+        window.codeModalTargetClientName = safeDecode(clientName || 'Cliente');
+        window.codeModalTargetSellerName = sName;
+
+        const cModal = document.getElementById('code-modal');
+        if (cModal) {
+            cModal.style.display = 'block';
+            cModal.style.zIndex = '10050';
+        }
+        window.initCodeModal();
+    };
+
     // Función para inicializar el modal de código con las restricciones correctas
     window.initCodeModal = async function () {
         const noSession = document.getElementById('code-no-session');
         const alreadyUsed = document.getElementById('code-already-used');
         const activePanel = document.getElementById('code-active-panel');
+        const permBlocked = document.getElementById('code-permission-blocked');
+        const sellerBanner = document.getElementById('code-seller-client-banner');
+        const sellerInfoEl = document.getElementById('code-seller-client-info');
 
         if (!noSession || !alreadyUsed || !activePanel) return;
 
@@ -1804,21 +1865,35 @@ function setupEventListeners() {
         noSession.style.display = 'none';
         alreadyUsed.style.display = 'none';
         activePanel.style.display = 'none';
+        if (permBlocked) permBlocked.style.display = 'none';
 
-        // 1. VERIFICAR SESIÓN
-        if (!clientPhoneLoggedIn) {
+        const targetPhone = window.getEffectiveCodeTargetPhone();
+
+        // Mostrar u ocultar banner de Modo Vendedor
+        if (window.isSellerActivatingClient && targetPhone) {
+            if (sellerBanner) sellerBanner.style.display = 'block';
+            if (sellerInfoEl) {
+                sellerInfoEl.innerHTML = `${window.codeModalTargetClientName || 'Cliente'} <span style="color:#4cd137; font-size:0.88rem;">(📱 ${targetPhone})</span>`;
+            }
+        } else {
+            if (sellerBanner) sellerBanner.style.display = 'none';
+        }
+
+        // 1. VERIFICAR SESIÓN (Cliente logueado o Vendedor activando a su cliente)
+        if (!targetPhone) {
             noSession.style.display = 'block';
             return;
         }
 
-        // Iniciar Live Sync permanente si aún no está corriendo
+        // Iniciar Live Sync permanente sobre el teléfono objetivo (compartido entre cliente y vendedor)
         if (window.startCodeAttemptsLiveSync) {
-            window.startCodeAttemptsLiveSync(clientPhoneLoggedIn);
+            window.startCodeAttemptsLiveSync(targetPhone);
         }
 
-        // 2. RECUPERAR INTENTOS USADOS EN FIREBASE (AHORA POR PLATAFORMA)
-        const rawP = String(clientPhoneLoggedIn).trim();
-        const cleanP = window.sanitizePhone ? window.sanitizePhone(rawP) : rawP.replace(/\D/g, '').replace(/^57/, '');
+        // 2. RECUPERAR INTENTOS USADOS EN FIREBASE (COMPARTIDO CLIENTE + VENDEDOR POR PLATAFORMA)
+        const rawP = String(targetPhone).trim();
+        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(rawP) : rawP.replace(/\D/g, '').replace(/^57/, '');
+        const cleanP = cleanPhone;
         const altP = (!rawP.startsWith('57')) ? `57${cleanP}` : cleanP;
 
         let combinedUsed = {};
@@ -1833,14 +1908,14 @@ function setupEventListeners() {
         window.clientUsedAttempts = combinedUsed;
         if (window.updateCodeCountersUI) window.updateCodeCountersUI();
 
-        // 3. CARGAR CORREOS DESDE SUS COMPRAS EN FIREBASE
+        // 3. CARGAR CORREOS DESDE SUS COMPRAS EN FIREBASE (clientSales + sellerSales si aplica)
         const emailSelect = document.getElementById('code-email');
         if (emailSelect) {
             emailSelect.innerHTML = '<option value="">-- Cargando tus cuentas... --</option>';
             try {
-                let salesSnap = await db.ref(`clientSales/${clientPhoneLoggedIn}`).once('value');
+                let salesSnap = await db.ref(`clientSales/${targetPhone}`).once('value');
                 let sales = salesSnap.val();
-                if (!sales && cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                if (!sales && cleanPhone && cleanPhone !== targetPhone) {
                     const fallbackSales = await db.ref(`clientSales/${cleanPhone}`).once('value');
                     sales = fallbackSales.val();
                 }
@@ -1848,7 +1923,79 @@ function setupEventListeners() {
                     const coSales = await db.ref(`clientSales/57${cleanPhone}`).once('value');
                     if (coSales.val()) sales = coSales.val();
                 }
-                sales = sales || {};
+                sales = sales ? Object.assign({}, sales) : {};
+
+                // También buscar en sellerSales para garantizar que las ventas de vendedores tengan todos sus correos y detectar si es cliente de vendedor
+                try {
+                    const sellerToCheck = window.codeModalTargetSellerName || currentSellerName;
+                    if (sellerToCheck) {
+                        const sSnap = await db.ref(`sellerSales/${sellerToCheck}`).once('value');
+                        const sSalesObj = sSnap.val() || {};
+                        Object.entries(sSalesObj).forEach(([sKey, sVal]) => {
+                            const sPhoneClean = window.sanitizePhone ? window.sanitizePhone(sVal.clientPhone) : String(sVal.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
+                            if (sPhoneClean && sPhoneClean === cleanPhone) {
+                                sales[`seller_${sKey}`] = sVal;
+                            }
+                        });
+                    }
+                } catch (e) { }
+
+                // 2.5 VALIDAR PERMISOS DEL CENTRO MAESTRO (GLOBAL, VENDEDORES Y CLIENTES DE VENDEDORES)
+                const cfg = (storeConfig && storeConfig.codeActivationConfig) ? storeConfig.codeActivationConfig : {};
+                if (window.isSellerActivatingClient) {
+                    // Es un Vendedor activando la cuenta de su cliente
+                    const sName = window.codeModalTargetSellerName || currentSellerName;
+                    if (cfg.sellersEnabled === false || !window.isSellerAllowedForCodes(sName)) {
+                        if (permBlocked) {
+                            permBlocked.style.display = 'block';
+                            const tEl = document.getElementById('code-permission-blocked-title');
+                            const dEl = document.getElementById('code-permission-blocked-desc');
+                            if (tEl) tEl.innerText = 'Opción Desactivada para Vendedores';
+                            if (dEl) dEl.innerText = 'El Administrador ha desactivado temporalmente la extracción de códigos desde el panel de vendedor.';
+                        }
+                        return;
+                    }
+                } else {
+                    // Es un Cliente intentando sacar código por su cuenta
+                    let clientSellerNames = [];
+                    Object.values(sales).forEach(s => {
+                        if (s && s.expirationDate && s.expirationDate < Date.now()) return;
+                        const sn = (s && s.sellerName) ? String(s.sellerName).trim() : '';
+                        if (sn && sn !== 'Página Web Oficial' && sn !== 'Admin' && sn !== 'Tienda Principal') {
+                            clientSellerNames.push(sn);
+                        }
+                    });
+                    if (publicSellerRef) {
+                        clientSellerNames.push(publicSellerRef);
+                    }
+
+                    if (clientSellerNames.length > 0) {
+                        // Es cliente de un Vendedor
+                        const anySellerAllowed = clientSellerNames.some(sn => window.isSellerAllowedForCodes(sn));
+                        if (cfg.sellerClientsEnabled === false || !anySellerAllowed) {
+                            if (permBlocked) {
+                                permBlocked.style.display = 'block';
+                                const tEl = document.getElementById('code-permission-blocked-title');
+                                const dEl = document.getElementById('code-permission-blocked-desc');
+                                if (tEl) tEl.innerText = 'Solicita la Activación a tu Vendedor';
+                                if (dEl) dEl.innerText = 'La activación de pantallas y códigos para tu cuenta es gestionada directamente por tu vendedor. Por favor escríbele por WhatsApp para que active tu pantalla.';
+                            }
+                            return;
+                        }
+                    } else {
+                        // Es cliente Global / Directo
+                        if (cfg.globalClientsEnabled === false) {
+                            if (permBlocked) {
+                                permBlocked.style.display = 'block';
+                                const tEl = document.getElementById('code-permission-blocked-title');
+                                const dEl = document.getElementById('code-permission-blocked-desc');
+                                if (tEl) tEl.innerText = 'Sistema de Códigos en Mantenimiento';
+                                if (dEl) dEl.innerText = 'En este momento la autogestión de códigos para clientes directos está desactivada. Por favor comunícate con soporte.';
+                            }
+                            return;
+                        }
+                    }
+                }
                 // Mapear plataformas activas y sus correos
                 window.clientActivePlatforms = {
                     netflix: new Set(),
@@ -2203,13 +2350,35 @@ function setupEventListeners() {
         const originalOpenCode = document.getElementById('open-code-btn');
         if (originalOpenCode) {
             originalOpenCode.addEventListener('click', () => {
+                window.isSellerActivatingClient = false;
+                window.codeModalTargetPhone = '';
+                window.codeModalTargetClientName = '';
+                window.codeModalTargetSellerName = '';
                 codeModal.style.display = 'block';
                 window.initCodeModal();
             });
         }
         // También inicializar si ya fue abierto directamente
         const codeCloseBtn = document.querySelector('.code-close');
-        if (codeCloseBtn) codeCloseBtn.addEventListener('click', () => codeModal.style.display = 'none');
+        if (codeCloseBtn) {
+            codeCloseBtn.addEventListener('click', () => {
+                codeModal.style.display = 'none';
+                if (window.isSellerActivatingClient) {
+                    window.isSellerActivatingClient = false;
+                    window.codeModalTargetPhone = '';
+                    window.codeModalTargetClientName = '';
+                    window.codeModalTargetSellerName = '';
+                    if (clientPhoneLoggedIn && window.startCodeAttemptsLiveSync) {
+                        window.startCodeAttemptsLiveSync(clientPhoneLoggedIn);
+                    } else if (window.stopCodeAttemptsLiveSync) {
+                        window.stopCodeAttemptsLiveSync();
+                    }
+                    if (typeof renderSellerDashboard === 'function' && isSellerMode) {
+                        renderSellerDashboard();
+                    }
+                }
+            });
+        }
     }
 
     // =============================================
@@ -2341,12 +2510,13 @@ function setupEventListeners() {
             return;
         }
 
-        if (!clientPhoneLoggedIn) {
+        const targetPhone = window.getEffectiveCodeTargetPhone();
+        if (!targetPhone) {
             alert('Debes iniciar sesión para solicitar un código.');
             return;
         }
 
-        // Validar si el intento YA fue consumido
+        // Validar si el intento YA fue consumido (compartido entre cliente y vendedor)
         let isExhausted = false;
         if (window.clientUsedAttempts) {
             if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
@@ -2372,18 +2542,18 @@ function setupEventListeners() {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Límite de Actualización Alcanzado',
-                        html: `<span style="color:#aaa;">Ya has utilizado tus 2 intentos de actualización / fuera de casa en ${brand}.</span><br><br><strong style="color:white;">Por favor, solicita a tu vendedor un CAMBIO DE CUENTA para evitar que pierdas el acceso.</strong>`,
+                        html: `<span style="color:#aaa;">Ya se han utilizado los 2 intentos de actualización / fuera de casa en ${brand} (contador compartido cliente/vendedor).</span><br><br><strong style="color:white;">Por favor, solicita un CAMBIO DE CUENTA para evitar que pierdas el acceso.</strong>`,
                         confirmButtonColor: brandColor,
                         background: '#1a1a1a',
                         color: '#fff'
                     });
                 } else {
-                    alert(`Atención: Ya has utilizado tus 2 intentos en ${brand}.`);
+                    alert(`Atención: Ya se han utilizado los 2 intentos en ${brand}.`);
                 }
             } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
-                alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Disney+ en TV.');
+                alert('⚠️ Ya se utilizó el intento disponible (1 vez) para activar Disney+ en TV.');
             } else {
-                alert('Ya has utilizado el intento disponible para esta plataforma.');
+                alert('⚠️ Ya se utilizó el intento disponible para esta plataforma (contador compartido cliente/vendedor).');
             }
             return;
         }
@@ -2415,15 +2585,15 @@ function setupEventListeners() {
             const data = await response.json();
 
             if (data.success && data.code) {
-                // ✅ ÉXITO: Registrar en Firebase y marcar intento usado
-                const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
+                // ✅ ÉXITO: Registrar en Firebase y marcar intento usado tanto para el cliente como para el vendedor (mismo nodo clientProfiles)
+                const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetPhone) : targetPhone;
                 if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
 
                 if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
                     const currentAttempts = parseInt(window.clientUsedAttempts[platform]) || 0;
                     const nextCount = currentAttempts + 1;
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(nextCount);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/${platform}`).set(nextCount);
+                    if (cleanPhone && cleanPhone !== targetPhone) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/${platform}`).set(nextCount);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
@@ -2432,9 +2602,9 @@ function setupEventListeners() {
                     window.clientUsedAttempts[platform] = nextCount;
                 } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
                     // 🏰 Disney TV vinculados: descontar y bloquear ambos (email y código)
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_tv`).set(true);
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_code_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/disney_tv`).set(true);
+                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== targetPhone) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
                     }
@@ -2445,8 +2615,8 @@ function setupEventListeners() {
                     window.clientUsedAttempts['disney_tv'] = true;
                     window.clientUsedAttempts['disney_code_tv'] = true;
                 } else {
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/${platform}`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/${platform}`).set(true);
+                    if (cleanPhone && cleanPhone !== targetPhone) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/${platform}`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
@@ -2457,10 +2627,11 @@ function setupEventListeners() {
 
                 if (window.updateCodeCountersUI) window.updateCodeCountersUI();
 
-                await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeHistory`).push({
+                await db.ref(`clientProfiles/${targetPhone}/codeHistory`).push({
                     code: data.code,
                     email: email,
                     platform: platform,
+                    requestedBy: window.isSellerActivatingClient ? `Vendedor: ${window.codeModalTargetSellerName || currentSellerName}` : 'Cliente',
                     timestamp: Date.now()
                 });
 
@@ -2694,7 +2865,7 @@ function setupEventListeners() {
             const email = emailSelect ? emailSelect.value.trim() : '';
 
             if (!tvCode) return alert('\u26a0\ufe0f Ingresa el código que aparece en tu TV.');
-            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!window.getEffectiveCodeTargetPhone()) return alert('Debes iniciar sesión primero.');
             if (!email) return alert('Selecciona el correo de tu cuenta Netflix.');
 
             // Bloquear botón temporalmente
@@ -2799,7 +2970,7 @@ function setupEventListeners() {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                    body: JSON.stringify({ email, tvCode, phone: window.getEffectiveCodeTargetPhone() })
                 });
                 const data = await response.json();
 
@@ -2809,10 +2980,10 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/netflix_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/netflix_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/netflix_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
@@ -2912,7 +3083,7 @@ function setupEventListeners() {
             const email = emailSelect ? emailSelect.value.trim() : '';
 
             if (!tvCode || tvCode.length < 6) return alert('⚠️ Ingresa el código de 6 dígitos que aparece en tu TV.');
-            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!window.getEffectiveCodeTargetPhone()) return alert('Debes iniciar sesión primero.');
             if (!email) return alert('Selecciona el correo de tu cuenta HBO Max.');
 
             // Bloquear botón temporalmente
@@ -2994,7 +3165,7 @@ function setupEventListeners() {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                    body: JSON.stringify({ email, tvCode, phone: window.getEffectiveCodeTargetPhone() })
                 });
                 const data = await response.json();
 
@@ -3004,10 +3175,10 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'hbomax_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/hbomax_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'hbomax_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/hbomax_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/hbomax_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
@@ -3101,7 +3272,7 @@ function setupEventListeners() {
             const email = emailSelect ? emailSelect.value.trim() : '';
 
             if (!tvCode || tvCode.length < 5) return alert('⚠️ Ingresa el código que aparece en tu TV (ej: HQ2W4Z).');
-            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!window.getEffectiveCodeTargetPhone()) return alert('Debes iniciar sesión primero.');
             if (!email) return alert('Selecciona el correo de tu cuenta Prime Video.');
 
             // Bloquear botón temporalmente
@@ -3181,7 +3352,7 @@ function setupEventListeners() {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                    body: JSON.stringify({ email, tvCode, phone: window.getEffectiveCodeTargetPhone() })
                 });
                 const data = await response.json();
 
@@ -3191,10 +3362,10 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'prime_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/prime_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'prime_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/prime_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/prime_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
@@ -3288,7 +3459,7 @@ function setupEventListeners() {
             const email = emailSelect ? emailSelect.value.trim() : '';
 
             if (!tvCode || tvCode.length !== 6) return alert('⚠️ Ingresa el código de 6 caracteres que aparece en tu TV (ej: ABCDEF).');
-            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!window.getEffectiveCodeTargetPhone()) return alert('Debes iniciar sesión primero.');
             if (!email) return alert('Selecciona el correo de tu cuenta Crunchyroll.');
 
             // Bloquear botón temporalmente
@@ -3368,7 +3539,7 @@ function setupEventListeners() {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                    body: JSON.stringify({ email, tvCode, phone: window.getEffectiveCodeTargetPhone() })
                 });
                 const data = await response.json();
 
@@ -3378,10 +3549,10 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'crunchyroll_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/crunchyroll_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'crunchyroll_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/crunchyroll_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/crunchyroll_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
@@ -3481,7 +3652,7 @@ function setupEventListeners() {
             const email = emailSelect ? emailSelect.value.trim() : '';
 
             if (!tvCode || tvCode.length < 8) return alert('⚠️ Ingresa el código de 8 dígitos que aparece en tu TV (ej: 12345678).');
-            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!window.getEffectiveCodeTargetPhone()) return alert('Debes iniciar sesión primero.');
             if (!email) return alert('Selecciona el correo de tu cuenta Disney+.');
 
             // Bloquear botón temporalmente
@@ -3561,7 +3732,7 @@ function setupEventListeners() {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                    body: JSON.stringify({ email, tvCode, phone: window.getEffectiveCodeTargetPhone() })
                 });
                 const data = await response.json();
 
@@ -3571,11 +3742,11 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento para AMBOS métodos de Disney TV (email y código)
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'disney_code_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_code_tv`).set(true);
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/disney_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'disney_code_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/disney_code_tv`).set(true);
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/disney_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
                     }
@@ -3675,7 +3846,7 @@ function setupEventListeners() {
             const email = emailSelect ? emailSelect.value.trim() : '';
 
             if (!tvCode || tvCode.length < 8) return alert('⚠️ Ingresa el código de 8 caracteres que aparece en tu TV (ej: ABCD1234).');
-            if (!clientPhoneLoggedIn) return alert('Debes iniciar sesión primero.');
+            if (!window.getEffectiveCodeTargetPhone()) return alert('Debes iniciar sesión primero.');
             if (!email) return alert('Selecciona el correo de tu cuenta ViX.');
 
             // Bloquear botón temporalmente
@@ -3755,7 +3926,7 @@ function setupEventListeners() {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
-                    body: JSON.stringify({ email, tvCode, phone: clientPhoneLoggedIn })
+                    body: JSON.stringify({ email, tvCode, phone: window.getEffectiveCodeTargetPhone() })
                 });
                 const data = await response.json();
 
@@ -3765,10 +3936,10 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(clientPhoneLoggedIn) : clientPhoneLoggedIn;
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/tvActivations`).push({ tvCode, email, platform: 'vix_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${clientPhoneLoggedIn}/codeAttemptUsed/vix_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== clientPhoneLoggedIn) {
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'vix_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/vix_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
                         await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/vix_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
@@ -4395,9 +4566,18 @@ function renderSellerSaleCard(sale, isExpired, container) {
 
     let buttonsHtml = '';
     const canRenew = !isExpired && daysLeft <= 3; // Solo mostrar Renovar los últimos 3 días
+    const sellerCodeAllowed = window.canSellerUseCodeActivation ? window.canSellerUseCodeActivation(currentSellerName) : true;
+    const cleanCardPhone = window.sanitizePhone ? window.sanitizePhone(sale.clientPhone) : String(sale.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
+    const statusBadgeId = `seller-card-code-status-${sale.id || cleanCardPhone}`;
+
     if (!isExpired) {
         buttonsHtml = `
             <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
+                ${sellerCodeAllowed ? `
+                <button onclick="openSellerClientCodeModal('${sale.clientPhone || ''}', '${encodeURIComponent(sale.clientName || 'Cliente')}', '${currentSellerName}')" 
+                    style="flex: 1 1 100%; padding:0.65rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: linear-gradient(135deg, rgba(243, 156, 18, 0.25), rgba(230, 126, 34, 0.15)); color:#f39c12; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 10px rgba(243,156,18,0.15);">
+                    <i class="fa-solid fa-unlock-keyhole"></i> 🔑 Activar Pantalla / Códigos Cliente
+                </button>` : ''}
                 <button onclick="sendTicketToAdminFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, #3498db, #2980b9); color:white;" title="Enviar el comprobante de pago al Admin con Precio Vendedor">
                     <i class="fa-solid fa-file-invoice-dollar"></i> Ticket Admin
@@ -4439,10 +4619,44 @@ function renderSellerSaleCard(sale, isExpired, container) {
             <span>📍 ${sale.clientCity || 'Ciudad N/A'}</span>
         </div>
         ${sale.incentiveEarned ? `<div style="background: rgba(243,156,18,0.2); border: 1px dashed #f39c12; color: #f39c12; font-size: 0.8rem; padding: 5px 10px; border-radius: 6px; margin-bottom: 0.8rem;"><b>Bono Ganado:</b> +$${sale.incentiveEarned.toLocaleString()}</div>` : ''}
-        <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '1rem'};">📺 ${itemsStr}</p>
+        <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:0.5rem;">📺 ${itemsStr}</p>
+        ${(!isExpired && sellerCodeAllowed && cleanCardPhone) ? `<div id="${statusBadgeId}" style="font-size:0.76rem; color:#aaa; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:5px 8px; margin-bottom:0.8rem;"><i class="fa-solid fa-link" style="color:#f39c12;"></i> Contador Códigos (Vendedor/Cliente): <span style="color:#888;">Consultando...</span></div>` : ''}
         ${buttonsHtml}
     `;
     container.appendChild(div);
+
+    // Consultar contador compartido en tiempo real para mostrarle al vendedor qué intentos ya fueron usados (por él o por el cliente)
+    if (!isExpired && sellerCodeAllowed && cleanCardPhone && typeof db !== 'undefined') {
+        Promise.all([
+            db.ref(`clientProfiles/${cleanCardPhone}/codeAttemptUsed`).once('value'),
+            db.ref(`clientProfiles/57${cleanCardPhone}/codeAttemptUsed`).once('value')
+        ]).then(([snap1, snap2]) => {
+            const badgeEl = document.getElementById(statusBadgeId);
+            if (!badgeEl) return;
+            const u1 = snap1.val();
+            const u2 = snap2.val();
+            let usedObj = {};
+            if (u1 === true || u2 === true) {
+                usedObj = { netflix: true, disney: true, hbomax: true, prime: true };
+            } else {
+                if (u1 && typeof u1 === 'object') Object.assign(usedObj, u1);
+                if (u2 && typeof u2 === 'object') Object.assign(usedObj, u2);
+            }
+            const usedKeys = Object.keys(usedObj).filter(k => usedObj[k] === true || (typeof usedObj[k] === 'number' && usedObj[k] > 0));
+            if (usedKeys.length === 0) {
+                badgeEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#2ecc71;"></i> Contador Códigos (Cliente + Vendedor): <strong style="color:#2ecc71;">Disponible (0 usados)</strong>`;
+            } else {
+                const labels = usedKeys.map(k => {
+                    const val = usedObj[k];
+                    if (k === 'netflix_update' || k === 'disney_update' || k === 'hbomax_update') {
+                        return `${k.replace('_update', ' hogar')} (${val}/2)`;
+                    }
+                    return `${k.replace('_tv', ' TV')} (Agotado)`;
+                }).join(', ');
+                badgeEl.innerHTML = `<i class="fa-solid fa-clock-rotate-left" style="color:#f39c12;"></i> Contador Compartido: <strong style="color:#f39c12;">Usados: ${labels}</strong>`;
+            }
+        }).catch(() => {});
+    }
 }
 
 window.renewFromDash = function (cName, cPhone, cCity, itemsJsonEncoded, saleId = null, source = 'client', prevExpDate = null, prevOrigDate = null, prevStartDate = null) {

@@ -326,6 +326,32 @@
                     </div>
                 </div>
 
+                <!-- BLOQUEO: Opción Desactivada por Admin -->
+                <div id="code-permission-blocked" style="display:none; text-align:center; padding:1.5rem 0;">
+                    <i class="fa-solid fa-user-shield" style="font-size:3rem; color:#f39c12; margin-bottom:1rem;"></i>
+                    <h3 id="code-permission-blocked-title" style="color:white; margin-bottom:0.5rem;">Activación Gestionada por Soporte</h3>
+                    <p id="code-permission-blocked-desc" style="color:#ccc; font-size:0.9rem; margin-bottom:1rem;">
+                        En este momento la solicitud de códigos y activación de pantallas está configurada para ser atendida directamente por tu vendedor o administrador.
+                    </p>
+                </div>
+
+                <!-- BANNER MODO VENDEDOR ACTIVANDO A SU CLIENTE -->
+                <div id="code-seller-client-banner" style="display:none; background:linear-gradient(135deg, rgba(52,152,219,0.2), rgba(41,128,185,0.1)); border:1.5px solid #3498db; border-radius:12px; padding:0.85rem 1rem; margin-bottom:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <div style="font-size:0.78rem; color:#3498db; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">
+                                <i class="fa-solid fa-user-tie"></i> Modo Vendedor — Activación a Cliente
+                            </div>
+                            <div id="code-seller-client-info" style="font-size:0.98rem; color:white; font-weight:bold; margin-top:2px;">
+                                Cliente: --
+                            </div>
+                        </div>
+                        <span style="background:rgba(243,156,18,0.18); border:1px solid rgba(243,156,18,0.5); color:#f39c12; font-size:0.74rem; font-weight:bold; padding:4px 9px; border-radius:8px;">
+                            <i class="fa-solid fa-link"></i> Contador Compartido (Vendedor + Cliente)
+                        </span>
+                    </div>
+                </div>
+
                 <!-- PANEL ACTIVO: Tiene sesión y tiene intento disponible -->
                 <div id="code-active-panel">
                     <!-- Instrucciones de intento -->

@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.33 (Base de Datos Maestra de Clientes)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.34 (Control de Códigos Vendedores + Contador Compartido)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -1891,6 +1891,80 @@
                             solicitar sus códigos, activar su celular ViX o activar su Smart TV sin límites, o habilitar
                             sus intentos si se le agotaron.
                         </p>
+
+                        <!-- 🎛️ PANEL DE CONTROL DE PERMISOS: GLOBAL, VENDEDORES Y CLIENTES DE VENDEDORES -->
+                        <div style="background: rgba(15, 22, 36, 0.85); border: 1px solid rgba(52, 152, 219, 0.45); border-radius: 12px; padding: 1.2rem; margin-bottom: 1.4rem; box-shadow: 0 4px 15px rgba(0,0,0,0.35);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:0.8rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.6rem;">
+                                <div style="font-size:1.02rem; font-weight:bold; color:#3498db; display:flex; align-items:center; gap:8px;">
+                                    <i class="fa-solid fa-sliders"></i> Control de Acceso a Activación y Códigos (Global, Vendedores y Clientes)
+                                </div>
+                                <span style="font-size:0.75rem; color:#f39c12; background:rgba(243,156,18,0.12); border:1px solid rgba(243,156,18,0.35); padding:3px 10px; border-radius:20px;">
+                                    <i class="fa-solid fa-link"></i> Contador Compartido (Vendedor + Cliente = 1 intento sin doble activación)
+                                </span>
+                            </div>
+
+                            <!-- 3 INTERRUPTORES PRINCIPALES -->
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:12px; margin-bottom:1rem;">
+                                <!-- 1. Global / Clientes Directos -->
+                                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 12px;">
+                                    <label style="display:block; font-size:0.82rem; font-weight:bold; color:#2ecc71; margin-bottom:6px;">
+                                        🌐 1. Global (Clientes Directos)
+                                    </label>
+                                    <select id="conf-code-global-enabled" onchange="saveCodeActivationPermissions()" style="width:100%; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); color:white; border:1px solid rgba(46,204,113,0.4); font-size:0.85rem; font-weight:bold; cursor:pointer;">
+                                        <option value="true">🟢 ACTIVO — Clientes directos pueden sacar códigos</option>
+                                        <option value="false">🔴 DESACTIVADO — Bloqueado para clientes directos</option>
+                                    </select>
+                                </div>
+
+                                <!-- 2. Vendedores (Panel Vendedor) -->
+                                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 12px;">
+                                    <label style="display:block; font-size:0.82rem; font-weight:bold; color:#3498db; margin-bottom:6px;">
+                                        👔 2. Vendedores (Activar a sus Clientes)
+                                    </label>
+                                    <select id="conf-code-sellers-enabled" onchange="saveCodeActivationPermissions()" style="width:100%; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); color:white; border:1px solid rgba(52,152,219,0.4); font-size:0.85rem; font-weight:bold; cursor:pointer;">
+                                        <option value="true">🟢 ACTIVO — Vendedores pueden activar a sus clientes</option>
+                                        <option value="false">🔴 DESACTIVADO — Vendedores NO pueden activar códigos</option>
+                                    </select>
+                                </div>
+
+                                <!-- 3. Clientes de Vendedores -->
+                                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 12px;">
+                                    <label style="display:block; font-size:0.82rem; font-weight:bold; color:#c48dfc; margin-bottom:6px;">
+                                        👥 3. Clientes de Vendedores (Autogestión)
+                                    </label>
+                                    <select id="conf-code-seller-clients-enabled" onchange="saveCodeActivationPermissions()" style="width:100%; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); color:white; border:1px solid rgba(196,141,252,0.4); font-size:0.85rem; font-weight:bold; cursor:pointer;">
+                                        <option value="true">🟢 ACTIVO — Clientes de vendedores pueden sacar códigos</option>
+                                        <option value="false">🔴 DESACTIVADO — Solo su vendedor o admin puede activarlos</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- SELECTOR DE VENDEDORES AUTORIZADOS (UNO, VARIOS O TODOS) -->
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                                    <div style="font-size:0.84rem; color:#eee; font-weight:bold;">
+                                        <i class="fa-solid fa-user-Secret" style="color:#f39c12;"></i> Seleccionar Vendedores Autorizados para Códigos y Activación de Pantallas:
+                                    </div>
+                                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                        <button type="button" onclick="toggleAllSellersCodePermission(true)" style="background:rgba(46,204,113,0.2); border:1px solid #2ecc71; color:#2ecc71; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+                                            <i class="fa-solid fa-check-double"></i> Activar TODOS
+                                        </button>
+                                        <button type="button" onclick="toggleAllSellersCodePermission(false)" style="background:rgba(231,76,60,0.2); border:1px solid #e74c3c; color:#e74c3c; padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+                                            <i class="fa-solid fa-ban"></i> Desmarcar Todos
+                                        </button>
+                                        <button type="button" onclick="saveCodeActivationPermissions(true)" style="background:linear-gradient(135deg,#2ecc71,#27ae60); border:none; color:#111; padding:4px 12px; border-radius:6px; font-size:0.76rem; font-weight:bold; cursor:pointer;">
+                                            <i class="fa-solid fa-floppy-disk"></i> Guardar Permisos
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="code-permissions-sellers-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap:8px; max-height:170px; overflow-y:auto; padding:4px;">
+                                    <!-- Renderizado dinámico de vendedores -->
+                                </div>
+                                <div id="code-permissions-save-msg" style="display:none; margin-top:8px; font-size:0.8rem; color:#2ecc71; font-weight:bold; text-align:right;">
+                                    ✅ Permisos actualizados en tiempo real.
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- BUSCADOR INTELIGENTE UNIVERSAL -->
                         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
@@ -4382,6 +4456,9 @@
                     renderManualClientProducts();
                     renderAllClientsList();
                     renderSellerSalesStats();
+                    if (window.renderCodeActivationPermissionsUI) {
+                        window.renderCodeActivationPermissionsUI();
+                    }
                     if (window.initMarketingPanel) {
                         initMarketingPanel();
                     }
@@ -4403,6 +4480,9 @@
                 renderBannersList();
                 renderSellersList();
                 renderBlockedClients();
+                if (window.renderCodeActivationPermissionsUI) {
+                    window.renderCodeActivationPermissionsUI();
+                }
 
                 // Llenar config
                 document.getElementById('conf-whatsapp').value = storeConfig.whatsappNumber || '';
@@ -4559,8 +4639,97 @@
             }
             if (subId === 'emails') {
                 fetchEmailAccounts();
+                if (window.renderCodeActivationPermissionsUI) {
+                    window.renderCodeActivationPermissionsUI();
+                }
             }
         }
+
+        // =====================================================
+        // 🎛️ GESTIÓN DE PERMISOS DE ACTIVACIÓN Y CÓDIGOS (GLOBAL, VENDEDORES Y CLIENTES)
+        // =====================================================
+        window.renderCodeActivationPermissionsUI = function () {
+            const cfg = (storeConfig && storeConfig.codeActivationConfig) ? storeConfig.codeActivationConfig : {};
+            const globalEl = document.getElementById('conf-code-global-enabled');
+            const sellersEl = document.getElementById('conf-code-sellers-enabled');
+            const sellerClientsEl = document.getElementById('conf-code-seller-clients-enabled');
+
+            if (globalEl) globalEl.value = (cfg.globalClientsEnabled !== false) ? 'true' : 'false';
+            if (sellersEl) sellersEl.value = (cfg.sellersEnabled !== false) ? 'true' : 'false';
+            if (sellerClientsEl) sellerClientsEl.value = (cfg.sellerClientsEnabled !== false) ? 'true' : 'false';
+
+            const listDiv = document.getElementById('code-permissions-sellers-list');
+            if (!listDiv) return;
+
+            const sellers = Array.isArray(storeConfig.sellers) ? storeConfig.sellers : Object.values(storeConfig.sellers || {});
+            if (sellers.length === 0) {
+                listDiv.innerHTML = '<span style="color:#888; font-size:0.8rem;">No hay vendedores registrados aún.</span>';
+                return;
+            }
+
+            const allowedMap = (cfg.allowedSellers && typeof cfg.allowedSellers === 'object') ? cfg.allowedSellers : null;
+
+            listDiv.innerHTML = sellers.map((s, idx) => {
+                const sName = (s && s.name) ? String(s.name).trim() : '';
+                if (!sName) return '';
+                // Por defecto todos están activos salvo que explícitamente esté en false
+                const isAllowed = allowedMap ? (allowedMap[sName] !== false) : true;
+                const safeId = `chk-seller-code-perm-${idx}`;
+                const safeAttr = sName.replace(/"/g, '&quot;');
+                return `
+                    <label for="${safeId}" style="display:flex; align-items:center; gap:8px; background:${isAllowed ? 'rgba(46,204,113,0.12)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${isAllowed ? 'rgba(46,204,113,0.45)' : 'rgba(255,255,255,0.12)'}; padding:7px 10px; border-radius:8px; cursor:pointer; font-size:0.82rem; color:${isAllowed ? '#2ecc71' : '#999'}; font-weight:bold; transition:all 0.2s;">
+                        <input type="checkbox" id="${safeId}" class="seller-code-perm-checkbox" data-seller-name="${safeAttr}" ${isAllowed ? 'checked' : ''} onchange="saveCodeActivationPermissions()" style="accent-color:#2ecc71; width:16px; height:16px; cursor:pointer;">
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${safeAttr}">👔 ${sName}</span>
+                    </label>
+                `;
+            }).join('');
+        };
+
+        window.toggleAllSellersCodePermission = function (enableAll) {
+            document.querySelectorAll('.seller-code-perm-checkbox').forEach(chk => {
+                chk.checked = !!enableAll;
+            });
+            window.saveCodeActivationPermissions(true);
+        };
+
+        window.saveCodeActivationPermissions = async function (showToast = false) {
+            try {
+                const globalEnabled = document.getElementById('conf-code-global-enabled')?.value !== 'false';
+                const sellersEnabled = document.getElementById('conf-code-sellers-enabled')?.value !== 'false';
+                const sellerClientsEnabled = document.getElementById('conf-code-seller-clients-enabled')?.value !== 'false';
+
+                const allowedSellers = {};
+                document.querySelectorAll('.seller-code-perm-checkbox').forEach(chk => {
+                    const sName = chk.getAttribute('data-seller-name');
+                    if (sName) {
+                        allowedSellers[sName] = !!chk.checked;
+                    }
+                });
+
+                const newCodeConfig = {
+                    globalClientsEnabled: globalEnabled,
+                    sellersEnabled: sellersEnabled,
+                    sellerClientsEnabled: sellerClientsEnabled,
+                    allowedSellers: allowedSellers,
+                    updatedAt: Date.now()
+                };
+
+                if (!storeConfig) storeConfig = {};
+                storeConfig.codeActivationConfig = newCodeConfig;
+
+                await db.ref('storeConfig/codeActivationConfig').set(newCodeConfig);
+                window.renderCodeActivationPermissionsUI();
+
+                const msgEl = document.getElementById('code-permissions-save-msg');
+                if (msgEl) {
+                    msgEl.style.display = 'block';
+                    setTimeout(() => { msgEl.style.display = 'none'; }, 2800);
+                }
+            } catch (e) {
+                console.error('Error guardando permisos de códigos:', e);
+                if (showToast) alert('Error al guardar permisos: ' + e.message);
+            }
+        };
 
         async function savePaymentMethodsDirect() {
             try {
