@@ -1399,13 +1399,21 @@ function setupEventListeners() {
     let _codeAttemptsRefClean = null;
     let _codeAttemptsListenerClean = null;
 
-    window.startCodeAttemptsLiveSync = function (phone) {
+    window.startCodeAttemptsLiveSync = function (phone, clientName = '') {
         if (!phone || typeof db === 'undefined') return;
         window.stopCodeAttemptsLiveSync();
 
         const rawPhone = String(phone).trim();
         const cleanPhone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '').replace(/^57/, '');
         const altPhone = (!rawPhone.startsWith('57')) ? `57${cleanPhone}` : cleanPhone;
+        const cName = clientName || window.codeModalTargetClientName || '';
+        const nameSlug = cName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+        // Determinar si este teléfono es compartido por varios clientes del vendedor
+        const isSharedSellerPhone = window.isSellerActivatingClient && nameSlug &&
+            window._sellerActiveClientsCache && window._sellerActiveClientsCache.filter(c => c.phone === cleanPhone).length > 1;
+
+        const pathSuffix = (isSharedSellerPhone && nameSlug) ? `clientAttempts/${nameSlug}` : 'codeAttemptUsed';
 
         let primaryData = null;
         let altData = null;
@@ -1432,7 +1440,7 @@ function setupEventListeners() {
         }
 
         // 1. Escuchar nodo primario con .on('value') para tiempo real
-        _codeAttemptsRefPrimary = db.ref(`clientProfiles/${rawPhone}/codeAttemptUsed`);
+        _codeAttemptsRefPrimary = db.ref(`clientProfiles/${rawPhone}/${pathSuffix}`);
         _codeAttemptsListenerPrimary = _codeAttemptsRefPrimary.on('value', snap => {
             primaryData = snap.val();
             applySync();
@@ -1440,7 +1448,7 @@ function setupEventListeners() {
 
         // 2. Si hay variante alterna (con o sin prefijo 57), escuchar también
         if (altPhone && altPhone !== rawPhone) {
-            _codeAttemptsRefClean = db.ref(`clientProfiles/${altPhone}/codeAttemptUsed`);
+            _codeAttemptsRefClean = db.ref(`clientProfiles/${altPhone}/${pathSuffix}`);
             _codeAttemptsListenerClean = _codeAttemptsRefClean.on('value', snap => {
                 altData = snap.val();
                 applySync();
@@ -1839,7 +1847,7 @@ function setupEventListeners() {
 
     window._sellerActiveClientsCache = [];
 
-    window.loadSellerClientsForCodeModal = async function (sellerName, preselectedPhone = '') {
+    window.loadSellerClientsForCodeModal = async function (sellerName, preselectedKey = '') {
         const sName = sellerName || currentSellerName;
         const selectEl = document.getElementById('code-seller-client-select');
         const searchEl = document.getElementById('code-seller-client-search');
@@ -1851,32 +1859,36 @@ function setupEventListeners() {
             const snap = await db.ref(`sellerSales/${sName}`).once('value');
             const salesObj = snap.val() || {};
             const now = Date.now();
-            const mapByPhone = {};
+            const mapByClient = {};
 
-            Object.values(salesObj).forEach(sale => {
+            Object.entries(salesObj).forEach(([saleKey, sale]) => {
                 if (!sale) return;
                 if (sale.expirationDate && sale.expirationDate < now) return; // Solo clientes activos
                 const rawP = String(sale.clientPhone || '').trim();
                 const cleanP = window.sanitizePhone ? window.sanitizePhone(rawP) : rawP.replace(/\D/g, '').replace(/^57/, '');
-                if (!cleanP) return;
                 const cName = safeDecode(sale.clientName || 'Cliente').trim();
                 if (cName.toLowerCase() === 'crm') return;
 
+                // Clave única combinando Nombre del Cliente y Celular (o 'sin_numero')
+                const phoneKey = cleanP || 'sin_numero';
+                const clientKey = `${cName.toLowerCase()}___${phoneKey}`;
+
                 const itemsStr = Array.isArray(sale.items) ? sale.items.map(i => i.name).join(', ') : '';
-                if (!mapByPhone[cleanP]) {
-                    mapByPhone[cleanP] = {
+                if (!mapByClient[clientKey]) {
+                    mapByClient[clientKey] = {
+                        key: clientKey,
                         phone: cleanP,
                         name: cName,
                         platforms: itemsStr ? [itemsStr] : []
                     };
-                } else if (itemsStr && !mapByPhone[cleanP].platforms.includes(itemsStr)) {
-                    mapByPhone[cleanP].platforms.push(itemsStr);
+                } else if (itemsStr && !mapByClient[clientKey].platforms.includes(itemsStr)) {
+                    mapByClient[clientKey].platforms.push(itemsStr);
                 }
             });
 
-            const list = Object.values(mapByPhone).sort((a, b) => a.name.localeCompare(b.name));
+            const list = Object.values(mapByClient).sort((a, b) => a.name.localeCompare(b.name));
             window._sellerActiveClientsCache = list;
-            window.renderSellerCodeModalClientOptions(list, preselectedPhone);
+            window.renderSellerCodeModalClientOptions(list, preselectedKey);
             return list;
         } catch (e) {
             selectEl.innerHTML = '<option value="">-- Error cargando clientes --</option>';
@@ -1884,10 +1896,10 @@ function setupEventListeners() {
         }
     };
 
-    window.renderSellerCodeModalClientOptions = function (list, selectedPhone = '') {
+    window.renderSellerCodeModalClientOptions = function (list, selectedKey = '') {
         const selectEl = document.getElementById('code-seller-client-select');
         if (!selectEl) return;
-        const targetClean = selectedPhone ? (window.sanitizePhone ? window.sanitizePhone(selectedPhone) : String(selectedPhone).replace(/\D/g, '').replace(/^57/, '')) : '';
+        const targetClean = String(selectedKey || '').trim().toLowerCase();
 
         if (!list || list.length === 0) {
             selectEl.innerHTML = '<option value="">-- No se encontraron clientes activos --</option>';
@@ -1896,10 +1908,11 @@ function setupEventListeners() {
 
         let html = '<option value="">-- Selecciona el cliente para activar / sacar código --</option>';
         list.forEach(c => {
-            const isSel = targetClean && c.phone === targetClean ? 'selected' : '';
+            const isSel = (targetClean && (c.key.toLowerCase() === targetClean || c.phone === targetClean || c.name.toLowerCase() === targetClean)) ? 'selected' : '';
             const platSummary = c.platforms.length > 0 ? ` — [${c.platforms.join(' + ')}]` : '';
-            const safeVal = encodeURIComponent(JSON.stringify({ phone: c.phone, name: c.name }));
-            html += `<option value="${safeVal}" ${isSel}>👤 ${c.name} (📱 ${c.phone})${platSummary}</option>`;
+            const phoneLabel = (c.phone && c.phone !== 'sin_numero') ? ` (📱 ${c.phone})` : '';
+            const safeVal = encodeURIComponent(JSON.stringify({ phone: c.phone, name: c.name, key: c.key }));
+            html += `<option value="${safeVal}" ${isSel}>👤 ${c.name}${phoneLabel}${platSummary}</option>`;
         });
         selectEl.innerHTML = html;
     };
@@ -1908,13 +1921,14 @@ function setupEventListeners() {
         const q = String(query || '').toLowerCase().trim();
         const all = window._sellerActiveClientsCache || [];
         const filtered = !q ? all : all.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.platforms.join(' ').toLowerCase().includes(q));
-        window.renderSellerCodeModalClientOptions(filtered, window.codeModalTargetPhone);
+        window.renderSellerCodeModalClientOptions(filtered, window.codeModalTargetClientKey || window.codeModalTargetPhone);
         // Si solo queda 1 coincidencia o el usuario filtra, seleccionar automáticamente el primero
         if (filtered.length === 1) {
             const first = filtered[0];
             window.codeModalTargetPhone = first.phone;
             window.codeModalTargetClientName = first.name;
-            window.renderSellerCodeModalClientOptions(filtered, first.phone);
+            window.codeModalTargetClientKey = first.key;
+            window.renderSellerCodeModalClientOptions(filtered, first.key);
             window.initCodeModal(true);
         }
     };
@@ -1923,10 +1937,11 @@ function setupEventListeners() {
         if (!encodedVal) return;
         try {
             const obj = JSON.parse(decodeURIComponent(encodedVal));
-            if (obj && obj.phone) {
+            if (obj) {
                 window.isSellerActivatingClient = true;
-                window.codeModalTargetPhone = obj.phone;
+                window.codeModalTargetPhone = obj.phone || '';
                 window.codeModalTargetClientName = obj.name || 'Cliente';
+                window.codeModalTargetClientKey = obj.key || `${(obj.name || '').toLowerCase()}___${obj.phone || ''}`;
                 window.codeModalTargetSellerName = currentSellerName;
                 window.initCodeModal(true);
             }
@@ -1940,13 +1955,10 @@ function setupEventListeners() {
             return;
         }
         const cleanP = window.sanitizePhone ? window.sanitizePhone(clientPhone) : String(clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
-        if (!cleanP) {
-            alert('⚠️ Este cliente no tiene un número de celular válido registrado.');
-            return;
-        }
         window.isSellerActivatingClient = true;
         window.codeModalTargetPhone = cleanP;
         window.codeModalTargetClientName = safeDecode(clientName || 'Cliente');
+        window.codeModalTargetClientKey = `${window.codeModalTargetClientName.toLowerCase()}___${cleanP || 'sin_numero'}`;
         window.codeModalTargetSellerName = sName;
 
         const cModal = document.getElementById('code-modal');
@@ -1954,7 +1966,7 @@ function setupEventListeners() {
             cModal.style.display = 'block';
             cModal.style.zIndex = '10050';
         }
-        await window.loadSellerClientsForCodeModal(sName, cleanP);
+        await window.loadSellerClientsForCodeModal(sName, window.codeModalTargetClientKey);
         window.initCodeModal(true);
     };
 
@@ -1980,11 +1992,12 @@ function setupEventListeners() {
             window.isSellerActivatingClient = true;
             window.codeModalTargetSellerName = currentSellerName;
             if (!skipDropdownReload) {
-                const clients = await window.loadSellerClientsForCodeModal(currentSellerName, window.codeModalTargetPhone);
-                if (!window.codeModalTargetPhone && clients.length > 0) {
+                const clients = await window.loadSellerClientsForCodeModal(currentSellerName, window.codeModalTargetClientKey || window.codeModalTargetPhone);
+                if (!window.codeModalTargetClientKey && clients.length > 0) {
                     window.codeModalTargetPhone = clients[0].phone;
                     window.codeModalTargetClientName = clients[0].name;
-                    window.renderSellerCodeModalClientOptions(clients, clients[0].phone);
+                    window.codeModalTargetClientKey = clients[0].key;
+                    window.renderSellerCodeModalClientOptions(clients, clients[0].key);
                 }
             }
         }
@@ -1998,7 +2011,7 @@ function setupEventListeners() {
                 if (targetPhone) {
                     sellerInfoEl.innerHTML = `Cliente activo: <span style="color:#4cd137;">${window.codeModalTargetClientName || 'Cliente'} (📱 ${targetPhone})</span>`;
                 } else {
-                    sellerInfoEl.innerHTML = `Selecciona un cliente activo de tu lista:`;
+                    sellerInfoEl.innerHTML = `Cliente activo: <span style="color:#4cd137;">${window.codeModalTargetClientName || 'Cliente'}</span>`;
                 }
             }
         } else {
@@ -2006,9 +2019,9 @@ function setupEventListeners() {
         }
 
         // 1. VERIFICAR SESIÓN (Cliente logueado o Vendedor activando a su cliente)
-        if (!targetPhone) {
+        if (!targetPhone && !window.codeModalTargetClientName) {
             if (window.isSellerActivatingClient) {
-                // El vendedor está logueado pero aún no tiene ventas activas con celular
+                // El vendedor está logueado pero aún no tiene clientes activos
                 return;
             }
             noSession.style.display = 'block';
@@ -2017,7 +2030,7 @@ function setupEventListeners() {
 
         // Iniciar Live Sync permanente sobre el teléfono objetivo (compartido entre cliente y vendedor)
         if (window.startCodeAttemptsLiveSync) {
-            window.startCodeAttemptsLiveSync(targetPhone);
+            window.startCodeAttemptsLiveSync(targetPhone, window.codeModalTargetClientName);
         }
 
         // 2. RECUPERAR INTENTOS USADOS EN FIREBASE (COMPARTIDO CLIENTE + VENDEDOR POR PLATAFORMA)
@@ -2026,10 +2039,15 @@ function setupEventListeners() {
         const cleanP = cleanPhone;
         const altP = (!rawP.startsWith('57')) ? `57${cleanP}` : cleanP;
 
+        const isSharedSellerPhone = window.isSellerActivatingClient &&
+            window._sellerActiveClientsCache && window._sellerActiveClientsCache.filter(c => c.phone === cleanPhone).length > 1;
+        const nameSlug = (window.codeModalTargetClientName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const pathSuffix = (isSharedSellerPhone && nameSlug) ? `clientAttempts/${nameSlug}` : 'codeAttemptUsed';
+
         let combinedUsed = {};
         const pList = Array.from(new Set([rawP, cleanP, altP])).filter(Boolean);
         for (const pk of pList) {
-            const snap = await db.ref(`clientProfiles/${pk}/codeAttemptUsed`).once('value');
+            const snap = await db.ref(`clientProfiles/${pk}/${pathSuffix}`).once('value');
             const v = snap.val();
             if (v === true) Object.assign(combinedUsed, { netflix: true, disney: true, hbomax: true, prime: true });
             else if (v && typeof v === 'object') Object.assign(combinedUsed, v);
@@ -2154,6 +2172,15 @@ function setupEventListeners() {
                     // Validar si la venta está activa
                     const isExpired = sale.expirationDate && sale.expirationDate < Date.now();
                     if (isExpired) return;
+
+                    // Si el vendedor está activando a un cliente específico, filtrar solo las compras de ese cliente
+                    if (window.isSellerActivatingClient && window.codeModalTargetClientName) {
+                        const targetNameL = window.codeModalTargetClientName.toLowerCase().trim();
+                        const saleNameL = safeDecode(sale.clientName || '').toLowerCase().trim();
+                        if (saleNameL && saleNameL !== targetNameL) {
+                            return; // Pertenece a otro cliente del mismo vendedor
+                        }
+                    }
 
                     // Detectar plataforma desde propiedades raíz de la venta
                     const saleRaw = `${sale.productName || ''} ${sale.name || ''} ${sale.category || ''} ${sale.platform || ''}`.toLowerCase();
@@ -2724,38 +2751,43 @@ function setupEventListeners() {
                 const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetPhone) : targetPhone;
                 if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
 
+                const isSharedSellerPhone = window.isSellerActivatingClient &&
+                    window._sellerActiveClientsCache && window._sellerActiveClientsCache.filter(c => c.phone === cleanPhone).length > 1;
+                const nameSlug = (window.codeModalTargetClientName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+                const pathSuffix = (isSharedSellerPhone && nameSlug) ? `clientAttempts/${nameSlug}` : 'codeAttemptUsed';
+
                 if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
                     const currentAttempts = parseInt(window.clientUsedAttempts[platform]) || 0;
                     const nextCount = currentAttempts + 1;
-                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/${platform}`).set(nextCount);
+                    await db.ref(`clientProfiles/${targetPhone}/${pathSuffix}/${platform}`).set(nextCount);
                     if (cleanPhone && cleanPhone !== targetPhone) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/${platform}`).set(nextCount);
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/${platform}`).set(nextCount);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/${platform}`).set(nextCount);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/${platform}`).set(nextCount);
                     }
                     window.clientUsedAttempts[platform] = nextCount;
                 } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
                     // 🏰 Disney TV vinculados: descontar y bloquear ambos (email y código)
-                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/disney_tv`).set(true);
-                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                    await db.ref(`clientProfiles/${targetPhone}/${pathSuffix}/disney_tv`).set(true);
+                    await db.ref(`clientProfiles/${targetPhone}/${pathSuffix}/disney_code_tv`).set(true);
                     if (cleanPhone && cleanPhone !== targetPhone) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/disney_tv`).set(true);
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/disney_code_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/disney_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/disney_code_tv`).set(true);
                     }
                     window.clientUsedAttempts['disney_tv'] = true;
                     window.clientUsedAttempts['disney_code_tv'] = true;
                 } else {
-                    await db.ref(`clientProfiles/${targetPhone}/codeAttemptUsed/${platform}`).set(true);
+                    await db.ref(`clientProfiles/${targetPhone}/${pathSuffix}/${platform}`).set(true);
                     if (cleanPhone && cleanPhone !== targetPhone) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/${platform}`).set(true);
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/${platform}`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/${platform}`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/${platform}`).set(true);
                     }
                     window.clientUsedAttempts[platform] = true;
                 }
