@@ -26,24 +26,9 @@ const FIREBASE_DB_URL = "https://streamingdpc-7e7fa-default-rtdb.firebaseio.com"
  * Intenta obtener el código de 4 dígitos desde una URL de Netflix
  */
 async function getCodeFromNetflixUrl(url) {
-    try {
-        console.log("Visitando URL de Netflix:", url);
-        const response = await axios.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-        });
-        const $ = cheerio.load(response.data);
-        const pageText = $('body').text();
-        const codeMatch = pageText.match(/\b\d{4}\b/);
-
-        if (codeMatch) {
-            console.log("Código encontrado en la web:", codeMatch[0]);
-            return codeMatch[0];
-        }
-    } catch (error) {
-        console.error("Error al visitar la URL de Netflix:", error.message);
-    }
+    // Las URLs de Netflix no deben ser raspadas directamente con axios porque Netflix redirige al login
+    // e inyecta la IP IPv6 de AWS (ej: 2600:xxxx) en reactContext, provocando falsos códigos '2600'.
+    // El enlace debe ser retornado directamente para que el cliente/vendedor lo abra en su navegador.
     return null;
 }
 
@@ -315,15 +300,7 @@ app.post('/api/get-code', async (req, res) => {
                         console.log(`[DEBUG] ¡MATCH ENCONTRADO en ${account.email}!`);
                         if (platformLower.includes('netflix')) {
                             if (platformLower === 'netflix_temp') {
-                                // 1. Buscar código de 4 dígitos en el texto o asunto del correo de acceso temporal
-                                const codeMatch = textContent.match(/\b\d{4}\b/);
-                                if (codeMatch && (textContent.includes('código') || textContent.includes('codigo') || textContent.includes('temporal') || textContent.includes('acceso') || textContent.includes('15 minutos') || subject.includes('código') || subject.includes('codigo') || subject.includes('temporal'))) {
-                                    accountLogs.found = true;
-                                    console.log(`[DEBUG] Código temporal Netflix de 4 dígitos encontrado en texto: ${codeMatch[0]}`);
-                                    return codeMatch[0];
-                                }
-
-                                // 2. Si no viene directo en texto, buscar enlace oficial de viaje o verificación (NUNCA contraseña)
+                                // En correos de acceso temporal de Netflix, el código oficial se obtiene abriendo el enlace oficial de viaje
                                 const $ = cheerio.load(htmlContent);
                                 const links = [];
                                 $('a').each((j, el) => {
@@ -338,17 +315,18 @@ app.post('/api/get-code', async (req, res) => {
 
                                 for (const link of links) {
                                     if (link.includes('travel') || link.includes('verify') || link.includes('token') || link.includes('update-primary-location')) {
-                                        // Intentar visitar la URL para extraer el código de 4 dígitos
-                                        const webCode = await getCodeFromNetflixUrl(link);
-                                        if (webCode) {
-                                            accountLogs.found = true;
-                                            console.log(`[DEBUG] Código temporal Netflix de 4 dígitos obtenido desde la web: ${webCode}`);
-                                            return webCode;
-                                        }
-                                        // Si la web no devolvió código de 4 dígitos, devolver el link seguro
                                         accountLogs.found = true;
-                                        return link;
+                                        console.log(`[DEBUG] Enlace temporal Netflix oficial encontrado: ${link}`);
+                                        return link; // Retorna el enlace directo para que el botón "Clic aquí → Ver mi Código en Netflix" lo abra en el navegador
                                     }
+                                }
+
+                                // Si por alguna razón viniera un código de 4 dígitos explícito en el texto
+                                const explicitCodeMatch = textContent.match(/c[oó]digo(?:\s+de\s+acceso)?(?:\s+temporal)?\s*[:\s]\s*(\b\d{4}\b)/i);
+                                if (explicitCodeMatch && explicitCodeMatch[1]) {
+                                    accountLogs.found = true;
+                                    console.log(`[DEBUG] Código temporal Netflix explícito en texto: ${explicitCodeMatch[1]}`);
+                                    return explicitCodeMatch[1];
                                 }
                             } else if (platformLower === 'netflix_update') {
                                 // Para actualizaciones de hogar, devolvemos el enlace directamente (excluyendo estrictamente passwords)
@@ -389,11 +367,8 @@ app.post('/api/get-code', async (req, res) => {
                                     });
                                     for (const link of links) {
                                         if (link.includes('verify') || link.includes('token') || link.includes('travel') || link.includes('update-primary-location')) {
-                                            const code = await getCodeFromNetflixUrl(link);
-                                            if (code) {
-                                                accountLogs.found = true;
-                                                return code;
-                                            }
+                                            accountLogs.found = true;
+                                            return link;
                                         }
                                     }
                                 }
