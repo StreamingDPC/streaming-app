@@ -10187,7 +10187,7 @@
                         if (!mergedClients[cleanP].sales[matchedKey].sellerName) {
                             mergedClients[cleanP].sales[matchedKey].sellerName = sellerName;
                         }
-                    } else {
+                    } else if (sellerName !== 'Página Web Oficial' && sellerName !== 'Admin') {
                         mergedClients[cleanP].sales[sKey] = {
                             ...s,
                             sellerName: s.sellerName || sellerName,
@@ -10613,6 +10613,11 @@
                                     style="margin:0; width:auto; padding:9px 16px; background:linear-gradient(135deg, #2ecc71, #27ae60); color:#111; font-weight:800; font-size:0.84rem; border-radius:8px; cursor:pointer;">
                                     <i class="fa-solid fa-floppy-disk"></i> Guardar
                                 </button>
+                                <button type="button" onclick="deleteDbEntireClientCard('${escapeAttr(client.phone)}', '${escapeAttr(client.rawPhoneKey)}')"
+                                    title="Eliminar este cliente y todas sus compras"
+                                    style="padding:9px 12px; border-radius:8px; border:1px solid rgba(255, 77, 77, 0.5); background:rgba(255, 77, 77, 0.12); color:#ff4d4d; cursor:pointer; font-size:0.82rem; font-weight:bold;">
+                                    <i class="fa-solid fa-user-xmark"></i>
+                                </button>
                                 <button type="button" onclick="jumpToClientFullEditor('${escapeAttr(client.phone)}')"
                                     title="Abrir en editor detallado de Clientes"
                                     style="padding:9px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:white; cursor:pointer; font-size:0.82rem;">
@@ -10935,16 +10940,39 @@
             if (!confirm('⚠️ ¿Estás seguro de ELIMINAR esta compra/suscripción completa del cliente?')) return;
 
             const updates = {};
-            updates[`clientSales/${phone}/${saleKey}`] = null;
+            const card = document.querySelector(`.db-client-card[data-orig-phone="${phone}"]`);
+            const rawPhoneKey = card?.getAttribute('data-raw-phone-key') || phone;
 
-            if (sellerName && sellerName !== 'Página Web Oficial' && sellerName !== 'Admin') {
-                if (sellerSaleKey) {
-                    updates[`sellerSales/${sellerName}/${sellerSaleKey}`] = null;
-                }
-                if (window.globalSellerSalesDataStore && window.globalSellerSalesDataStore[sellerName] && window.globalSellerSalesDataStore[sellerName][saleKey]) {
-                    updates[`sellerSales/${sellerName}/${saleKey}`] = null;
-                }
+            // Obtener fecha de la venta antes de eliminar para limpiar copias en sellerSales
+            const cSalesSource = (window.allClientSalesMap && (window.allClientSalesMap[rawPhoneKey] || window.allClientSalesMap[phone])) || {};
+            const sSalesStore = window.globalSellerSalesDataStore || {};
+            const targetSaleObj = cSalesSource[saleKey] || (sellerName && sSalesStore[sellerName] && (sSalesStore[sellerName][sellerSaleKey] || sSalesStore[sellerName][saleKey])) || {};
+            const targetDate = Number(targetSaleObj.date) || 0;
+
+            updates[`clientSales/${phone}/${saleKey}`] = null;
+            if (rawPhoneKey && rawPhoneKey !== phone) {
+                updates[`clientSales/${rawPhoneKey}/${saleKey}`] = null;
             }
+            updates[`clientSales/57${phone}/${saleKey}`] = null;
+
+            // Eliminar en sellerSales para CUALQUIER vendedor (incluyendo 'Página Web Oficial', 'Admin', 'Maac', etc.)
+            Object.keys(sSalesStore).forEach(sKeyName => {
+                const sMap = sSalesStore[sKeyName] || {};
+                if (sMap[saleKey]) {
+                    updates[`sellerSales/${sKeyName}/${saleKey}`] = null;
+                }
+                if (sellerSaleKey && sMap[sellerSaleKey]) {
+                    updates[`sellerSales/${sKeyName}/${sellerSaleKey}`] = null;
+                }
+                Object.keys(sMap).forEach(sid => {
+                    const ss = sMap[sid];
+                    if (!ss) return;
+                    const cleanP = window.sanitizePhone ? window.sanitizePhone(ss.clientPhone || '') : String(ss.clientPhone || '').replace(/\D/g, '');
+                    if (cleanP === phone && targetDate && ss.date && Math.abs(Number(ss.date) - targetDate) < 15000) {
+                        updates[`sellerSales/${sKeyName}/${sid}`] = null;
+                    }
+                });
+            });
 
             try {
                 await db.ref('/').update(updates);
@@ -10952,6 +10980,41 @@
                 renderDatabaseTab();
             } catch (err) {
                 alert('Error al eliminar: ' + err.message);
+            }
+        };
+
+        window.deleteDbEntireClientCard = async function (phone, rawPhoneKey) {
+            if (!confirm(`⚠️ ¿Estás seguro de ELIMINAR por completo al cliente (${phone}) y todas sus compras?`)) return;
+
+            const updates = {};
+            updates[`clientSales/${phone}`] = null;
+            updates[`clientProfiles/${phone}`] = null;
+            if (rawPhoneKey && rawPhoneKey !== phone) {
+                updates[`clientSales/${rawPhoneKey}`] = null;
+                updates[`clientProfiles/${rawPhoneKey}`] = null;
+            }
+            updates[`clientSales/57${phone}`] = null;
+            updates[`clientProfiles/57${phone}`] = null;
+
+            const sSalesStore = window.globalSellerSalesDataStore || {};
+            Object.keys(sSalesStore).forEach(sKeyName => {
+                const sMap = sSalesStore[sKeyName] || {};
+                Object.keys(sMap).forEach(sid => {
+                    const ss = sMap[sid];
+                    if (!ss) return;
+                    const cleanP = window.sanitizePhone ? window.sanitizePhone(ss.clientPhone || '') : String(ss.clientPhone || '').replace(/\D/g, '');
+                    if (cleanP === phone) {
+                        updates[`sellerSales/${sKeyName}/${sid}`] = null;
+                    }
+                });
+            });
+
+            try {
+                await db.ref('/').update(updates);
+                showDbToast(`🗑️ Cliente ${phone} eliminado por completo`);
+                renderDatabaseTab();
+            } catch (err) {
+                alert('Error al eliminar cliente: ' + err.message);
             }
         };
 
