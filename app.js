@@ -4797,7 +4797,28 @@ function renderSaleItem(sale, isExpired, container) {
             <span><i class="fa-regular fa-calendar-check" style="color:#4cd137;"></i> ${new Date(sale.date).toLocaleDateString()}</span>
             <span><i class="fa-regular fa-calendar-xmark" style="color:#ff4d4d;"></i> ${new Date(sale.expirationDate).toLocaleDateString()}</span>
         </div>
-        <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '1rem'};">📺 ${itemsStr}</p>
+        <p style="font-size:0.85rem; color:var(--text-primary); margin-bottom:${isExpired ? '0' : '0.8rem'};">📺 ${itemsStr}</p>
+        ${!isExpired ? (() => {
+            const credBlocks = [];
+            (sale.items || []).forEach(it => {
+                const specs = Array.isArray(it.specificEmails)
+                    ? it.specificEmails
+                    : (it.specificEmails && typeof it.specificEmails === 'object' ? Object.values(it.specificEmails) : []);
+                specs.forEach(sc => {
+                    if (sc && (sc.email || sc.pass || sc.profile || sc.pin)) {
+                        credBlocks.push(`
+                            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(46, 204, 113, 0.3); border-radius:8px; padding:8px 10px; font-size:0.8rem; line-height:1.45;">
+                                <div style="color:#2ecc71; font-weight:bold; margin-bottom:3px;"><i class="fa-solid fa-tv"></i> ${sc.platform || it.name || 'Pantalla'}</div>
+                                ${sc.email ? `<div style="color:#ddd;">📧 <b>Correo:</b> <span style="color:#00d2d3; user-select:all;">${sc.email}</span></div>` : ''}
+                                ${sc.pass ? `<div style="color:#ddd;">🔒 <b>Clave:</b> <span style="color:#fff; user-select:all;">${sc.pass}</span></div>` : ''}
+                                ${(sc.profile || sc.pin) ? `<div style="color:#ddd;">👤 <b>Perfil:</b> ${sc.profile || 'Asignado'} ${sc.pin ? `| 🔢 <b>PIN:</b> <span style="color:#f1c40f; font-weight:bold;">${sc.pin}</span>` : ''}</div>` : ''}
+                            </div>
+                        `);
+                    }
+                });
+            });
+            return credBlocks.length > 0 ? `<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:0.8rem;">${credBlocks.join('')}</div>` : '';
+        })() : ''}
         ${!isExpired ? `
         <div style="display:flex; flex-direction:column; gap: 0.5rem;">
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">

@@ -389,7 +389,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#00d2d3;">v3.9.32 (Bloqueo Anti Doble Envío Mismo Día)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.33 (Base de Datos Maestra de Clientes)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -419,6 +419,11 @@
                     style="border: 1px solid rgba(76, 209, 55, 0.4);"><i class="fa-solid fa-trophy"
                         style="color: #4cd137;"></i> Polla</button>
                 <button class="admin-tab" data-tab="configuracion" onclick="switchTab('configuracion', this)">⚙️ Configuración</button>
+            </div>
+            <div class="admin-tabs-row">
+                <button class="admin-tab" id="tab-btn-basedatos" data-tab="basedatos" onclick="switchTab('basedatos', this); renderDatabaseTab();"
+                    style="border: 1px solid rgba(46, 204, 113, 0.55); background: rgba(46, 204, 113, 0.08);"><i class="fa-solid fa-database"
+                        style="color:#2ecc71;"></i> Base de Datos</button>
             </div>
         </div>
 
@@ -1586,6 +1591,118 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB BASE DE DATOS MAESTRA DE CLIENTES Y PANTALLAS -->
+        <div id="tab-basedatos" class="tab-content">
+            <div class="admin-form" style="padding: 1.5rem;">
+                <!-- Encabezado y Acciones Rápidas -->
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem; border-bottom:1px solid var(--glass-border); padding-bottom:1rem;">
+                    <div>
+                        <h2 style="margin:0; display:flex; align-items:center; gap:0.8rem; color:#2ecc71;">
+                            <i class="fa-solid fa-database"></i> Base de Datos Maestra de Clientes y Pantallas
+                        </h2>
+                        <p style="margin:0.3rem 0 0 0; font-size:0.88rem; color:#a0a0a0;">
+                            Control total de clientes activos y sus pantallas respectivas. Todo lo que edites y guardes aquí se actualiza en tiempo real en la cuenta del cliente y en la página de Códigos.
+                        </p>
+                    </div>
+                    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                        <button type="button" class="save-btn" onclick="openDbQuickNewClientModal()" style="margin:0; width:auto; padding:10px 16px; background:linear-gradient(135deg, #2ecc71, #27ae60); color:#111; font-weight:bold; font-size:0.85rem; border-radius:10px;">
+                            <i class="fa-solid fa-user-plus"></i> Nuevo Cliente / Pantalla
+                        </button>
+                        <button type="button" class="save-btn" onclick="saveAllModifiedDbClients()" style="margin:0; width:auto; padding:10px 16px; background:linear-gradient(135deg, #00d2d3, #2ab7ca); color:#111; font-weight:bold; font-size:0.85rem; border-radius:10px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Todos los Editados (<span id="db-dirty-count">0</span>)
+                        </button>
+                        <button type="button" class="save-btn" onclick="exportDatabaseMasterCSV()" style="margin:0; width:auto; padding:10px 16px; background:rgba(52, 152, 219, 0.2); border:1px solid #3498db; color:#3498db; font-weight:bold; font-size:0.85rem; border-radius:10px;">
+                            <i class="fa-solid fa-file-csv"></i> Exportar Excel / CSV
+                        </button>
+                        <button type="button" class="save-btn" onclick="renderDatabaseTab(true)" style="margin:0; width:auto; padding:10px 14px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); color:white; font-size:0.85rem; border-radius:10px;" title="Recargar Base de Datos">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tarjetas de Resumen (KPIs) -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                    <div onclick="setDbCompletionFilter('all')" style="background:rgba(46, 204, 113, 0.08); border:1px solid rgba(46, 204, 113, 0.35); border-radius:12px; padding:1rem; cursor:pointer; transition:all 0.2s;">
+                        <div style="font-size:0.78rem; color:#aaa; text-transform:uppercase; font-weight:bold;"><i class="fa-solid fa-users" style="color:#2ecc71;"></i> Clientes en Vista</div>
+                        <div id="db-kpi-clients" style="font-size:1.8rem; font-weight:800; color:#2ecc71; margin-top:4px;">0</div>
+                        <div style="font-size:0.72rem; color:#888; margin-top:2px;">Clic para ver todos</div>
+                    </div>
+                    <div onclick="setDbCompletionFilter('all')" style="background:rgba(0, 210, 211, 0.08); border:1px solid rgba(0, 210, 211, 0.35); border-radius:12px; padding:1rem; cursor:pointer; transition:all 0.2s;">
+                        <div style="font-size:0.78rem; color:#aaa; text-transform:uppercase; font-weight:bold;"><i class="fa-solid fa-tv" style="color:#00d2d3;"></i> Total Pantallas</div>
+                        <div id="db-kpi-screens" style="font-size:1.8rem; font-weight:800; color:#00d2d3; margin-top:4px;">0</div>
+                        <div style="font-size:0.72rem; color:#888; margin-top:2px;">Pantallas desglosadas</div>
+                    </div>
+                    <div onclick="setDbCompletionFilter('complete')" style="background:rgba(76, 209, 55, 0.08); border:1px solid rgba(76, 209, 55, 0.35); border-radius:12px; padding:1rem; cursor:pointer; transition:all 0.2s;">
+                        <div style="font-size:0.78rem; color:#aaa; text-transform:uppercase; font-weight:bold;"><i class="fa-solid fa-circle-check" style="color:#4cd137;"></i> Pantallas Completas</div>
+                        <div id="db-kpi-complete" style="font-size:1.8rem; font-weight:800; color:#4cd137; margin-top:4px;">0</div>
+                        <div style="font-size:0.72rem; color:#888; margin-top:2px;">Email + Clave + PIN listos</div>
+                    </div>
+                    <div onclick="setDbCompletionFilter('incomplete')" style="background:rgba(243, 156, 18, 0.1); border:1px solid rgba(243, 156, 18, 0.45); border-radius:12px; padding:1rem; cursor:pointer; transition:all 0.2s;">
+                        <div style="font-size:0.78rem; color:#aaa; text-transform:uppercase; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation" style="color:#f39c12;"></i> Datos Incompletos</div>
+                        <div id="db-kpi-incomplete" style="font-size:1.8rem; font-weight:800; color:#f39c12; margin-top:4px;">0</div>
+                        <div style="font-size:0.72rem; color:#f39c12; margin-top:2px;">🔍 Clic para filtrar pendientes</div>
+                    </div>
+                </div>
+
+                <!-- Barra de Filtros y Búsqueda -->
+                <div style="background:rgba(0,0,0,0.35); border:1px solid var(--glass-border); border-radius:14px; padding:1.2rem; margin-bottom:1.5rem;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; align-items:end;">
+                        <div class="form-col" style="margin:0;">
+                            <label style="font-size:0.8rem; color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-magnifying-glass"></i> Buscar Cliente / Correo / Celular / Perfil</label>
+                            <input type="text" id="db-filter-search" placeholder="Nombre, celular, correo, plataforma, PIN..." oninput="renderDatabaseTab()" style="margin:0; padding:10px 12px; font-size:0.9rem; border-radius:8px; border:1px solid rgba(46,204,113,0.4); background:rgba(0,0,0,0.5); color:white;">
+                        </div>
+                        <div class="form-col" style="margin:0;">
+                            <label style="font-size:0.8rem; color:#ccc; font-weight:bold;"><i class="fa-solid fa-bolt"></i> Estado de Suscripción</label>
+                            <select id="db-filter-status" onchange="renderDatabaseTab()" style="margin:0; padding:10px 12px; font-size:0.9rem; border-radius:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid var(--glass-border);">
+                                <option value="active" selected>🟢 Solo Clientes Activos (Vigentes)</option>
+                                <option value="expiring">⚠️ Próximos a Vencer (≤ 3 días)</option>
+                                <option value="expired">🔴 Clientes Vencidos</option>
+                                <option value="all">📋 Todos (Activos + Vencidos)</option>
+                            </select>
+                        </div>
+                        <div class="form-col" style="margin:0;">
+                            <label style="font-size:0.8rem; color:#ccc; font-weight:bold;"><i class="fa-solid fa-clipboard-check"></i> Estado de Datos (Códigos)</label>
+                            <select id="db-filter-completion" onchange="renderDatabaseTab()" style="margin:0; padding:10px 12px; font-size:0.9rem; border-radius:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid var(--glass-border);">
+                                <option value="all" selected>📋 Todos los Registros</option>
+                                <option value="incomplete">⚠️ Datos Incompletos (Falta Email, Clave o PIN)</option>
+                                <option value="no_email">📧 Sin Correo Asignado</option>
+                                <option value="no_pin">🔑 Sin PIN de Cuenta (Web)</option>
+                                <option value="complete">✅ Datos 100% Completos</option>
+                            </select>
+                        </div>
+                        <div class="form-col" style="margin:0;">
+                            <label style="font-size:0.8rem; color:#ccc; font-weight:bold;"><i class="fa-solid fa-tv"></i> Plataforma</label>
+                            <select id="db-filter-platform" onchange="renderDatabaseTab()" style="margin:0; padding:10px 12px; font-size:0.9rem; border-radius:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid var(--glass-border);">
+                                <option value="all" selected>📺 Todas las Plataformas</option>
+                                <option value="netflix">Netflix</option>
+                                <option value="disney">Disney+</option>
+                                <option value="max">Max / HBO</option>
+                                <option value="prime">Prime Video</option>
+                                <option value="vix">ViX</option>
+                                <option value="crunchyroll">Crunchyroll</option>
+                                <option value="paramount">Paramount+</option>
+                                <option value="youtube">YouTube / Spotify</option>
+                                <option value="iptv">IPTV / Magis / Tele Latino</option>
+                            </select>
+                        </div>
+                        <div class="form-col" style="margin:0;">
+                            <label style="font-size:0.8rem; color:#ccc; font-weight:bold;"><i class="fa-solid fa-user-tie"></i> Cartera / Origen</label>
+                            <select id="db-filter-seller" onchange="renderDatabaseTab()" style="margin:0; padding:10px 12px; font-size:0.9rem; border-radius:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid var(--glass-border);">
+                                <option value="all" selected>👥 Todos (Directos + Vendedores)</option>
+                                <option value="direct">🏢 Solo Clientes Directos (Admin / Web)</option>
+                                <option value="sellers">👔 Solo Clientes de Vendedores</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor Principal de la Base de Datos -->
+                <div id="db-master-list-container" style="display:flex; flex-direction:column; gap:1rem;">
+                    <p style="color:#aaa; text-align:center; padding:2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando base de datos de clientes...</p>
                 </div>
             </div>
         </div>
@@ -4253,6 +4370,9 @@
                     if (window.initMarketingPanel) {
                         initMarketingPanel();
                     }
+                    if (window.renderDatabaseTab && document.getElementById('tab-basedatos')?.classList.contains('active') && _dbDirtyPhones.size === 0) {
+                        renderDatabaseTab();
+                    }
                 } else {
                     renderAdminList();
                     renderEstrenosList();
@@ -4264,6 +4384,9 @@
                     renderSellerSalesStats();
                     if (window.initMarketingPanel) {
                         initMarketingPanel();
+                    }
+                    if (window.renderDatabaseTab && document.getElementById('tab-basedatos')?.classList.contains('active') && _dbDirtyPhones.size === 0) {
+                        renderDatabaseTab();
                     }
                 }
             } else {
@@ -9736,6 +9859,1044 @@
             const finishedCtrl = document.getElementById('mkt-controls-finished');
             if (runningCtrl) runningCtrl.style.display = 'flex';
             if (finishedCtrl) finishedCtrl.style.display = 'none';
+        };
+
+        // =========================================================================
+        // 🗄️ BASE DE DATOS MAESTRA DE CLIENTES Y PANTALLAS (v3.9.33)
+        // =========================================================================
+        const _dbDirtyPhones = new Set();
+
+        function showDbToast(msg, isError = false) {
+            let toast = document.getElementById('db-floating-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'db-floating-toast';
+                toast.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:99999; padding:12px 22px; border-radius:12px; font-weight:bold; font-size:0.9rem; box-shadow:0 8px 25px rgba(0,0,0,0.6); transition:all 0.25s ease; display:flex; align-items:center; gap:10px;';
+                document.body.appendChild(toast);
+            }
+            toast.style.background = isError ? 'linear-gradient(135deg, #ff4d4d, #c0392b)' : 'linear-gradient(135deg, #2ecc71, #27ae60)';
+            toast.style.color = isError ? '#fff' : '#111';
+            toast.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i> <span>${msg}</span>`;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            if (toast._hideTimer) clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(15px)';
+            }, 3200);
+        }
+
+        function escapeAttr(val) {
+            if (val === undefined || val === null) return '';
+            return String(val)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        window.markDbClientDirty = function (phone) {
+            _dbDirtyPhones.add(phone);
+            const countEl = document.getElementById('db-dirty-count');
+            if (countEl) countEl.innerText = _dbDirtyPhones.size;
+            const card = document.querySelector(`.db-client-card[data-orig-phone="${phone}"]`);
+            if (card) {
+                card.style.borderColor = '#f1c40f';
+                card.style.boxShadow = '0 0 15px rgba(241, 196, 15, 0.25)';
+                const saveBtn = card.querySelector('.db-btn-save-client');
+                if (saveBtn) {
+                    saveBtn.style.background = 'linear-gradient(135deg, #f1c40f, #f39c12)';
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Cambios*';
+                }
+            }
+        };
+
+        window.setDbCompletionFilter = function (val) {
+            const sel = document.getElementById('db-filter-completion');
+            if (sel) {
+                sel.value = val;
+                renderDatabaseTab();
+            }
+        };
+
+        function populateDbSellerDropdown() {
+            const sel = document.getElementById('db-filter-seller');
+            if (!sel) return;
+            const prev = sel.value || 'all';
+            let html = `
+                <option value="all">👥 Todos (Directos + Vendedores)</option>
+                <option value="direct">🏢 Solo Clientes Directos (Admin / Web)</option>
+                <option value="sellers">👔 Todos los Vendedores</option>
+            `;
+            const sellers = Array.isArray(storeConfig.sellers) ? storeConfig.sellers : Object.values(storeConfig.sellers || {});
+            sellers.forEach(s => {
+                if (s && s.name) {
+                    html += `<option value="seller:${escapeAttr(s.name)}">👤 Vendedor: ${escapeAttr(s.name)}</option>`;
+                }
+            });
+            sel.innerHTML = html;
+            if (Array.from(sel.options).some(o => o.value === prev)) {
+                sel.value = prev;
+            }
+        }
+
+        // Construye el listado consolidado de clientes y sus ventas/pantallas
+        function buildMasterDatabaseRecords() {
+            const cSalesMap = window.allClientSalesMap || {};
+            const cProfiles = window.allClientProfiles || {};
+            const sSalesStore = window.globalSellerSalesDataStore || {};
+            const now = Date.now();
+
+            // 1. Clonar estructura base de clientSales y fusionar ventas de sellerSales que no estén en clientSales
+            const mergedClients = {};
+
+            Object.keys(cSalesMap).forEach(rawPhone => {
+                const cleanP = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '');
+                if (!cleanP) return;
+                if (!mergedClients[cleanP]) {
+                    mergedClients[cleanP] = {
+                        phone: cleanP,
+                        rawPhoneKey: rawPhone,
+                        profile: cProfiles[cleanP] || cProfiles[rawPhone] || {},
+                        sales: {}
+                    };
+                }
+                const salesObj = cSalesMap[rawPhone] || {};
+                Object.keys(salesObj).forEach(saleKey => {
+                    const s = salesObj[saleKey];
+                    if (!s || typeof s !== 'object') return;
+                    mergedClients[cleanP].sales[saleKey] = {
+                        ...s,
+                        _saleKey: saleKey,
+                        _inClientSales: true,
+                        _rawPhoneKey: rawPhone
+                    };
+                });
+            });
+
+            // También vincular ventas de sellerSales por si alguna venta de vendedor no se copió a clientSales
+            Object.keys(sSalesStore).forEach(sellerName => {
+                const sMap = sSalesStore[sellerName] || {};
+                Object.keys(sMap).forEach(sKey => {
+                    const s = sMap[sKey];
+                    if (!s || typeof s !== 'object') return;
+                    const cleanP = window.sanitizePhone ? window.sanitizePhone(s.clientPhone || '') : (s.clientPhone || '').replace(/\D/g, '');
+                    if (!cleanP) return;
+
+                    if (!mergedClients[cleanP]) {
+                        mergedClients[cleanP] = {
+                            phone: cleanP,
+                            rawPhoneKey: cleanP,
+                            profile: cProfiles[cleanP] || {},
+                            sales: {}
+                        };
+                    }
+
+                    // Verificar si ya existe por clave o por timestamp cercano
+                    let matchedKey = null;
+                    if (mergedClients[cleanP].sales[sKey]) {
+                        matchedKey = sKey;
+                    } else {
+                        matchedKey = Object.keys(mergedClients[cleanP].sales).find(k => {
+                            const ex = mergedClients[cleanP].sales[k];
+                            return ex.date && s.date && Math.abs(ex.date - s.date) < 5000;
+                        });
+                    }
+
+                    if (matchedKey) {
+                        mergedClients[cleanP].sales[matchedKey]._sellerName = sellerName;
+                        mergedClients[cleanP].sales[matchedKey]._sellerSaleKey = sKey;
+                        if (!mergedClients[cleanP].sales[matchedKey].sellerName) {
+                            mergedClients[cleanP].sales[matchedKey].sellerName = sellerName;
+                        }
+                    } else {
+                        mergedClients[cleanP].sales[sKey] = {
+                            ...s,
+                            sellerName: s.sellerName || sellerName,
+                            _saleKey: sKey,
+                            _inClientSales: false,
+                            _sellerName: sellerName,
+                            _sellerSaleKey: sKey,
+                            _rawPhoneKey: cleanP
+                        };
+                    }
+                });
+            });
+
+            // 2. Transformar cada cliente y desglosar sus pantallas
+            const clientRecords = [];
+
+            Object.keys(mergedClients).forEach(phone => {
+                const entry = mergedClients[phone];
+                const prof = entry.profile || {};
+                const salesKeys = Object.keys(entry.sales);
+                if (salesKeys.length === 0) return;
+
+                // Ordenar ventas: más recientes primero
+                salesKeys.sort((a, b) => (entry.sales[b].date || 0) - (entry.sales[a].date || 0));
+
+                const latestSale = entry.sales[salesKeys[0]] || {};
+                const clientName = safeDecode(prof.name || latestSale.clientName || 'Sin Nombre');
+                const clientCity = safeDecode(latestSale.clientCity || '');
+                const accountPin = (prof.pin || prof.ticketPin || '').toString().trim();
+
+                const processedSales = [];
+                salesKeys.forEach(sKey => {
+                    const s = entry.sales[sKey];
+                    const expMs = Number(s.expirationDate) || 0;
+                    const startMs = Number(s.date) || Date.now();
+                    const isExpired = now > expMs;
+                    const daysLeft = Math.ceil((expMs - now) / (1000 * 60 * 60 * 24));
+                    const sellerName = s.sellerName || s._sellerName || 'Página Web Oficial';
+                    const isSellerSale = sellerName && sellerName !== 'Página Web Oficial' && sellerName !== 'Admin';
+
+                    // Normalizar items y sus pantallas (specificEmails)
+                    let rawItems = s.items;
+                    let itemsArr = [];
+                    if (!rawItems || (Array.isArray(rawItems) && rawItems.length === 0) || (typeof rawItems === 'object' && Object.keys(rawItems).length === 0)) {
+                        itemsArr = [{
+                            id: 'legacy_0',
+                            name: 'Pantalla Streaming',
+                            category: 'individual',
+                            specificEmails: [{
+                                platform: 'Streaming',
+                                email: s.email || '',
+                                pass: s.password || '',
+                                profile: s.profile || '',
+                                pin: ''
+                            }]
+                        }];
+                    } else {
+                        itemsArr = Array.isArray(rawItems) ? rawItems : Object.values(rawItems);
+                    }
+
+                    const expandedItems = itemsArr.map((it, itemIdx) => {
+                        const screenCount = getScreenCount(it.category, it.name);
+                        const guesses = guessPlatforms(it.name, screenCount);
+                        const existingSpec = Array.isArray(it.specificEmails)
+                            ? it.specificEmails
+                            : (it.specificEmails && typeof it.specificEmails === 'object' ? Object.values(it.specificEmails) : []);
+
+                        const totalScreens = Math.max(screenCount, existingSpec.length, 1);
+                        const screens = [];
+                        for (let sIdx = 0; sIdx < totalScreens; sIdx++) {
+                            const sp = existingSpec[sIdx] || {};
+                            const plat = (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim();
+                            const email = (sp.email || (sIdx === 0 && totalScreens === 1 ? (s.email || '') : '')).toString().trim();
+                            const pass = (sp.pass || (sIdx === 0 && totalScreens === 1 ? (s.password || '') : '')).toString().trim();
+                            const profile = (sp.profile || (sIdx === 0 && totalScreens === 1 ? (s.profile || '') : '')).toString().trim();
+                            const pin = (sp.pin || '').toString().trim();
+
+                            const isScreenComplete = Boolean(email && pass && accountPin);
+                            screens.push({
+                                itemIdx,
+                                screenIdx: sIdx,
+                                productName: it.name || 'Pantalla',
+                                customName: it.customName || '',
+                                platform: plat,
+                                email,
+                                pass,
+                                profile,
+                                pin,
+                                isScreenComplete
+                            });
+                        }
+
+                        return {
+                            itemIdx,
+                            name: it.name || 'Pantalla',
+                            customName: it.customName || '',
+                            category: it.category || '',
+                            screens
+                        };
+                    });
+
+                    processedSales.push({
+                        saleKey: sKey,
+                        rawPhoneKey: s._rawPhoneKey || phone,
+                        sellerName,
+                        isSellerSale,
+                        sellerSaleKey: s._sellerSaleKey || sKey,
+                        startMs,
+                        expMs,
+                        isExpired,
+                        daysLeft,
+                        isPaid: s.isPaid !== false,
+                        total: s.total || 0,
+                        clientNameInSale: safeDecode(s.clientName || clientName),
+                        items: expandedItems
+                    });
+                });
+
+                clientRecords.push({
+                    phone,
+                    rawPhoneKey: entry.rawPhoneKey || phone,
+                    clientName,
+                    clientCity,
+                    accountPin,
+                    sales: processedSales
+                });
+            });
+
+            return clientRecords;
+        }
+
+        window.renderDatabaseTab = function (showFeedback = false) {
+            const container = document.getElementById('db-master-list-container');
+            if (!container) return;
+
+            populateDbSellerDropdown();
+
+            const searchQ = (document.getElementById('db-filter-search')?.value || '').toLowerCase().trim();
+            const statusFilter = document.getElementById('db-filter-status')?.value || 'active';
+            const completionFilter = document.getElementById('db-filter-completion')?.value || 'all';
+            const platformFilter = (document.getElementById('db-filter-platform')?.value || 'all').toLowerCase();
+            const sellerFilter = document.getElementById('db-filter-seller')?.value || 'all';
+
+            const allClients = buildMasterDatabaseRecords();
+
+            let totalClientsInView = 0;
+            let totalScreensInView = 0;
+            let completeScreensCount = 0;
+            let incompleteScreensCount = 0;
+
+            const filteredClients = [];
+
+            allClients.forEach(client => {
+                // Filtrar las ventas del cliente según el estado de suscripción y vendedor
+                const matchingSales = client.sales.filter(sale => {
+                    // 1. Filtro Estado
+                    if (statusFilter === 'active' && sale.isExpired) return false;
+                    if (statusFilter === 'expiring' && (sale.isExpired || sale.daysLeft > 3)) return false;
+                    if (statusFilter === 'expired' && !sale.isExpired) return false;
+
+                    // 2. Filtro Vendedor / Cartera
+                    if (sellerFilter === 'direct' && sale.isSellerSale) return false;
+                    if (sellerFilter === 'sellers' && !sale.isSellerSale) return false;
+                    if (sellerFilter.startsWith('seller:')) {
+                        const targetSeller = sellerFilter.substring(7);
+                        if (sale.sellerName !== targetSeller) return false;
+                    }
+
+                    // 3. Filtro Plataforma
+                    if (platformFilter !== 'all') {
+                        const hasPlat = sale.items.some(it =>
+                            it.screens.some(sc => {
+                                const pLow = (sc.platform + ' ' + sc.productName).toLowerCase();
+                                if (platformFilter === 'max') return pLow.includes('max') || pLow.includes('hbo');
+                                if (platformFilter === 'iptv') return pLow.includes('iptv') || pLow.includes('magis') || pLow.includes('tele') || pLow.includes('flujo');
+                                if (platformFilter === 'youtube') return pLow.includes('youtube') || pLow.includes('spotify') || pLow.includes('canva');
+                                return pLow.includes(platformFilter);
+                            })
+                        );
+                        if (!hasPlat) return false;
+                    }
+
+                    // 4. Filtro Estado de Datos (Completitud)
+                    if (completionFilter !== 'all') {
+                        const allScreens = sale.items.flatMap(it => it.screens);
+                        if (completionFilter === 'complete') {
+                            const ok = Boolean(client.accountPin) && allScreens.every(sc => sc.email && sc.pass);
+                            if (!ok) return false;
+                        } else if (completionFilter === 'incomplete') {
+                            const inc = !client.accountPin || allScreens.some(sc => !sc.email || !sc.pass);
+                            if (!inc) return false;
+                        } else if (completionFilter === 'no_email') {
+                            const noEm = allScreens.some(sc => !sc.email);
+                            if (!noEm) return false;
+                        } else if (completionFilter === 'no_pin') {
+                            if (client.accountPin) return false;
+                        }
+                    }
+
+                    // 5. Filtro Búsqueda de texto libre
+                    if (searchQ) {
+                        const screensPool = sale.items.flatMap(it =>
+                            it.screens.map(sc => `${sc.platform} ${sc.productName} ${sc.email} ${sc.pass} ${sc.profile} ${sc.pin}`)
+                        ).join(' ');
+                        const pool = `${client.clientName} ${client.phone} ${client.accountPin} ${sale.sellerName} ${sale.clientNameInSale} ${screensPool}`.toLowerCase();
+                        if (!pool.includes(searchQ)) return false;
+                    }
+
+                    return true;
+                });
+
+                if (matchingSales.length > 0) {
+                    totalClientsInView++;
+                    matchingSales.forEach(s => {
+                        s.items.forEach(it => {
+                            it.screens.forEach(sc => {
+                                totalScreensInView++;
+                                if (client.accountPin && sc.email && sc.pass) {
+                                    completeScreensCount++;
+                                } else {
+                                    incompleteScreensCount++;
+                                }
+                            });
+                        });
+                    });
+
+                    filteredClients.push({
+                        ...client,
+                        sales: matchingSales
+                    });
+                }
+            });
+
+            // Ordenar clientes: primero los que tienen vencimiento más próximo o ventas más recientes
+            filteredClients.sort((a, b) => {
+                const nameA = (a.clientName || '').toLowerCase();
+                const nameB = (b.clientName || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+
+            // Actualizar KPIs
+            const kpiClients = document.getElementById('db-kpi-clients');
+            const kpiScreens = document.getElementById('db-kpi-screens');
+            const kpiComplete = document.getElementById('db-kpi-complete');
+            const kpiIncomplete = document.getElementById('db-kpi-incomplete');
+            if (kpiClients) kpiClients.innerText = totalClientsInView;
+            if (kpiScreens) kpiScreens.innerText = totalScreensInView;
+            if (kpiComplete) kpiComplete.innerText = completeScreensCount;
+            if (kpiIncomplete) kpiIncomplete.innerText = incompleteScreensCount;
+
+            _dbDirtyPhones.clear();
+            const dirtyCountEl = document.getElementById('db-dirty-count');
+            if (dirtyCountEl) dirtyCountEl.innerText = '0';
+
+            if (filteredClients.length === 0) {
+                container.innerHTML = `
+                    <div style="background:rgba(255,255,255,0.03); border:1px dashed var(--glass-border); border-radius:14px; padding:2.5rem; text-align:center;">
+                        <i class="fa-solid fa-database" style="font-size:2.5rem; color:#555; margin-bottom:0.8rem;"></i>
+                        <h3 style="margin:0 0 0.4rem 0; color:#ccc;">No se encontraron registros con los filtros actuales</h3>
+                        <p style="margin:0; color:#888; font-size:0.88rem;">Prueba cambiando el filtro de estado o limpiando el cuadro de búsqueda.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filteredClients.forEach((client, cIdx) => {
+                const allClientScreens = client.sales.flatMap(s => s.items.flatMap(i => i.screens));
+                const isClientFullyComplete = Boolean(client.accountPin) && allClientScreens.every(sc => sc.email && sc.pass);
+
+                const statusBadge = isClientFullyComplete
+                    ? `<span style="background:rgba(76, 209, 55, 0.15); border:1px solid #4cd137; color:#4cd137; padding:3px 9px; border-radius:20px; font-size:0.74rem; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> Datos Completos</span>`
+                    : `<span style="background:rgba(243, 156, 18, 0.18); border:1px solid #f39c12; color:#f39c12; padding:3px 9px; border-radius:20px; font-size:0.74rem; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> Datos Incompletos</span>`;
+
+                let salesHtml = '';
+                client.sales.forEach(sale => {
+                    const startVal = sale.startMs ? (() => {
+                        const d = new Date(sale.startMs);
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    })() : '';
+                    const expVal = sale.expMs ? (() => {
+                        const d = new Date(sale.expMs);
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    })() : '';
+
+                    const expBadgeColor = sale.isExpired ? '#ff4d4d' : (sale.daysLeft <= 3 ? '#f39c12' : '#4cd137');
+                    const expBadgeText = sale.isExpired ? `🔴 Vencida` : `🟢 Activa (${sale.daysLeft}d restantes)`;
+                    const sellerBadge = sale.isSellerSale
+                        ? `<span style="background:rgba(155, 89, 182, 0.2); border:1px solid #9b59b6; color:#d2b4de; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:bold;"><i class="fa-solid fa-user-tie"></i> ${escapeAttr(sale.sellerName)}</span>`
+                        : `<span style="background:rgba(42, 183, 202, 0.15); border:1px solid #2ab7ca; color:#2ab7ca; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:bold;"><i class="fa-solid fa-globe"></i> Directo</span>`;
+
+                    let screensRowsHtml = '';
+                    sale.items.forEach(item => {
+                        item.screens.forEach(sc => {
+                            const missingEmail = !sc.email;
+                            const missingPass = !sc.pass;
+                            screensRowsHtml += `
+                                <div class="db-screen-row" data-item-idx="${sc.itemIdx}" data-screen-idx="${sc.screenIdx}"
+                                    style="display:grid; grid-template-columns: minmax(130px, 1.1fr) minmax(190px, 1.7fr) minmax(130px, 1.1fr) minmax(110px, 0.9fr) minmax(85px, 0.7fr) auto; gap:8px; align-items:end; background:rgba(0,0,0,0.4); padding:10px; border-radius:10px; border:1px solid ${missingEmail || missingPass ? 'rgba(243, 156, 18, 0.45)' : 'rgba(255,255,255,0.08)'}; margin-top:8px;">
+                                    <div>
+                                        <label style="font-size:0.68rem; color:#2ecc71; font-weight:bold; display:block; margin-bottom:3px;">📺 PLATAFORMA (${escapeAttr(sc.productName)})</label>
+                                        <input type="text" class="db-inp-platform" value="${escapeAttr(sc.platform)}" placeholder="Ej: Netflix"
+                                            oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                            style="margin:0; padding:7px 9px; font-size:0.84rem; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:white; font-weight:bold; width:100%;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:0.68rem; color:${missingEmail ? '#f39c12' : '#aaa'}; font-weight:bold; display:block; margin-bottom:3px;">📧 EMAIL / CORREO ${missingEmail ? '⚠️' : ''}</label>
+                                        <input type="text" class="db-inp-email" value="${escapeAttr(sc.email)}" placeholder="correo@cuenta.com"
+                                            oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                            style="margin:0; padding:7px 9px; font-size:0.84rem; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid ${missingEmail ? '#f39c12' : 'rgba(255,255,255,0.15)'}; color:#00d2d3; width:100%;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:0.68rem; color:${missingPass ? '#f39c12' : '#aaa'}; font-weight:bold; display:block; margin-bottom:3px;">🔒 CONTRASEÑA ${missingPass ? '⚠️' : ''}</label>
+                                        <input type="text" class="db-inp-pass" value="${escapeAttr(sc.pass)}" placeholder="Contraseña"
+                                            oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                            style="margin:0; padding:7px 9px; font-size:0.84rem; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid ${missingPass ? '#f39c12' : 'rgba(255,255,255,0.15)'}; color:white; width:100%;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:0.68rem; color:#aaa; font-weight:bold; display:block; margin-bottom:3px;">👤 NOMBRE PERFIL</label>
+                                        <input type="text" class="db-inp-profile" value="${escapeAttr(sc.profile)}" placeholder="Ej: Perfil 1"
+                                            oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                            style="margin:0; padding:7px 9px; font-size:0.84rem; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:white; width:100%;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:0.68rem; color:#aaa; font-weight:bold; display:block; margin-bottom:3px;">🔢 PIN PERFIL</label>
+                                        <input type="text" class="db-inp-pin" value="${escapeAttr(sc.pin)}" placeholder="PIN"
+                                            oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                            style="margin:0; padding:7px 9px; font-size:0.84rem; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#f1c40f; font-weight:bold; width:100%;">
+                                    </div>
+                                    <div style="display:flex; gap:5px; align-items:center;">
+                                        <button type="button" onclick="sendDbRowWhatsApp('${escapeAttr(client.phone)}', '${escapeAttr(sale.saleKey)}', ${sc.itemIdx}, ${sc.screenIdx})"
+                                            title="Enviar datos de esta pantalla por WhatsApp"
+                                            style="padding:7px 10px; border-radius:6px; border:1px solid #25D366; background:rgba(37, 211, 102, 0.15); color:#25D366; cursor:pointer; font-size:0.82rem;">
+                                            <i class="fa-brands fa-whatsapp"></i>
+                                        </button>
+                                        <button type="button" onclick="deleteDbScreen('${escapeAttr(client.phone)}', '${escapeAttr(sale.saleKey)}', ${sc.itemIdx}, ${sc.screenIdx})"
+                                            title="Eliminar esta pantalla"
+                                            style="padding:7px 10px; border-radius:6px; border:1px solid rgba(255, 77, 77, 0.5); background:rgba(255, 77, 77, 0.1); color:#ff4d4d; cursor:pointer; font-size:0.82rem;">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    });
+
+                    salesHtml += `
+                        <div class="db-sale-block" data-sale-key="${escapeAttr(sale.saleKey)}" data-seller-name="${escapeAttr(sale.sellerName)}" data-seller-sale-key="${escapeAttr(sale.sellerSaleKey)}"
+                            style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-left:3px solid ${expBadgeColor}; border-radius:10px; padding:10px 12px; margin-top:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    <span style="color:${expBadgeColor}; font-weight:bold; font-size:0.8rem;">${expBadgeText}</span>
+                                    ${sellerBadge}
+                                    <span style="font-size:0.75rem; color:#888;">Inicio:</span>
+                                    <input type="date" class="db-inp-sale-start" value="${startVal}" oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                        style="margin:0; padding:3px 7px; font-size:0.76rem; border-radius:6px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.15); color:#ccc; width:auto;">
+                                    <span style="font-size:0.75rem; color:#888;">Vence:</span>
+                                    <input type="date" class="db-inp-sale-exp" value="${expVal}" oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                        style="margin:0; padding:3px 7px; font-size:0.76rem; border-radius:6px; background:rgba(0,0,0,0.5); border:1px solid ${expBadgeColor}; color:white; width:auto; font-weight:bold;">
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <button type="button" onclick="addDbScreenToSale('${escapeAttr(client.phone)}', '${escapeAttr(sale.saleKey)}')"
+                                        style="padding:4px 10px; border-radius:6px; border:1px solid #00d2d3; background:rgba(0, 210, 211, 0.12); color:#00d2d3; cursor:pointer; font-size:0.75rem; font-weight:bold;">
+                                        <i class="fa-solid fa-plus"></i> Añadir Pantalla
+                                    </button>
+                                    <button type="button" onclick="deleteDbEntireSale('${escapeAttr(client.phone)}', '${escapeAttr(sale.saleKey)}', '${escapeAttr(sale.sellerName)}', '${escapeAttr(sale.sellerSaleKey)}')"
+                                        style="padding:4px 10px; border-radius:6px; border:1px solid rgba(255,77,77,0.4); background:rgba(255,77,77,0.1); color:#ff4d4d; cursor:pointer; font-size:0.75rem;">
+                                        <i class="fa-solid fa-trash-can"></i> Borrar Compra
+                                    </button>
+                                </div>
+                            </div>
+                            ${screensRowsHtml}
+                        </div>
+                    `;
+                });
+
+                const missingAccountPin = !client.accountPin;
+
+                html += `
+                    <div class="db-client-card" data-orig-phone="${escapeAttr(client.phone)}" data-raw-phone-key="${escapeAttr(client.rawPhoneKey)}"
+                        style="background:rgba(20, 24, 34, 0.85); border:1px solid ${isClientFullyComplete ? 'rgba(46, 204, 113, 0.3)' : 'rgba(243, 156, 18, 0.4)'}; border-radius:14px; padding:1.1rem; transition:all 0.2s;">
+                        <!-- Fila Superior: Datos Maestros del Cliente -->
+                        <div style="display:grid; grid-template-columns: minmax(180px, 1.5fr) minmax(140px, 1fr) minmax(130px, 0.9fr) auto; gap:10px; align-items:end; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                                    <span style="font-size:0.72rem; color:#2ecc71; font-weight:bold;">#${cIdx + 1} 👤 NOMBRE DEL CLIENTE</span>
+                                    ${statusBadge}
+                                </div>
+                                <input type="text" class="db-inp-client-name" value="${escapeAttr(client.clientName)}" placeholder="Nombre completo"
+                                    oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                    style="margin:0; padding:8px 11px; font-size:0.95rem; font-weight:bold; border-radius:8px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.18); color:white; width:100%;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem; color:#aaa; font-weight:bold; display:block; margin-bottom:4px;">📱 CELULAR (WHATSAPP)</label>
+                                <input type="text" class="db-inp-client-phone" value="${escapeAttr(client.phone)}" placeholder="Ej: 3001234567"
+                                    oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                    style="margin:0; padding:8px 11px; font-size:0.92rem; font-weight:bold; border-radius:8px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.18); color:#00d2d3; width:100%;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem; color:${missingAccountPin ? '#f39c12' : '#4cd137'}; font-weight:bold; display:block; margin-bottom:4px;">
+                                    🔑 PIN DE CUENTA (4 DÍGITOS) ${missingAccountPin ? '⚠️' : ''}
+                                </label>
+                                <div style="display:flex; gap:5px;">
+                                    <input type="text" class="db-inp-client-pin" value="${escapeAttr(client.accountPin)}" maxlength="4" placeholder="Ej: 1234"
+                                        oninput="markDbClientDirty('${escapeAttr(client.phone)}')"
+                                        style="margin:0; padding:8px 11px; font-size:0.95rem; font-weight:800; letter-spacing:2px; text-align:center; border-radius:8px; background:rgba(0,0,0,0.55); border:1px solid ${missingAccountPin ? '#f39c12' : '#4cd137'}; color:#f1c40f; width:100%;">
+                                    <button type="button" onclick="generateRandomDbPin(this, '${escapeAttr(client.phone)}')" title="Generar PIN aleatorio de 4 dígitos"
+                                        style="padding:0 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#ccc; cursor:pointer;">
+                                        <i class="fa-solid fa-dice"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                                <button type="button" class="save-btn db-btn-save-client" onclick="saveDbClientCard('${escapeAttr(client.phone)}')"
+                                    style="margin:0; width:auto; padding:9px 16px; background:linear-gradient(135deg, #2ecc71, #27ae60); color:#111; font-weight:800; font-size:0.84rem; border-radius:8px; cursor:pointer;">
+                                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                                </button>
+                                <button type="button" onclick="jumpToClientFullEditor('${escapeAttr(client.phone)}')"
+                                    title="Abrir en editor detallado de Clientes"
+                                    style="padding:9px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:white; cursor:pointer; font-size:0.82rem;">
+                                    <i class="fa-solid fa-up-right-from-square"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Bloques de Compras y Pantallas del Cliente -->
+                        ${salesHtml}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            if (showFeedback) {
+                showDbToast('Base de datos actualizada');
+            }
+        };
+
+        window.generateRandomDbPin = function (btnEl, phone) {
+            const card = btnEl.closest('.db-client-card');
+            if (!card) return;
+            const pinInput = card.querySelector('.db-inp-client-pin');
+            if (pinInput) {
+                const rnd = Math.floor(1000 + Math.random() * 9000).toString();
+                pinInput.value = rnd;
+                markDbClientDirty(phone);
+            }
+        };
+
+        window.jumpToClientFullEditor = function (phone) {
+            const tabBtn = document.querySelector('.admin-tab[data-tab="clientes"]');
+            if (tabBtn) switchTab('clientes', tabBtn);
+            const searchInput = document.getElementById('search-client-phone');
+            if (searchInput) {
+                searchInput.value = phone;
+                searchClient();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+
+        // Guarda los cambios de una tarjeta de cliente (y migra si cambió el celular)
+        window.saveDbClientCard = async function (origPhone, silent = false) {
+            const card = document.querySelector(`.db-client-card[data-orig-phone="${origPhone}"]`);
+            if (!card) return false;
+
+            const rawPhoneKey = card.getAttribute('data-raw-phone-key') || origPhone;
+            const newName = (card.querySelector('.db-inp-client-name')?.value || '').trim() || 'Cliente';
+            const rawNewPhone = (card.querySelector('.db-inp-client-phone')?.value || '').trim();
+            const newPhone = window.sanitizePhone ? window.sanitizePhone(rawNewPhone) : rawNewPhone.replace(/\D/g, '');
+            const newAccountPin = (card.querySelector('.db-inp-client-pin')?.value || '').trim();
+
+            if (!newPhone || newPhone.length < 7) {
+                alert('⚠️ Ingresa un número de celular válido.');
+                return false;
+            }
+
+            const targetPhoneKey = (newPhone !== origPhone) ? newPhone : rawPhoneKey;
+            const updates = {};
+
+            // 1. Actualizar perfil del cliente (Nombre + PIN de Cuenta Web y Ticket)
+            updates[`clientProfiles/${targetPhoneKey}/name`] = newName;
+            if (newAccountPin) {
+                updates[`clientProfiles/${targetPhoneKey}/pin`] = newAccountPin;
+                updates[`clientProfiles/${targetPhoneKey}/ticketPin`] = newAccountPin;
+            } else {
+                updates[`clientProfiles/${targetPhoneKey}/pin`] = null;
+                updates[`clientProfiles/${targetPhoneKey}/ticketPin`] = null;
+            }
+
+            // 2. Recorrer cada bloque de venta y sus filas de pantallas
+            const saleBlocks = card.querySelectorAll('.db-sale-block');
+            const cSalesSource = (window.allClientSalesMap && (window.allClientSalesMap[rawPhoneKey] || window.allClientSalesMap[origPhone])) || {};
+            const sSalesStore = window.globalSellerSalesDataStore || {};
+
+            saleBlocks.forEach(sBlock => {
+                const saleKey = sBlock.getAttribute('data-sale-key');
+                const sellerName = sBlock.getAttribute('data-seller-name') || '';
+                const sellerSaleKey = sBlock.getAttribute('data-seller-sale-key') || saleKey;
+
+                const startDateStr = sBlock.querySelector('.db-inp-sale-start')?.value || '';
+                const expDateStr = sBlock.querySelector('.db-inp-sale-exp')?.value || '';
+
+                // Obtener objeto original de la venta (desde clientSales o desde sellerSales)
+                let origSale = cSalesSource[saleKey];
+                if (!origSale && sellerName && sSalesStore[sellerName] && sSalesStore[sellerName][sellerSaleKey]) {
+                    origSale = sSalesStore[sellerName][sellerSaleKey];
+                }
+                origSale = origSale ? JSON.parse(JSON.stringify(origSale)) : {
+                    date: Date.now(),
+                    expirationDate: Date.now() + 30 * 86400000,
+                    isPaid: true,
+                    items: []
+                };
+
+                origSale.clientName = newName;
+                origSale.clientPhone = newPhone;
+
+                if (startDateStr) {
+                    const [sy, sm, sd] = startDateStr.split('-').map(Number);
+                    const oldD = origSale.date ? new Date(origSale.date) : new Date();
+                    oldD.setFullYear(sy, sm - 1, sd);
+                    origSale.date = oldD.getTime();
+                }
+                if (expDateStr) {
+                    const [ey, em, ed] = expDateStr.split('-').map(Number);
+                    const expD = new Date(ey, em - 1, ed, 23, 59, 59, 999);
+                    origSale.expirationDate = expD.getTime();
+                }
+
+                // Normalizar arreglo items
+                let itemsArr = [];
+                if (!origSale.items || (Array.isArray(origSale.items) && origSale.items.length === 0) || (typeof origSale.items === 'object' && Object.keys(origSale.items).length === 0)) {
+                    itemsArr = [{
+                        id: 'legacy_0',
+                        name: 'Pantalla Streaming',
+                        category: 'individual',
+                        specificEmails: []
+                    }];
+                } else {
+                    itemsArr = Array.isArray(origSale.items) ? origSale.items : Object.values(origSale.items);
+                }
+
+                // Limpiar specificEmails antes de reconstruir desde las filas de la UI
+                itemsArr.forEach(it => { it.specificEmails = []; });
+
+                let firstEmailFound = '';
+                let firstPassFound = '';
+                let firstProfileFound = '';
+
+                const screenRows = sBlock.querySelectorAll('.db-screen-row');
+                screenRows.forEach(row => {
+                    const itemIdx = parseInt(row.getAttribute('data-item-idx')) || 0;
+                    const plat = (row.querySelector('.db-inp-platform')?.value || '').trim();
+                    const email = (row.querySelector('.db-inp-email')?.value || '').trim();
+                    const pass = (row.querySelector('.db-inp-pass')?.value || '').trim();
+                    const profile = (row.querySelector('.db-inp-profile')?.value || '').trim();
+                    const pin = (row.querySelector('.db-inp-pin')?.value || '').trim();
+
+                    if (!itemsArr[itemIdx]) {
+                        itemsArr[itemIdx] = {
+                            id: 'custom_' + itemIdx,
+                            name: plat || 'Pantalla Streaming',
+                            category: 'individual',
+                            specificEmails: []
+                        };
+                    }
+
+                    // Si es producto individual de 1 pantalla, actualizar también el nombre si el admin lo editó
+                    if (itemsArr.length === 1 && screenRows.length === 1 && plat) {
+                        itemsArr[itemIdx].name = plat;
+                    }
+
+                    itemsArr[itemIdx].specificEmails.push({
+                        platform: plat || itemsArr[itemIdx].name || 'Streaming',
+                        email,
+                        pass,
+                        profile,
+                        pin
+                    });
+
+                    if (!firstEmailFound && email) firstEmailFound = email;
+                    if (!firstPassFound && pass) firstPassFound = pass;
+                    if (!firstProfileFound && profile) firstProfileFound = profile;
+                });
+
+                origSale.items = itemsArr;
+                if (firstEmailFound) origSale.email = firstEmailFound;
+                if (firstPassFound) origSale.password = firstPassFound;
+                if (firstProfileFound) origSale.profile = firstProfileFound;
+
+                // Guardar en clientSales
+                updates[`clientSales/${targetPhoneKey}/${saleKey}`] = origSale;
+
+                // Sincronizar también en sellerSales si pertenece a un vendedor
+                if (sellerName && sellerName !== 'Página Web Oficial' && sellerName !== 'Admin') {
+                    if (sSalesStore[sellerName]) {
+                        // Buscar por sellerSaleKey o por coincidencia de fecha/teléfono
+                        let targetSellerSid = sellerSaleKey;
+                        if (!sSalesStore[sellerName][targetSellerSid]) {
+                            targetSellerSid = Object.keys(sSalesStore[sellerName]).find(sid => {
+                                const ss = sSalesStore[sellerName][sid];
+                                return ss && (sid === saleKey || (ss.clientPhone === origPhone && Math.abs((ss.date || 0) - (origSale.date || 0)) < 86400000));
+                            });
+                        }
+                        if (targetSellerSid && sSalesStore[sellerName][targetSellerSid]) {
+                            const sellerCopy = {
+                                ...sSalesStore[sellerName][targetSellerSid],
+                                clientName: newName,
+                                clientPhone: newPhone,
+                                date: origSale.date,
+                                expirationDate: origSale.expirationDate,
+                                items: origSale.items,
+                                email: origSale.email || '',
+                                password: origSale.password || '',
+                                profile: origSale.profile || ''
+                            };
+                            updates[`sellerSales/${sellerName}/${targetSellerSid}`] = sellerCopy;
+                        }
+                    }
+                }
+            });
+
+            // 3. Si el número de teléfono cambió, eliminar las ramas antiguas para completar la migración
+            if (newPhone !== origPhone) {
+                updates[`clientSales/${rawPhoneKey}`] = null;
+                if (rawPhoneKey !== origPhone) updates[`clientSales/${origPhone}`] = null;
+                updates[`clientProfiles/${rawPhoneKey}`] = null;
+                if (rawPhoneKey !== origPhone) updates[`clientProfiles/${origPhone}`] = null;
+            }
+
+            try {
+                await db.ref('/').update(updates);
+                _dbDirtyPhones.delete(origPhone);
+                const countEl = document.getElementById('db-dirty-count');
+                if (countEl) countEl.innerText = _dbDirtyPhones.size;
+
+                if (!silent) {
+                    showDbToast(`✅ Guardado: ${newName} (${newPhone})`);
+                    renderDatabaseTab();
+                }
+                return true;
+            } catch (err) {
+                console.error('[DB SAVE ERROR]', err);
+                alert('Error al guardar en Firebase: ' + err.message);
+                return false;
+            }
+        };
+
+        window.saveAllModifiedDbClients = async function () {
+            const phones = Array.from(_dbDirtyPhones);
+            if (phones.length === 0) {
+                showDbToast('No hay cambios pendientes por guardar');
+                return;
+            }
+            let savedCount = 0;
+            for (const p of phones) {
+                const ok = await saveDbClientCard(p, true);
+                if (ok) savedCount++;
+            }
+            showDbToast(`✅ Se guardaron ${savedCount} cliente(s) exitosamente`);
+            renderDatabaseTab();
+        };
+
+        // Añadir una nueva pantalla en blanco a una venta existente desde la Base de Datos
+        window.addDbScreenToSale = async function (phone, saleKey) {
+            // Primero guardar cualquier cambio escrito en la tarjeta actual
+            await saveDbClientCard(phone, true);
+
+            const cSales = window.allClientSalesMap[phone] || {};
+            const sale = cSales[saleKey];
+            if (!sale) {
+                return alert('Primero haz clic en "Guardar" en la tarjeta del cliente para inicializar esta venta en clientSales.');
+            }
+
+            let itemsArr = Array.isArray(sale.items) ? sale.items : Object.values(sale.items || {});
+            if (itemsArr.length === 0) {
+                itemsArr = [{
+                    id: 'custom_0',
+                    name: 'Nueva Pantalla',
+                    category: 'individual',
+                    specificEmails: []
+                }];
+            }
+
+            const targetItem = itemsArr[0];
+            if (!Array.isArray(targetItem.specificEmails)) {
+                const count = getScreenCount(targetItem.category, targetItem.name);
+                const guesses = guessPlatforms(targetItem.name, count);
+                targetItem.specificEmails = [];
+                for (let i = 0; i < count; i++) {
+                    targetItem.specificEmails.push({
+                        platform: guesses[i] || targetItem.name || 'Streaming',
+                        email: '',
+                        pass: '',
+                        profile: '',
+                        pin: ''
+                    });
+                }
+            }
+
+            targetItem.specificEmails.push({
+                platform: 'Nueva Pantalla',
+                email: '',
+                pass: '',
+                profile: '',
+                pin: ''
+            });
+
+            sale.items = itemsArr;
+            await db.ref(`clientSales/${phone}/${saleKey}/items`).set(itemsArr);
+            showDbToast('➕ Nueva fila de pantalla añadida');
+            renderDatabaseTab();
+        };
+
+        // Eliminar una pantalla específica o la compra si era la única pantalla
+        window.deleteDbScreen = async function (phone, saleKey, itemIdx, screenIdx) {
+            const card = document.querySelector(`.db-client-card[data-orig-phone="${phone}"]`);
+            if (!card) return;
+            const sBlock = card.querySelector(`.db-sale-block[data-sale-key="${saleKey}"]`);
+            if (!sBlock) return;
+
+            const allRows = sBlock.querySelectorAll('.db-screen-row');
+            if (allRows.length <= 1) {
+                const sellerName = sBlock.getAttribute('data-seller-name') || '';
+                const sellerSaleKey = sBlock.getAttribute('data-seller-sale-key') || saleKey;
+                return deleteDbEntireSale(phone, saleKey, sellerName, sellerSaleKey);
+            }
+
+            if (!confirm('¿Eliminar esta pantalla de la cuenta del cliente?')) return;
+
+            const targetRow = sBlock.querySelector(`.db-screen-row[data-item-idx="${itemIdx}"][data-screen-idx="${screenIdx}"]`);
+            if (targetRow) targetRow.remove();
+
+            await saveDbClientCard(phone, false);
+        };
+
+        window.deleteDbEntireSale = async function (phone, saleKey, sellerName, sellerSaleKey) {
+            if (!confirm('⚠️ ¿Estás seguro de ELIMINAR esta compra/suscripción completa del cliente?')) return;
+
+            const updates = {};
+            updates[`clientSales/${phone}/${saleKey}`] = null;
+
+            if (sellerName && sellerName !== 'Página Web Oficial' && sellerName !== 'Admin') {
+                if (sellerSaleKey) {
+                    updates[`sellerSales/${sellerName}/${sellerSaleKey}`] = null;
+                }
+                if (window.globalSellerSalesDataStore && window.globalSellerSalesDataStore[sellerName] && window.globalSellerSalesDataStore[sellerName][saleKey]) {
+                    updates[`sellerSales/${sellerName}/${saleKey}`] = null;
+                }
+            }
+
+            try {
+                await db.ref('/').update(updates);
+                showDbToast('🗑️ Compra eliminada correctamente');
+                renderDatabaseTab();
+            } catch (err) {
+                alert('Error al eliminar: ' + err.message);
+            }
+        };
+
+        // Enviar credenciales de una pantalla por WhatsApp directamente desde la fila
+        window.sendDbRowWhatsApp = function (phone, saleKey, itemIdx, screenIdx) {
+            const card = document.querySelector(`.db-client-card[data-orig-phone="${phone}"]`);
+            if (!card) return;
+
+            const clientName = (card.querySelector('.db-inp-client-name')?.value || 'Cliente').trim();
+            const clientPhone = (card.querySelector('.db-inp-client-phone')?.value || phone).trim();
+            const accountPin = (card.querySelector('.db-inp-client-pin')?.value || 'No asignado').trim();
+
+            const sBlock = card.querySelector(`.db-sale-block[data-sale-key="${saleKey}"]`);
+            if (!sBlock) return;
+
+            const expDateStr = sBlock.querySelector('.db-inp-sale-exp')?.value || '';
+            const row = sBlock.querySelector(`.db-screen-row[data-item-idx="${itemIdx}"][data-screen-idx="${screenIdx}"]`);
+            if (!row) return;
+
+            const plat = (row.querySelector('.db-inp-platform')?.value || 'Streaming').trim();
+            const email = (row.querySelector('.db-inp-email')?.value || 'N/A').trim();
+            const pass = (row.querySelector('.db-inp-pass')?.value || 'N/A').trim();
+            const profile = (row.querySelector('.db-inp-profile')?.value || 'Asignado').trim();
+            const pin = (row.querySelector('.db-inp-pin')?.value || 'Sin PIN').trim();
+
+            const msg = `Hola *${clientName}* 👋\n\nAquí tienes los datos actualizados de tu pantalla en *Streaming DPC*:\n\n📺 *Plataforma:* ${plat}\n📧 *Correo:* ${email}\n🔒 *Contraseña:* ${pass}\n👤 *Perfil:* ${profile}\n🔢 *PIN de Perfil:* ${pin}\n\n🔑 *Tu PIN de Cuenta Web (para consultar tus compras y pedir códigos):* ${accountPin}\n📅 *Vencimiento:* ${expDateStr || 'Vigente'}\n\n¡Que la disfrutes! 🍿✨`;
+
+            let waPhone = clientPhone.replace(/\D/g, '');
+            if (waPhone.length === 10 && waPhone.startsWith('3')) waPhone = '57' + waPhone;
+            window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
+        // Modal / Acción rápida para agregar un nuevo cliente directo desde Base de Datos
+        window.openDbQuickNewClientModal = async function () {
+            const name = prompt('👤 Nombre del nuevo cliente:');
+            if (!name || !name.trim()) return;
+
+            const rawPhone = prompt('📱 Celular (WhatsApp) del cliente (10 dígitos):');
+            if (!rawPhone || !rawPhone.trim()) return;
+            const phone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '');
+            if (phone.length < 7) return alert('Número de celular inválido.');
+
+            const platform = prompt('📺 Plataforma (Ej: Netflix, Disney+, Max, Prime Video):', 'Netflix') || 'Netflix';
+            const rndPin = Math.floor(1000 + Math.random() * 9000).toString();
+            const accountPin = prompt('🔑 PIN de Cuenta Web (4 dígitos):', rndPin) || rndPin;
+
+            const now = Date.now();
+            const exp = now + 30 * 86400000;
+            const newSaleKey = db.ref(`clientSales/${phone}`).push().key;
+
+            const newSaleObj = {
+                clientName: name.trim(),
+                clientPhone: phone,
+                clientCity: '',
+                date: now,
+                expirationDate: exp,
+                isPaid: true,
+                sellerName: 'Página Web Oficial',
+                total: 0,
+                items: [{
+                    id: 'db_manual_' + now,
+                    name: platform.trim(),
+                    category: 'individual',
+                    specificEmails: [{
+                        platform: platform.trim(),
+                        email: '',
+                        pass: '',
+                        profile: '',
+                        pin: ''
+                    }]
+                }]
+            };
+
+            const updates = {};
+            updates[`clientProfiles/${phone}/name`] = name.trim();
+            updates[`clientProfiles/${phone}/pin`] = accountPin.trim();
+            updates[`clientProfiles/${phone}/ticketPin`] = accountPin.trim();
+            updates[`clientSales/${phone}/${newSaleKey}`] = newSaleObj;
+
+            try {
+                await db.ref('/').update(updates);
+                const searchInput = document.getElementById('db-filter-search');
+                if (searchInput) searchInput.value = phone;
+                showDbToast(`✅ Cliente ${name.trim()} creado. Completa sus datos en la fila.`);
+                renderDatabaseTab();
+            } catch (e) {
+                alert('Error al crear cliente: ' + e.message);
+            }
+        };
+
+        // Exportar toda la Base de Datos Maestra a Excel / CSV
+        window.exportDatabaseMasterCSV = function () {
+            const records = buildMasterDatabaseRecords();
+            let csv = '\uFEFFNombre Cliente,Celular,PIN Cuenta Web,Estado,Vencimiento,Origen / Vendedor,Plataforma,Email Cuenta,Contraseña,Nombre Perfil,PIN Perfil\n';
+
+            const cleanCsv = (v) => `"${String(v || '').replace(/"/g, '""')}"`;
+
+            records.forEach(c => {
+                c.sales.forEach(s => {
+                    const estado = s.isExpired ? 'Vencida' : 'Activa';
+                    const expStr = s.expMs ? new Date(s.expMs).toLocaleDateString() : '';
+                    s.items.forEach(it => {
+                        it.screens.forEach(sc => {
+                            csv += [
+                                cleanCsv(c.clientName),
+                                cleanCsv(c.phone),
+                                cleanCsv(c.accountPin),
+                                cleanCsv(estado),
+                                cleanCsv(expStr),
+                                cleanCsv(s.sellerName),
+                                cleanCsv(sc.platform),
+                                cleanCsv(sc.email),
+                                cleanCsv(sc.pass),
+                                cleanCsv(sc.profile),
+                                cleanCsv(sc.pin)
+                            ].join(',') + '\n';
+                        });
+                    });
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Base_De_Datos_Clientes_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         };
     </script>
 </body>
