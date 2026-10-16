@@ -390,7 +390,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.44 (Corrección Eliminación Compras)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.45 (Distintivo de Clientes en Historial)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -7578,60 +7578,118 @@
                 return;
             }
 
+            // Agrupar ventas vencidas por cliente (teléfono) con su distintivo completo
+            const clientsExpiredMap = {};
             allExpired.forEach(sale => {
-                const clientObj = sale._clientObj;
-                const isSellerSale = sale._sourceType === 'seller';
-                const safeClientName = safeDecode(clientObj.name || 'Desconocido');
-                const itemsStr = (sale.items || []).map(i => i.name).join(', ') || 'Pantallas';
-                const totalDisp = sale.total ? `$${sale.total.toLocaleString()}` : (sale.price ? `$${sale.price.toLocaleString()}` : 'N/A');
-
-                let reminderOnclick = '';
-                if (isSellerSale) {
-                    reminderOnclick = `sendAdminReminderToSeller('${encodeURIComponent(sale.sellerName)}', '${encodeURIComponent(safeClientName)}', '${encodeURIComponent(itemsStr)}', '${clientObj.phone}', ${sale.total || 0})`;
-                } else {
-                    reminderOnclick = `sendAdminReminderToDirectClient('${encodeURIComponent(safeClientName)}', '${encodeURIComponent(itemsStr)}', '${clientObj.phone}', ${sale.total || 0})`;
+                const phone = (sale._clientObj && sale._clientObj.phone) ? sale._clientObj.phone.toString().trim() : 'sin_telefono';
+                if (!clientsExpiredMap[phone]) {
+                    const prof = (window.allClientProfiles && window.allClientProfiles[phone]) ? window.allClientProfiles[phone] : {};
+                    const clientName = (sale._clientObj && sale._clientObj.name) || sale.clientName || prof.name || 'Desconocido';
+                    const clientCity = sale.clientCity || (sale._clientObj && sale._clientObj.city) || prof.city || prof.ticketCity || 'N/A';
+                    clientsExpiredMap[phone] = {
+                        phone: phone,
+                        name: safeDecode(clientName),
+                        city: safeDecode(clientCity),
+                        sellerName: sale.sellerName || 'Página Web Oficial',
+                        isSellerSale: sale._sourceType === 'seller',
+                        sales: []
+                    };
                 }
+                clientsExpiredMap[phone].sales.push(sale);
+            });
 
-                const d = document.createElement('div');
-                d.style.background = 'rgba(255, 77, 77, 0.05)';
-                d.style.borderLeft = '4px solid #ff4d4d';
-                d.style.padding = '1rem';
-                d.style.marginBottom = '1rem';
-                d.style.borderRadius = '8px';
+            Object.values(clientsExpiredMap).forEach(c => {
+                const clientBox = document.createElement('div');
+                clientBox.className = 'admin-item';
+                clientBox.style.flexDirection = 'column';
+                clientBox.style.alignItems = 'flex-start';
+                clientBox.style.gap = '1rem';
+                clientBox.style.marginBottom = '1.2rem';
+                clientBox.style.borderLeft = '4px solid #ff4d4d';
+                clientBox.style.background = 'rgba(255, 77, 77, 0.03)';
 
-                let sellerBadge = isSellerSale ? `<span style="background:#8e44ad; color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:0.5rem;"><i class="fa-solid fa-user-tie"></i> ${sale.sellerName}</span>` : `<span style="background:#2ab7ca; color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:0.5rem;"><i class="fa-solid fa-globe"></i> Global</span>`;
+                let sellerBadge = c.isSellerSale && c.sellerName && c.sellerName !== 'Página Web Oficial' 
+                    ? `<span style="background:#8e44ad; color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:0.5rem;"><i class="fa-solid fa-user-tie"></i> ${c.sellerName}</span>` 
+                    : `<span style="background:#2ab7ca; color:white; font-size:0.7rem; padding:2px 6px; border-radius:4px; margin-left:0.5rem;"><i class="fa-solid fa-globe"></i> Global</span>`;
 
-                d.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                        <strong style="color:white; font-size:1.1rem; display:flex; align-items:center;">
-                            ${safeClientName} ${sellerBadge}
-                        </strong>
-                        <span style="background:#ff4d4d; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold;">Vencida</span>
-                    </div>
-                    <p style="font-size:0.85rem; color:#ccc; margin-bottom:0.8rem; line-height:1.4;">
-                        📱 ${clientObj.phone} <br>
-                        📅 Venció: ${new Date(sale.expirationDate).toLocaleDateString()} a las ${new Date(sale.expirationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}<br>
-                        📺 Compra: ${itemsStr}<br>
-                        💰 Valor: ${totalDisp}
-                    </p>
-                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                        <button onclick="${reminderOnclick}" style="flex:1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: rgba(255, 77, 77, 0.1); color:#ff4d4d; font-size:0.8rem;">
-                            <i class="fa-brands fa-whatsapp"></i> ${isSellerSale ? 'Avisar Vendedor' : 'Recordar al Cliente'}
-                        </button>
-                        <button onclick="sendAdminRenovadaMessage('${encodeURIComponent(safeClientName)}', '${clientObj.phone}', '${encodeURIComponent(itemsStr)}', false, ${sale.expirationDate || 0}, '${sale.id}', '${encodeURIComponent(sale.sellerName || 'Página Web Oficial')}', '${isSellerSale ? 'seller' : 'client'}')" 
-                            style="flex:1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem;">
-                            <i class="fa-brands fa-whatsapp"></i> Renovada
-                        </button>
-                        ${isSellerSale ? `
-                        <button onclick="deleteSellerSale('${encodeURIComponent(sale.sellerName)}', '${sale.id}')" 
-                                style="padding:0.6rem; border-radius:8px; cursor:pointer; border:1px solid #555; background:transparent; color:#ff4d4d;"><i class="fa-solid fa-trash"></i></button>
-                        ` : `
-                        <button onclick="deleteClientSale('${clientObj.phone}', '${sale.id}')" 
-                                style="padding:0.6rem; border-radius:8px; cursor:pointer; border:1px solid #555; background:transparent; color:#ff4d4d;"><i class="fa-solid fa-trash"></i></button>
-                        `}
+                clientBox.innerHTML = `
+                    <div style="display:flex; gap:1rem; width:100%; align-items:center;">
+                        <div><i class="fa-solid fa-user-clock" style="color:#ff4d4d; font-size:1.5rem"></i></div>
+                        <div style="flex:1;">
+                            <strong style="color: white; font-size:1.1rem">${c.name}</strong> 
+                            ${sellerBadge}
+                            <span style="font-size:0.8rem; color:#ff7675; margin-left:6px;">(${c.sales.length} compra${c.sales.length > 1 ? 's vencidas' : ' vencida'})</span><br>
+                            <span style="font-size: 0.8rem; color: #a0a0a0;">📱 ${c.phone} | 📍 ${c.city}</span>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn-icon btn-edit" onclick="clickEditClient('${c.phone}')" title="Editar Cliente">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
-                listDiv.appendChild(d);
+
+                const salesContainer = document.createElement('div');
+                salesContainer.style.width = '100%';
+                salesContainer.style.display = 'grid';
+                salesContainer.style.gridTemplateColumns = '1fr';
+                salesContainer.style.gap = '0.8rem';
+                salesContainer.style.borderTop = '1px solid rgba(255,255,255,0.08)';
+                salesContainer.style.paddingTop = '0.8rem';
+
+                c.sales.forEach(sale => {
+                    const clientObj = sale._clientObj || { phone: c.phone, name: c.name };
+                    const isSellerSale = sale._sourceType === 'seller';
+                    const safeClientName = safeDecode(clientObj.name || c.name);
+                    const itemsStr = (sale.items || []).map(i => i.name).join(', ') || 'Pantallas';
+                    const totalDisp = sale.total ? `$${sale.total.toLocaleString()}` : (sale.price ? `$${sale.price.toLocaleString()}` : 'N/A');
+
+                    let reminderOnclick = '';
+                    if (isSellerSale) {
+                        reminderOnclick = `sendAdminReminderToSeller('${encodeURIComponent(sale.sellerName)}', '${encodeURIComponent(safeClientName)}', '${encodeURIComponent(itemsStr)}', '${clientObj.phone}', ${sale.total || 0})`;
+                    } else {
+                        reminderOnclick = `sendAdminReminderToDirectClient('${encodeURIComponent(safeClientName)}', '${encodeURIComponent(itemsStr)}', '${clientObj.phone}', ${sale.total || 0})`;
+                    }
+
+                    const d = document.createElement('div');
+                    d.style.background = 'rgba(255, 77, 77, 0.05)';
+                    d.style.borderLeft = '3px solid #ff4d4d';
+                    d.style.padding = '0.9rem';
+                    d.style.borderRadius = '8px';
+
+                    d.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; align-items:center;">
+                            <strong style="color:white; font-size:1rem; display:flex; align-items:center;">
+                                📺 ${itemsStr}
+                            </strong>
+                            <span style="background:#ff4d4d; color:white; padding: 2px 6px; border-radius: 6px; font-size: 0.75rem; font-weight:bold;">Vencida</span>
+                        </div>
+                        <p style="font-size:0.82rem; color:#ccc; margin-bottom:0.8rem; line-height:1.4;">
+                            📅 Venció: ${new Date(sale.expirationDate).toLocaleDateString()} a las ${new Date(sale.expirationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}<br>
+                            💰 Valor: ${totalDisp}
+                        </p>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button onclick="${reminderOnclick}" style="flex:1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: rgba(255, 77, 77, 0.1); color:#ff4d4d; font-size:0.8rem;">
+                                <i class="fa-brands fa-whatsapp"></i> ${isSellerSale ? 'Avisar Vendedor' : 'Recordar al Cliente'}
+                            </button>
+                            <button onclick="sendAdminRenovadaMessage('${encodeURIComponent(safeClientName)}', '${clientObj.phone}', '${encodeURIComponent(itemsStr)}', false, ${sale.expirationDate || 0}, '${sale.id}', '${encodeURIComponent(sale.sellerName || 'Página Web Oficial')}', '${isSellerSale ? 'seller' : 'client'}')" 
+                                style="flex:1; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12; font-size:0.8rem;">
+                                <i class="fa-brands fa-whatsapp"></i> Renovada
+                            </button>
+                            ${isSellerSale ? `
+                            <button onclick="deleteSellerSale('${encodeURIComponent(sale.sellerName)}', '${sale.id}')" 
+                                    style="padding:0.6rem; border-radius:8px; cursor:pointer; border:1px solid #555; background:transparent; color:#ff4d4d;" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                            ` : `
+                            <button onclick="deleteClientSale('${clientObj.phone}', '${sale.id}')" 
+                                    style="padding:0.6rem; border-radius:8px; cursor:pointer; border:1px solid #555; background:transparent; color:#ff4d4d;" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                            `}
+                        </div>
+                    `;
+                    salesContainer.appendChild(d);
+                });
+
+                clientBox.appendChild(salesContainer);
+                listDiv.appendChild(clientBox);
             });
         }
 
@@ -7721,6 +7779,10 @@
                                 else activeSales.push(sale);
                             });
 
+                            // Si todas sus cuentas están vencidas (0 compras activas),
+                            // su distintivo no debe quedarse aquí como cascarón vacío, sino que va en Historial junto con su cuenta.
+                            if (activeSales.length === 0) return;
+
                             // Render Active Sales
                             activeSales.forEach(sale => {
                                 renderAdminSaleCard(sale, false, c, salesContainer);
@@ -7728,6 +7790,8 @@
 
                             // Ocultar sección de ventas vencidas (movidas al Historial Global)
                             div.appendChild(salesContainer);
+                        } else {
+                            return;
                         }
 
                         listDiv.appendChild(div);
@@ -7911,8 +7975,10 @@
         };
 
         function clickEditClient(phone) {
-            document.getElementById('search-client-phone').value = phone;
-            searchClient();
+            if (typeof switchTab === 'function') switchTab('clientes');
+            const searchInput = document.getElementById('search-client-phone');
+            if (searchInput) searchInput.value = phone;
+            if (typeof searchClient === 'function') searchClient();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
