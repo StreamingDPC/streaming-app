@@ -4460,6 +4460,14 @@ function setupEventListeners() {
             finalSellerDestination = extrasOriginalOwner;
         }
 
+        // Si la compra la realizó un cliente desde la tienda virtual de un vendedor
+        if (publicSellerRef || extrasOriginalOwner) {
+            saleData.fromStore = true;
+            saleData.isStorePurchase = true;
+            saleData.sellerStoreRef = publicSellerRef || extrasOriginalOwner;
+            saleData.sellerName = publicSellerRef || extrasOriginalOwner;
+        }
+
         if (window.renewalSaleId) {
             // UPDATE EL MISMO REGISTRO, NO GENERAR UNO NUEVO
             if (window.renewalSource === 'seller') {
@@ -4769,6 +4777,23 @@ function renderSellerSaleCard(sale, isExpired, container) {
     const cleanCardPhone = window.sanitizePhone ? window.sanitizePhone(sale.clientPhone) : String(sale.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
     const statusBadgeId = `seller-card-code-status-${sale.id || cleanCardPhone}`;
 
+    // Validar si la cuenta ya tiene credenciales entregadas/activas
+    const hasActiveCredentials = Boolean(
+        (sale.email && sale.email.trim() !== '') ||
+        (sale.password && sale.password.trim() !== '') ||
+        (sale.items && sale.items.some(i => i.specificEmails && i.specificEmails.length > 0 && i.specificEmails[0].email))
+    );
+
+    // El Ticket Admin solo se habilita para compras realizadas por el cliente desde la tienda virtual del vendedor
+    const isStorePurchase = Boolean(
+        sale.fromStore === true ||
+        sale.isStorePurchase === true ||
+        Boolean(sale.sellerStoreRef) ||
+        (!hasActiveCredentials && sale.isPaid === false)
+    );
+
+    const showTicketAdmin = !isExpired && isStorePurchase && (sale.fromStore === true || sale.isStorePurchase === true || !hasActiveCredentials);
+
     if (!isExpired) {
         buttonsHtml = `
             <div style="display:flex; gap: 0.5rem; flex-wrap:wrap;">
@@ -4777,10 +4802,11 @@ function renderSellerSaleCard(sale, isExpired, container) {
                     style="flex: 1 1 100%; padding:0.65rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: linear-gradient(135deg, rgba(243, 156, 18, 0.25), rgba(230, 126, 34, 0.15)); color:#f39c12; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 2px 10px rgba(243,156,18,0.15);">
                     <i class="fa-solid fa-unlock-keyhole"></i> 🔑 Activar Pantalla / Códigos Cliente
                 </button>` : ''}
+                ${showTicketAdmin ? `
                 <button onclick="sendTicketToAdminFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || ''}', '${encodeURIComponent(JSON.stringify(sale.items || []))}')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, #3498db, #2980b9); color:white;" title="Enviar el comprobante de pago al Admin con Precio Vendedor">
                     <i class="fa-solid fa-file-invoice-dollar"></i> Ticket Admin
-                </button>
+                </button>` : ''}
                 ${canRenew ? `
                 <button onclick="renewFromDash('${safeDecode(sale.clientName)}', '${sale.clientPhone}', '${sale.clientCity}', '${encodeURIComponent(JSON.stringify(sale.items || []))}', '${sale.id}', 'seller', ${sale.expirationDate || 0}, ${sale.fechaCompraOriginal || 0}, ${sale.date || 0})" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:none; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color:black;">
@@ -4803,8 +4829,11 @@ function renderSellerSaleCard(sale, isExpired, container) {
     }
 
     div.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
-            <strong style="color:white; font-size:1.1rem;">${safeDecode(sale.clientName)}</strong>
+        <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <strong style="color:white; font-size:1.1rem;">${safeDecode(sale.clientName)}</strong>
+                ${(isStorePurchase && !hasActiveCredentials) ? `<span style="background: rgba(52, 152, 219, 0.2); color:#74b9ff; border: 1px solid rgba(52, 152, 219, 0.4); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight:bold;"><i class="fa-solid fa-shop"></i> Tienda Virtual</span>` : ''}
+            </div>
             <span style="background:${statusColor}; color:${isExpired ? 'white' : (daysLeft <= 3 ? 'black' : 'white')}; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight:bold;">
                 ${isExpired ? '🔴 Vencida' : (daysLeft <= 3 ? `⚠️ Vence en ${daysLeft} día${daysLeft === 1 ? '' : 's'} — Renovar` : `Vence en ${daysLeft} días`)}
             </span>
