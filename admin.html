@@ -390,7 +390,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.43 (Filtro Ticket Admin Tienda Virtual)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.44 (Corrección Eliminación Compras)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -7740,12 +7740,33 @@
             }
         }
 
-        function deleteClientSale(phone, saleId) {
-            if (confirm('¿Estás seguro de que quieres eliminar este registro? (Útil si fue una prueba o error)')) {
-                db.ref(`clientSales / ${phone}/${saleId}`).remove().then(() => {
-                    alert('Registro eliminado del historial del cliente.');
-                    fetchClientSalesHistory();
-                });
+        async function deleteClientSale(phone, saleId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este registro de compra? (Útil si fue una prueba o error)')) return;
+            
+            const cleanPhone = (phone || '').toString().trim();
+            const updates = {};
+            updates[`clientSales/${cleanPhone}/${saleId}`] = null;
+
+            try {
+                // Si la venta también fue registrada bajo un vendedor (sellerSales), sincronizar y eliminarla
+                const sellerSnap = await db.ref('sellerSales').once('value');
+                const allSellers = sellerSnap.val() || {};
+                for (const [sellerName, sales] of Object.entries(allSellers)) {
+                    if (!sales) continue;
+                    for (const [sId, s] of Object.entries(sales)) {
+                        if (sId === saleId || (s && s.clientPhone && s.clientPhone.toString().trim() === cleanPhone && (s.id === saleId || s.date === saleId))) {
+                            updates[`sellerSales/${sellerName}/${sId}`] = null;
+                        }
+                    }
+                }
+
+                await db.ref().update(updates);
+                alert('Registro eliminado del historial del cliente exitosamente.');
+                fetchClientSalesHistory();
+                if (typeof fetchSellerSalesStats === 'function') fetchSellerSalesStats();
+            } catch (err) {
+                console.error("Error al eliminar venta:", err);
+                alert('Error al eliminar registro: ' + err.message);
             }
         }
 
