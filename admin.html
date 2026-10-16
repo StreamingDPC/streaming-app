@@ -11257,12 +11257,8 @@
                         const city = headerCols.ciudadIdx !== -1 ? r[headerCols.ciudadIdx] : '';
                         const rawPinCol = headerCols.pinIdx !== -1 ? r[headerCols.pinIdx] : '';
 
-                        const profileParts = [];
-                        const maxProfCol = headerCols.usuarioIdx > 0 ? headerCols.usuarioIdx : 2;
-                        for (let p = 0; p < maxProfCol; p++) {
-                            if (r[p]) profileParts.push(r[p]);
-                        }
-                        const profileName = profileParts.join(' ').trim();
+                        // El Nombre de Perfil es el valor de la columna 'cliente' del Excel
+                        const profileName = clientName.trim();
 
                         let email = currentAccountEmail;
                         let password = currentAccountPass;

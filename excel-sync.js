@@ -223,13 +223,8 @@ function parseWorkbookFromBuffer(buffer) {
             const fecha = headerCols.fechaIdx !== -1 ? r[headerCols.fechaIdx] : '';
             const fin = headerCols.finIdx !== -1 ? r[headerCols.finIdx] : '';
 
-            // Nombre del perfil: columnas antes de 'usuario' (ej: "1 hon", "2 rok")
-            const profileParts = [];
-            const maxProfCol = headerCols.usuarioIdx > 0 ? headerCols.usuarioIdx : 2;
-            for (let p = 0; p < maxProfCol; p++) {
-                if (r[p]) profileParts.push(r[p]);
-            }
-            const profileName = profileParts.join(' ').trim();
+            // El Nombre de Perfil en la plataforma es el valor de la columna 'cliente' del Excel
+            const profileName = clientName.trim();
 
             let email = currentAccountEmail;
             let password = currentAccountPass;
