@@ -390,7 +390,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.41 (Control Masivo y Selectivo de Intentos de Códigos)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.42 (Control Masivo y Selectivo de Intentos de Códigos)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -4291,8 +4291,29 @@
             }
 
             try {
-                const snap = await db.ref('clientProfiles').once('value');
+                const [snap, sSnap] = await Promise.all([
+                    db.ref('clientProfiles').once('value'),
+                    db.ref('sellerSales').once('value')
+                ]);
                 const profiles = snap.val() || {};
+                const sellerSales = sSnap.val() || {};
+
+                // Asegurar que todos los clientes de vendedores (incluso con celular compartido) queden en clientAttempts
+                Object.values(sellerSales).forEach(sales => {
+                    Object.values(sales || {}).forEach(s => {
+                        const rawP = String(s.clientPhone || '').trim();
+                        const cleanP = rawP.replace(/\D/g, '').replace(/^57/, '');
+                        const slug = (s.clientName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        if (cleanP && slug) {
+                            [rawP, cleanP, `57${cleanP}`].filter(Boolean).forEach(pKey => {
+                                if (!profiles[pKey]) profiles[pKey] = {};
+                                if (!profiles[pKey].clientAttempts) profiles[pKey].clientAttempts = {};
+                                if (!profiles[pKey].clientAttempts[slug]) profiles[pKey].clientAttempts[slug] = true;
+                            });
+                        }
+                    });
+                });
+
                 const phones = Object.keys(profiles);
                 const total = phones.length;
 

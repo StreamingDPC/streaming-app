@@ -1441,16 +1441,28 @@ function setupEventListeners() {
 
         // 1. Escuchar nodo primario con .on('value') para tiempo real
         _codeAttemptsRefPrimary = db.ref(`clientProfiles/${rawPhone}/${pathSuffix}`);
-        _codeAttemptsListenerPrimary = _codeAttemptsRefPrimary.on('value', snap => {
+        _codeAttemptsListenerPrimary = _codeAttemptsRefPrimary.on('value', async snap => {
             primaryData = snap.val();
+            if ((primaryData === null || primaryData === undefined) && pathSuffix !== 'codeAttemptUsed') {
+                try {
+                    const fb = await db.ref(`clientProfiles/${rawPhone}/codeAttemptUsed`).once('value');
+                    if (fb.val() !== null && fb.val() !== undefined) primaryData = fb.val();
+                } catch (e) { }
+            }
             applySync();
         });
 
         // 2. Si hay variante alterna (con o sin prefijo 57), escuchar también
         if (altPhone && altPhone !== rawPhone) {
             _codeAttemptsRefClean = db.ref(`clientProfiles/${altPhone}/${pathSuffix}`);
-            _codeAttemptsListenerClean = _codeAttemptsRefClean.on('value', snap => {
+            _codeAttemptsListenerClean = _codeAttemptsRefClean.on('value', async snap => {
                 altData = snap.val();
+                if ((altData === null || altData === undefined) && pathSuffix !== 'codeAttemptUsed') {
+                    try {
+                        const fb = await db.ref(`clientProfiles/${altPhone}/codeAttemptUsed`).once('value');
+                        if (fb.val() !== null && fb.val() !== undefined) altData = fb.val();
+                    } catch (e) { }
+                }
                 applySync();
             });
         }
@@ -2048,7 +2060,13 @@ function setupEventListeners() {
         const pList = Array.from(new Set([rawP, cleanP, altP])).filter(Boolean);
         for (const pk of pList) {
             const snap = await db.ref(`clientProfiles/${pk}/${pathSuffix}`).once('value');
-            const v = snap.val();
+            let v = snap.val();
+            if ((v === null || v === undefined) && pathSuffix !== 'codeAttemptUsed') {
+                try {
+                    const fallbackSnap = await db.ref(`clientProfiles/${pk}/codeAttemptUsed`).once('value');
+                    if (fallbackSnap.val() !== null && fallbackSnap.val() !== undefined) v = fallbackSnap.val();
+                } catch (e) { }
+            }
             if (v === true) Object.assign(combinedUsed, { netflix: true, disney: true, hbomax: true, prime: true });
             else if (v && typeof v === 'object') Object.assign(combinedUsed, v);
         }
@@ -2498,8 +2516,9 @@ function setupEventListeners() {
             }
         }
 
-        // 4. MOSTRAR PANEL ACTIVO
+        // 4. MOSTRAR PANEL ACTIVO Y REFRESCAR CONTADORES Y BOTONES
         activePanel.style.display = 'block';
+        if (window.updateCodeCountersUI) window.updateCodeCountersUI();
     };
 
     // Cuando el modal de código abre, inicializarlo
