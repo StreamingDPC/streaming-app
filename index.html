@@ -58,7 +58,7 @@
             <div class="logo" style="display: flex; align-items: center; gap: 10px;">
                 <img src="https://github.com/StreamingDPC/streaming-dpc/blob/main/assets/streaming%20%20pag%202.jpg?raw=true"
                     alt="Streaming DPC" style="height: 80px; border-radius: 8px; object-fit: contain;">
-                <span style="font-size: 0.7rem; color: #4cd137; opacity: 0.5;">v3.8.17</span>
+                <span style="font-size: 0.7rem; color: #4cd137; opacity: 0.5;">v3.9.35</span>
             </div>
             <div class="header-actions"
                 style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
@@ -336,19 +336,30 @@
                 </div>
 
                 <!-- BANNER MODO VENDEDOR ACTIVANDO A SU CLIENTE -->
-                <div id="code-seller-client-banner" style="display:none; background:linear-gradient(135deg, rgba(52,152,219,0.2), rgba(41,128,185,0.1)); border:1.5px solid #3498db; border-radius:12px; padding:0.85rem 1rem; margin-bottom:1rem;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div id="code-seller-client-banner" style="display:none; background:linear-gradient(135deg, rgba(52,152,219,0.2), rgba(41,128,185,0.1)); border:1.5px solid #3498db; border-radius:12px; padding:0.9rem 1rem; margin-bottom:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
                         <div>
                             <div style="font-size:0.78rem; color:#3498db; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">
                                 <i class="fa-solid fa-user-tie"></i> Modo Vendedor — Activación a Cliente
                             </div>
                             <div id="code-seller-client-info" style="font-size:0.98rem; color:white; font-weight:bold; margin-top:2px;">
-                                Cliente: --
+                                Selecciona el cliente a activar:
                             </div>
                         </div>
                         <span style="background:rgba(243,156,18,0.18); border:1px solid rgba(243,156,18,0.5); color:#f39c12; font-size:0.74rem; font-weight:bold; padding:4px 9px; border-radius:8px;">
                             <i class="fa-solid fa-link"></i> Contador Compartido (Vendedor + Cliente)
                         </span>
+                    </div>
+                    <!-- Selector rápido de clientes del vendedor -->
+                    <div id="code-seller-client-picker-wrap" style="margin-top:6px;">
+                        <input type="text" id="code-seller-client-search" placeholder="🔍 Filtrar cliente por nombre o celular..."
+                            style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(52,152,219,0.4); background:rgba(0,0,0,0.55); color:white; font-size:0.85rem; margin-bottom:6px; outline:none;"
+                            oninput="if(window.filterSellerCodeModalClients) window.filterSellerCodeModalClients(this.value)">
+                        <select id="code-seller-client-select" class="input-modern"
+                            style="width:100%; padding:9px 10px; font-size:0.9rem; background:rgba(0,0,0,0.7); border:1px solid #3498db; color:white; border-radius:8px;"
+                            onchange="if(window.onSellerCodeModalClientChange) window.onSellerCodeModalClientChange(this.value)">
+                            <option value="">-- Selecciona un cliente activo --</option>
+                        </select>
                     </div>
                 </div>
 
@@ -1511,7 +1522,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
     <!-- Lógica Principal -->
-    <script src="app.js?v=3.8.44"></script>
+    <script src="app.js?v=3.9.35"></script>
     <!-- CRM / Respuestas Selector Modal -->
     <div id="crm-selector-modal" class="modal" style="display:none; z-index: 5000;">
         <div class="modal-content"

@@ -349,6 +349,17 @@ function setupConfigUI() {
 
         // Hide "Mis Compras" button for sellers
         if (openClientBtn) openClientBtn.style.display = 'none';
+
+        // Mostrar u ocultar botón "Obtener Código" en la barra superior para el vendedor según sus permisos del Centro Maestro
+        const codeNavBtn = document.getElementById('open-code-btn');
+        if (codeNavBtn) {
+            const sellerCanCode = window.canSellerUseCodeActivation ? window.canSellerUseCodeActivation(currentSellerName) : true;
+            if (sellerCanCode && !(storeConfig.netflixEnabled === false && storeConfig.disneyEnabled === false)) {
+                codeNavBtn.style.display = 'inline-flex';
+            } else {
+                codeNavBtn.style.display = 'none';
+            }
+        }
     }
 
     if (publicSellerRef) {
@@ -1826,7 +1837,103 @@ function setupEventListeners() {
         return window.isSellerAllowedForCodes(sellerName || currentSellerName);
     };
 
-    window.openSellerClientCodeModal = function (clientPhone, clientName, sellerName) {
+    window._sellerActiveClientsCache = [];
+
+    window.loadSellerClientsForCodeModal = async function (sellerName, preselectedPhone = '') {
+        const sName = sellerName || currentSellerName;
+        const selectEl = document.getElementById('code-seller-client-select');
+        const searchEl = document.getElementById('code-seller-client-search');
+        if (searchEl) searchEl.value = '';
+        if (!selectEl || !sName) return [];
+
+        selectEl.innerHTML = '<option value="">⏳ Cargando tus clientes activos...</option>';
+        try {
+            const snap = await db.ref(`sellerSales/${sName}`).once('value');
+            const salesObj = snap.val() || {};
+            const now = Date.now();
+            const mapByPhone = {};
+
+            Object.values(salesObj).forEach(sale => {
+                if (!sale) return;
+                if (sale.expirationDate && sale.expirationDate < now) return; // Solo clientes activos
+                const rawP = String(sale.clientPhone || '').trim();
+                const cleanP = window.sanitizePhone ? window.sanitizePhone(rawP) : rawP.replace(/\D/g, '').replace(/^57/, '');
+                if (!cleanP) return;
+                const cName = safeDecode(sale.clientName || 'Cliente').trim();
+                if (cName.toLowerCase() === 'crm') return;
+
+                const itemsStr = Array.isArray(sale.items) ? sale.items.map(i => i.name).join(', ') : '';
+                if (!mapByPhone[cleanP]) {
+                    mapByPhone[cleanP] = {
+                        phone: cleanP,
+                        name: cName,
+                        platforms: itemsStr ? [itemsStr] : []
+                    };
+                } else if (itemsStr && !mapByPhone[cleanP].platforms.includes(itemsStr)) {
+                    mapByPhone[cleanP].platforms.push(itemsStr);
+                }
+            });
+
+            const list = Object.values(mapByPhone).sort((a, b) => a.name.localeCompare(b.name));
+            window._sellerActiveClientsCache = list;
+            window.renderSellerCodeModalClientOptions(list, preselectedPhone);
+            return list;
+        } catch (e) {
+            selectEl.innerHTML = '<option value="">-- Error cargando clientes --</option>';
+            return [];
+        }
+    };
+
+    window.renderSellerCodeModalClientOptions = function (list, selectedPhone = '') {
+        const selectEl = document.getElementById('code-seller-client-select');
+        if (!selectEl) return;
+        const targetClean = selectedPhone ? (window.sanitizePhone ? window.sanitizePhone(selectedPhone) : String(selectedPhone).replace(/\D/g, '').replace(/^57/, '')) : '';
+
+        if (!list || list.length === 0) {
+            selectEl.innerHTML = '<option value="">-- No se encontraron clientes activos --</option>';
+            return;
+        }
+
+        let html = '<option value="">-- Selecciona el cliente para activar / sacar código --</option>';
+        list.forEach(c => {
+            const isSel = targetClean && c.phone === targetClean ? 'selected' : '';
+            const platSummary = c.platforms.length > 0 ? ` — [${c.platforms.join(' + ')}]` : '';
+            const safeVal = encodeURIComponent(JSON.stringify({ phone: c.phone, name: c.name }));
+            html += `<option value="${safeVal}" ${isSel}>👤 ${c.name} (📱 ${c.phone})${platSummary}</option>`;
+        });
+        selectEl.innerHTML = html;
+    };
+
+    window.filterSellerCodeModalClients = function (query) {
+        const q = String(query || '').toLowerCase().trim();
+        const all = window._sellerActiveClientsCache || [];
+        const filtered = !q ? all : all.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.platforms.join(' ').toLowerCase().includes(q));
+        window.renderSellerCodeModalClientOptions(filtered, window.codeModalTargetPhone);
+        // Si solo queda 1 coincidencia o el usuario filtra, seleccionar automáticamente el primero
+        if (filtered.length === 1) {
+            const first = filtered[0];
+            window.codeModalTargetPhone = first.phone;
+            window.codeModalTargetClientName = first.name;
+            window.renderSellerCodeModalClientOptions(filtered, first.phone);
+            window.initCodeModal(true);
+        }
+    };
+
+    window.onSellerCodeModalClientChange = function (encodedVal) {
+        if (!encodedVal) return;
+        try {
+            const obj = JSON.parse(decodeURIComponent(encodedVal));
+            if (obj && obj.phone) {
+                window.isSellerActivatingClient = true;
+                window.codeModalTargetPhone = obj.phone;
+                window.codeModalTargetClientName = obj.name || 'Cliente';
+                window.codeModalTargetSellerName = currentSellerName;
+                window.initCodeModal(true);
+            }
+        } catch (e) { }
+    };
+
+    window.openSellerClientCodeModal = async function (clientPhone, clientName, sellerName) {
         const sName = sellerName || currentSellerName;
         if (!window.canSellerUseCodeActivation(sName)) {
             alert('⚠️ La opción de activación de códigos para vendedores se encuentra desactivada por el Administrador.');
@@ -1847,11 +1954,12 @@ function setupEventListeners() {
             cModal.style.display = 'block';
             cModal.style.zIndex = '10050';
         }
-        window.initCodeModal();
+        await window.loadSellerClientsForCodeModal(sName, cleanP);
+        window.initCodeModal(true);
     };
 
     // Función para inicializar el modal de código con las restricciones correctas
-    window.initCodeModal = async function () {
+    window.initCodeModal = async function (skipDropdownReload = false) {
         const noSession = document.getElementById('code-no-session');
         const alreadyUsed = document.getElementById('code-already-used');
         const activePanel = document.getElementById('code-active-panel');
@@ -1867,13 +1975,31 @@ function setupEventListeners() {
         activePanel.style.display = 'none';
         if (permBlocked) permBlocked.style.display = 'none';
 
+        // Si está en Modo Vendedor y abrió el modal desde el botón superior "Obtener Código"
+        if (isSellerMode && currentSellerName && !clientPhoneLoggedIn) {
+            window.isSellerActivatingClient = true;
+            window.codeModalTargetSellerName = currentSellerName;
+            if (!skipDropdownReload) {
+                const clients = await window.loadSellerClientsForCodeModal(currentSellerName, window.codeModalTargetPhone);
+                if (!window.codeModalTargetPhone && clients.length > 0) {
+                    window.codeModalTargetPhone = clients[0].phone;
+                    window.codeModalTargetClientName = clients[0].name;
+                    window.renderSellerCodeModalClientOptions(clients, clients[0].phone);
+                }
+            }
+        }
+
         const targetPhone = window.getEffectiveCodeTargetPhone();
 
         // Mostrar u ocultar banner de Modo Vendedor
-        if (window.isSellerActivatingClient && targetPhone) {
+        if (window.isSellerActivatingClient) {
             if (sellerBanner) sellerBanner.style.display = 'block';
             if (sellerInfoEl) {
-                sellerInfoEl.innerHTML = `${window.codeModalTargetClientName || 'Cliente'} <span style="color:#4cd137; font-size:0.88rem;">(📱 ${targetPhone})</span>`;
+                if (targetPhone) {
+                    sellerInfoEl.innerHTML = `Cliente activo: <span style="color:#4cd137;">${window.codeModalTargetClientName || 'Cliente'} (📱 ${targetPhone})</span>`;
+                } else {
+                    sellerInfoEl.innerHTML = `Selecciona un cliente activo de tu lista:`;
+                }
             }
         } else {
             if (sellerBanner) sellerBanner.style.display = 'none';
@@ -1881,6 +2007,10 @@ function setupEventListeners() {
 
         // 1. VERIFICAR SESIÓN (Cliente logueado o Vendedor activando a su cliente)
         if (!targetPhone) {
+            if (window.isSellerActivatingClient) {
+                // El vendedor está logueado pero aún no tiene ventas activas con celular
+                return;
+            }
             noSession.style.display = 'block';
             return;
         }
@@ -2350,12 +2480,17 @@ function setupEventListeners() {
         const originalOpenCode = document.getElementById('open-code-btn');
         if (originalOpenCode) {
             originalOpenCode.addEventListener('click', () => {
-                window.isSellerActivatingClient = false;
-                window.codeModalTargetPhone = '';
-                window.codeModalTargetClientName = '';
-                window.codeModalTargetSellerName = '';
+                if (isSellerMode && currentSellerName) {
+                    window.isSellerActivatingClient = true;
+                    window.codeModalTargetSellerName = currentSellerName;
+                } else {
+                    window.isSellerActivatingClient = false;
+                    window.codeModalTargetPhone = '';
+                    window.codeModalTargetClientName = '';
+                    window.codeModalTargetSellerName = '';
+                }
                 codeModal.style.display = 'block';
-                window.initCodeModal();
+                window.initCodeModal(false);
             });
         }
         // También inicializar si ya fue abierto directamente
