@@ -74,11 +74,19 @@ async function registerNgrokUrl() {
         if (tunnels && tunnels.length > 0) {
             const https = tunnels.find(t => t.proto === 'https') || tunnels[0];
             const publicUrl = https.public_url;
-            if (publicUrl && publicUrl !== currentRegisteredNgrokUrl) {
-                await axios.put(`${FIREBASE_DB_URL}/config/botUrl.json`, JSON.stringify(publicUrl));
+            if (publicUrl) {
+                // Verificar periódicamente si Firebase aún conserva la URL o si cambió
+                try {
+                    const fbCheck = await axios.get(`${FIREBASE_DB_URL}/config/botUrl.json`, { timeout: 3000 });
+                    if (!fbCheck.data || fbCheck.data !== publicUrl) {
+                        await axios.put(`${FIREBASE_DB_URL}/config/botUrl.json`, JSON.stringify(publicUrl));
+                        console.log(`[BOT] 🌐 URL pública ngrok registrada/restaurada en Firebase: ${publicUrl}`);
+                        console.log(`[BOT] ✅ Clientes desde celular y redes externas listos para activar TV.`);
+                    }
+                } catch (fbErr) {
+                    await axios.put(`${FIREBASE_DB_URL}/config/botUrl.json`, JSON.stringify(publicUrl)).catch(() => {});
+                }
                 currentRegisteredNgrokUrl = publicUrl;
-                console.log(`[BOT] 🌐 URL pública ngrok registrada en Firebase: ${publicUrl}`);
-                console.log(`[BOT] ✅ Clientes desde celular y redes externas listos para activar TV.`);
             }
             return publicUrl;
         }
@@ -468,6 +476,12 @@ app.post('/api/activate-tv', async (req, res) => {
             error: err.message || 'Error en la activación del bot local.'
         });
     }
+});
+
+// Alias para compatibilidad
+app.post('/api/activate-netflix-tv', (req, res) => {
+    req.url = '/api/activate-tv';
+    app._router.handle(req, res);
 });
 
 // ── ENDPOINT: Activar HBO Max TV ───────────────────────────────────────────

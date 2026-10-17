@@ -694,8 +694,6 @@ app.post('/api/activate-tv', async (req, res) => {
                 return res.status(proxyResp.status).json(proxyResp.data);
             } catch (proxyErr) {
                 console.warn(`[TV-BOT] ⚠️ Bot local no respondió (${proxyErr.message}). Usando Render como respaldo...`);
-                // Limpiar URL inválida de Firebase para no volver a intentar
-                await axios.delete(`${FIREBASE_DB_URL}/config/botUrl.json`).catch(() => { });
             }
         }
     } catch (e) {
@@ -790,151 +788,172 @@ app.post('/api/activate-tv', async (req, res) => {
 
         // 2. Lanzar Puppeteer con Chromium (compatible con Render)
         browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
+            args: [
+                ...chromium.args,
+                '--disable-blink-features=AutomationControlled',
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ],
+            defaultViewport: { width: 1280, height: 800 },
             executablePath: await chromium.executablePath(),
             headless: chromium.headless,
         });
 
         const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        });
 
-        // User-Agent real de iPhone para evadir ReCaptcha de escritorio
-        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
-        await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+        // 3. Iniciar sesión en Netflix primero
+        console.log(`[TV-BOT] Navegando a netflix.com/login...`);
+        await page.goto('https://www.netflix.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 1500));
 
-        // 3. Ir a la página de activación directamente (forzará redirección a login legado)
-        console.log(`[TV-BOT] Navegando a Netflix tv8 para redireccion...`);
-        await page.goto('https://www.netflix.com/tv8', { waitUntil: 'networkidle2', timeout: 30000 });
-
-        // Esperar a que cargue algo el DOM
-        await new Promise(r => setTimeout(r, 2000));
-        const redirectedUrl = page.url();
-        console.log(`[TV-BOT] URL actual tras intentar tv8: ${redirectedUrl}`);
-
-        // 4. Ingresar email
-        await page.waitForSelector('input[name="userLoginId"]', { visible: true, timeout: 10000 });
-        await new Promise(r => setTimeout(r, 1000)); // pausa humana
-        await page.type('input[name="userLoginId"]', targetEmail, { delay: 95 });
-
-        // Verificar flujo de 2 pasos (si la contraseña no está visible)
-        let passVisible = false;
-        try {
-            const passEl = await page.$('input[name="password"]');
-            if (passEl) {
-                const box = await passEl.boundingBox();
-                if (box) passVisible = true;
-            }
-        } catch (e) { }
-
-        if (!passVisible) {
-            console.log(`[TV-BOT] Flujo de 2 pasos detectado. Haciendo click en Continue...`);
-            await page.click('button[type="submit"]');
-
-            // Esperar a que Netflix procese
-            await new Promise(r => setTimeout(r, 3000));
-
-            // Buscar si pide código por email (PIN) y necesitamos darle a "Usar contraseña"
-            console.log(`[TV-BOT] Buscando opcion 'Usar contraseña' u 'Obtener ayuda'...`);
-            await page.evaluate(async () => {
-                const sleep = ms => new Promise(r => setTimeout(r, ms));
-                const findAndClickBtn = (keywords) => {
-                    const elements = Array.from(document.querySelectorAll('button, a, span, div[role="button"]'));
-                    const el = elements.find(b => {
-                        const txt = b.innerText ? b.innerText.toLowerCase().trim() : '';
-                        return keywords.some(kw => txt === kw || txt.includes(kw));
-                    });
-                    if (el) { el.click(); return true; }
-                    return false;
-                };
-
-                // Si de una vez vemos "Usar contraseña"
-                let clickedPass = findAndClickBtn(['usar contraseña', 'use password']);
-
-                if (!clickedPass) {
-                    // Quizas está oculto bajo "Obtener ayuda" / "Need help"
-                    const clickedHelp = findAndClickBtn(['obtener ayuda', 'need help?', 'need help']);
-                    if (clickedHelp) {
-                        await sleep(800); // esperar que se deslice el menu
-                        findAndClickBtn(['usar contraseña', 'use password']);
-                    }
-                }
-            });
-
-            // Esperar a que la contraseña esté visible tras los clicks (ignorando catch x si pasa directo)
-            await new Promise(r => setTimeout(r, 1500));
-            await page.waitForSelector('input[name="password"]', { visible: true, timeout: 10000 }).catch(e => console.log('[TV-BOT] Timeout al esperar input password'));
+        // 4. Ingresar email con soporte de múltiples selectores
+        const emailSelectors = [
+            'input[name="userLoginId"]',
+            'input[data-uia="login-field"]',
+            'input[autocomplete="email"]',
+            'input[type="email"]',
+            'input[id*="userLoginId"]'
+        ];
+        let emailInput = null;
+        for (const sel of emailSelectors) {
+            emailInput = await page.$(sel);
+            if (emailInput) break;
         }
 
-        // 5. Ingresar contraseña
-        console.log(`[TV-BOT] Escribiendo contraseña...`);
-        await page.type('input[name="password"]', netflixPass.replace(/\s+/g, ''), { delay: 75 });
+        if (!emailInput) {
+            try {
+                await page.waitForSelector('input[name="userLoginId"], input[data-uia="login-field"], input[type="email"], input[type="text"]', { visible: true, timeout: 8000 });
+                emailInput = await page.$('input[name="userLoginId"], input[data-uia="login-field"], input[type="email"], input[type="text"]');
+            } catch (e) {
+                console.log(`[TV-BOT] Selector de email no apareció de inmediato en ${page.url()}`);
+            }
+        }
 
-        // 6. Click en Sign In
-        console.log(`[TV-BOT] Clickeando Sign In...`);
+        if (!emailInput) {
+            const screenshotBase64 = await page.screenshot({ encoding: 'base64' });
+            await browser.close();
+            return res.status(500).json({
+                success: false,
+                error: `Netflix no mostró el campo de correo en ${page.url()}.`,
+                screenshot: `data:image/png;base64,${screenshotBase64}`
+            });
+        }
+
         await new Promise(r => setTimeout(r, 500));
-        await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => { }), // No fallar si no navega (por ej. si da error)
-            page.click('button[type="submit"]')
-        ]);
+        await emailInput.click({ clickCount: 3 });
+        await emailInput.type(targetEmail, { delay: 90 });
+
+        // Presionar Enter para avanzar a la contraseña si es flujo de 2 pasos
+        await new Promise(r => setTimeout(r, 500));
+        await page.keyboard.press('Enter');
+        await new Promise(r => setTimeout(r, 3000));
+
+        // Verificar si la contraseña está visible o pide "Usar contraseña"
+        let passInput = await page.$('input[name="password"], input[type="password"]');
+        let passVisible = false;
+        if (passInput) {
+            const box = await passInput.boundingBox();
+            if (box && box.width > 0 && box.height > 0) passVisible = true;
+        }
+
+        if (!passVisible) {
+            // Intentar pulsar "Usar contraseña" si Netflix sugiere inicio por link/código
+            await page.evaluate(async () => {
+                const elements = Array.from(document.querySelectorAll('button, a, span, div[role="button"]'));
+                const el = elements.find(b => {
+                    const txt = b.innerText ? b.innerText.toLowerCase().trim() : '';
+                    return txt === 'usar contraseña' || txt.includes('usar contrase') || txt.includes('use password');
+                });
+                if (el) el.click();
+            });
+            await new Promise(r => setTimeout(r, 1500));
+            passInput = await page.$('input[name="password"], input[type="password"]');
+        }
+
+        if (passInput) {
+            console.log(`[TV-BOT] Escribiendo contraseña...`);
+            await passInput.click({ clickCount: 3 });
+            await passInput.type(netflixPass.replace(/\s+/g, ''), { delay: 75 });
+            await new Promise(r => setTimeout(r, 500));
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => { }),
+                page.keyboard.press('Enter')
+            ]);
+        }
 
         console.log(`[TV-BOT] Credenciales enviadas, esperando sesión...`);
         await new Promise(r => setTimeout(r, 3000));
 
-        // Verificar si el login fue exitoso (si redirige a /browse o /tv*)
-        const currentUrl = page.url();
-        console.log(`[TV-BOT] URL tras login: ${currentUrl}`);
+        const afterLoginUrl = page.url();
+        console.log(`[TV-BOT] URL tras login: ${afterLoginUrl}`);
 
-        if (currentUrl.includes('/login')) {
-            // Extraer el texto de error de la página para diagnosticar la causa exacta
+        if (afterLoginUrl.includes('/login') && !afterLoginUrl.includes('/tv8')) {
             const errorText = await page.evaluate(() => {
                 const errDiv = document.querySelector('.ui-message-contents, header, .error-message, [data-uia="error-message-container"]');
                 return errDiv ? errDiv.innerText : document.body.innerText.substring(0, 300);
             });
             const screenshotBase64 = await page.screenshot({ encoding: 'base64' });
-
             await browser.close();
             return res.status(401).json({
                 success: false,
-                error: `Netflix rechazó el inicio de sesión. Razón de Netflix: "${errorText.replace(/\n'/g, ' ')}". Verifica la contraseña de Netflix (envió: ${netflixPass}).`,
+                error: `Netflix rechazó el inicio de sesión: "${errorText.replace(/\n/g, ' ')}".`,
                 screenshot: `data:image/png;base64,${screenshotBase64}`
             });
         }
 
-        // 8. Navegar a la página de activación de TV
+        // 8. Navegar a netflix.com/tv8 con sesión activa
         console.log(`[TV-BOT] Navegando a netflix.com/tv8...`);
-        await page.goto('https://www.netflix.com/tv8', { waitUntil: 'networkidle2', timeout: 20000 });
+        await page.goto('https://www.netflix.com/tv8', { waitUntil: 'networkidle2', timeout: 25000 });
+        await new Promise(r => setTimeout(r, 2000));
 
-        // 9. Buscar el campo de código y escribirlo
-        // Netflix usa inputs tipo text o number, uno por dígito o un solo campo
+        // 9. Ingresar código de activación (8 dígitos)
+        const cleanCode = tvCode.replace(/[^0-9]/g, '');
+        console.log(`[TV-BOT] Código limpio a ingresar en tv8: ${cleanCode}`);
+
         await page.waitForSelector('input', { timeout: 10000 });
 
-        // Intentar con campo único primero
-        const singleInput = await page.$('input[type="text"], input[type="tel"], input[type="number"], input.code-input');
-        if (singleInput) {
-            await singleInput.click({ clickCount: 3 });
-            await singleInput.type(tvCode.replace(/[^0-9]/g, ''), { delay: 100 });
+        const pinInputs = await page.$$('input[data-uia^="pin-number-"], input.pin-number-input');
+        if (pinInputs.length >= cleanCode.length) {
+            for (let i = 0; i < cleanCode.length; i++) {
+                await pinInputs[i].click();
+                await pinInputs[i].type(cleanCode[i], { delay: 80 });
+            }
         } else {
-            // Múltiples inputs (uno por dígito)
-            const inputs = await page.$$('input');
-            const digits = tvCode.replace(/[^0-9]/g, '').split('');
-            for (let i = 0; i < inputs.length && i < digits.length; i++) {
-                await inputs[i].click();
-                await inputs[i].type(digits[i], { delay: 80 });
+            const singleInput = await page.$('input[type="text"], input[type="tel"], input[type="number"], input.code-input');
+            if (singleInput) {
+                await singleInput.click({ clickCount: 3 });
+                await singleInput.type(cleanCode, { delay: 100 });
+            } else {
+                const inputs = await page.$$('input');
+                if (inputs.length >= cleanCode.length) {
+                    for (let i = 0; i < cleanCode.length; i++) {
+                        await inputs[i].click();
+                        await inputs[i].type(cleanCode[i], { delay: 80 });
+                    }
+                } else if (inputs.length > 0) {
+                    await inputs[0].click({ clickCount: 3 });
+                    await inputs[0].type(cleanCode, { delay: 100 });
+                }
             }
         }
 
-        console.log(`[TV-BOT] Código ${tvCode} ingresado, buscando botón de confirmar...`);
+        console.log(`[TV-BOT] Código ${cleanCode} ingresado, buscando botón de confirmar...`);
 
-        // 10. Click en el botón de confirmar / continuar
+        // 10. Click en el botón de confirmar
         await new Promise(r => setTimeout(r, 1000));
-        const submitBtn = await page.$('button[type="submit"], button.nf-btn-primary, button[data-uia="action-button"]');
+        const submitBtn = await page.$('button[data-uia="witcher-code-submit"], button[type="submit"], button.nf-btn-primary, button[data-uia="action-button"]');
         if (submitBtn) {
             await submitBtn.click();
         } else {
             await page.keyboard.press('Enter');
         }
 
-        // 11. Esperar resultado (3-5 seg)
+        // 11. Esperar resultado
         await new Promise(r => setTimeout(r, 4000));
         const finalUrl = page.url();
         const pageText = await page.evaluate(() => document.body.innerText);
@@ -943,7 +962,6 @@ app.post('/api/activate-tv', async (req, res) => {
         await browser.close();
         browser = null;
 
-        // Verificar si hubo éxito
         const successKeywords = ['activado', 'activated', 'connected', 'conectado', 'enjoy', 'listo', 'signed in', 'iniciado sesión'];
         const errorKeywords = ['invalid', 'inválido', 'incorrect', 'incorrecto', 'expired', 'expirado', 'vuelv', 'try again'];
 
@@ -986,6 +1004,59 @@ app.post('/api/activate-tv', async (req, res) => {
         }
         return res.status(500).json(errorPayload);
     }
+});
+
+// ============================================================
+// PROXIES PARA ACTIVACIONES DE TV HACIA EL BOT RESIDENCIAL LOCAL
+// ============================================================
+const forwardToLocalBot = async (endpoint, req, res) => {
+    try {
+        const botUrlResp = await axios.get(`${FIREBASE_DB_URL}/config/botUrl.json`, { timeout: 3000 });
+        const botUrl = botUrlResp.data;
+        if (botUrl && botUrl.startsWith('http')) {
+            const proxyResp = await axios.post(`${botUrl}${endpoint}`, req.body, {
+                timeout: 120000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                }
+            });
+            return res.status(proxyResp.status).json(proxyResp.data);
+        }
+    } catch (e) {
+        console.warn(`[PROXY] Error reenviando a bot local ${endpoint}:`, e.message);
+    }
+    return res.status(503).json({
+        success: false,
+        error: 'El bot local de activación en la PC del administrador no está disponible en este momento.'
+    });
+};
+
+app.post('/api/activate-hbo-tv', (req, res) => forwardToLocalBot('/api/activate-hbomax-tv', req, res));
+app.post('/api/activate-hbomax-tv', (req, res) => forwardToLocalBot('/api/activate-hbomax-tv', req, res));
+app.post('/api/activate-prime-tv', (req, res) => forwardToLocalBot('/api/activate-prime-tv', req, res));
+app.post('/api/activate-crunchyroll-tv', (req, res) => forwardToLocalBot('/api/activate-crunchyroll-tv', req, res));
+app.post('/api/activate-disney-tv', (req, res) => forwardToLocalBot('/api/activate-disney-tv', req, res));
+app.post('/api/activate-vix-tv', (req, res) => forwardToLocalBot('/api/activate-vix-tv', req, res));
+app.post('/api/activate-netflix-tv', (req, res) => {
+    req.url = '/api/activate-tv';
+    app._router.handle(req, res);
+});
+
+// Proxy para consultar estado de la cola
+app.get('/api/queue-status', async (req, res) => {
+    try {
+        const botUrlResp = await axios.get(`${FIREBASE_DB_URL}/config/botUrl.json`, { timeout: 3000 });
+        const botUrl = botUrlResp.data;
+        if (botUrl && botUrl.startsWith('http')) {
+            const qResp = await axios.get(`${botUrl}/api/queue-status`, {
+                timeout: 5000,
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            return res.status(qResp.status).json(qResp.data);
+        }
+    } catch (e) { }
+    return res.json({ success: true, isBusy: false, queueLength: 0 });
 });
 
 // Ruta de salud para verificar que el servidor está vivo
