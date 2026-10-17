@@ -1403,6 +1403,13 @@ function setupEventListeners() {
     let _codeAttemptsRefClean = null;
     let _codeAttemptsListenerClean = null;
 
+    window.isUserAdmin = function () {
+        const isLocalAdmin = localStorage.getItem('adminLoggedIn') === 'true';
+        const isSellerAdmin = typeof isSellerMode !== 'undefined' && isSellerMode &&
+            ['admin', 'administrador', 'administrador (global)', 'tienda principal', 'página web oficial'].includes(String(currentSellerName || '').toLowerCase().trim());
+        return Boolean(isLocalAdmin || isSellerAdmin);
+    };
+
     window.startCodeAttemptsLiveSync = function (phone, clientName = '') {
         if (!phone || typeof db === 'undefined') return;
         window.stopCodeAttemptsLiveSync();
@@ -1495,6 +1502,8 @@ function setupEventListeners() {
             window.clientUsedAttempts.disney_code_tv = true;
         }
 
+        const isAdmin = window.isUserAdmin && window.isUserAdmin();
+
         function updateBtn(plat, icon, name, maxUses) {
             const btn = document.querySelector(`.platform-tab-btn[data-platform="${plat}"]`);
             if (btn) {
@@ -1506,11 +1515,18 @@ function setupEventListeners() {
                 let rem = maxUses - numUsed;
                 if (rem < 0) rem = 0;
 
-                btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                if (rem <= 0) {
-                    btn.style.opacity = '0.6';
-                } else {
+                if (isAdmin) {
+                    btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
                     btn.style.opacity = '1';
+                    btn.disabled = false;
+                    btn.style.cursor = 'pointer';
+                } else {
+                    btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
+                    if (rem <= 0) {
+                        btn.style.opacity = '0.6';
+                    } else {
+                        btn.style.opacity = '1';
+                    }
                 }
             }
         }
@@ -1541,10 +1557,18 @@ function setupEventListeners() {
 
             let rem = 1 - numTv;
             if (rem < 0) rem = 0;
-            tvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
 
             const actBtn = document.getElementById('activate-tv-btn');
-            if (rem <= 0) {
+            if (isAdmin) {
+                tvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
+                tvBtn.style.opacity = '1';
+                if (actBtn) {
+                    actBtn.disabled = false;
+                    actBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar TV (Admin ∞)';
+                    actBtn.style.opacity = '1';
+                    actBtn.style.cursor = 'pointer';
+                }
+            } else if (rem <= 0) {
                 tvBtn.style.opacity = '0.6';
                 if (actBtn) {
                     actBtn.disabled = true;
@@ -1554,6 +1578,7 @@ function setupEventListeners() {
                 }
             } else {
                 tvBtn.style.opacity = '1';
+                tvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
                 if (actBtn) {
                     actBtn.disabled = false;
                     actBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar TV';
@@ -1573,11 +1598,20 @@ function setupEventListeners() {
 
             let rem = 1 - numTv;
             if (rem < 0) rem = 0;
-            hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
 
             const actHboBtn = document.getElementById('activate-hbo-tv-btn');
-            if (rem <= 0) {
+            if (isAdmin) {
+                hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
+                hboTvBtn.style.opacity = '1';
+                if (actHboBtn) {
+                    actHboBtn.disabled = false;
+                    actHboBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar HBO Max en TV (Admin ∞)';
+                    actHboBtn.style.opacity = '1';
+                    actHboBtn.style.cursor = 'pointer';
+                }
+            } else if (rem <= 0) {
                 hboTvBtn.style.opacity = '0.6';
+                hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (0 veces)`;
                 if (actHboBtn) {
                     actHboBtn.disabled = true;
                     actHboBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de HBO Max TV agotado (1/1)';
@@ -1586,6 +1620,7 @@ function setupEventListeners() {
                 }
             } else {
                 hboTvBtn.style.opacity = '1';
+                hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
                 if (actHboBtn) {
                     actHboBtn.disabled = false;
                     actHboBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar HBO Max en TV';
@@ -1605,11 +1640,20 @@ function setupEventListeners() {
 
             let rem = 1 - numTv;
             if (rem < 0) rem = 0;
-            primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
 
             const actPrimeBtn = document.getElementById('activate-prime-tv-btn');
-            if (rem <= 0) {
+            if (isAdmin) {
+                primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
+                primeTvBtn.style.opacity = '1';
+                if (actPrimeBtn) {
+                    actPrimeBtn.disabled = false;
+                    actPrimeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Prime en TV (Admin ∞)';
+                    actPrimeBtn.style.opacity = '1';
+                    actPrimeBtn.style.cursor = 'pointer';
+                }
+            } else if (rem <= 0) {
                 primeTvBtn.style.opacity = '0.6';
+                primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (0 veces)`;
                 if (actPrimeBtn) {
                     actPrimeBtn.disabled = true;
                     actPrimeBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Prime Video TV agotado (1/1)';
@@ -1618,6 +1662,7 @@ function setupEventListeners() {
                 }
             } else {
                 primeTvBtn.style.opacity = '1';
+                primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
                 if (actPrimeBtn) {
                     actPrimeBtn.disabled = false;
                     actPrimeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Prime en TV';
@@ -1637,11 +1682,20 @@ function setupEventListeners() {
 
             let rem = 1 - numTv;
             if (rem < 0) rem = 0;
-            crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
 
             const actCrunchyBtn = document.getElementById('activate-crunchyroll-tv-btn');
-            if (rem <= 0) {
+            if (isAdmin) {
+                crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
+                crunchyTvBtn.style.opacity = '1';
+                if (actCrunchyBtn) {
+                    actCrunchyBtn.disabled = false;
+                    actCrunchyBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Crunchyroll en TV (Admin ∞)';
+                    actCrunchyBtn.style.opacity = '1';
+                    actCrunchyBtn.style.cursor = 'pointer';
+                }
+            } else if (rem <= 0) {
                 crunchyTvBtn.style.opacity = '0.6';
+                crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (0 veces)`;
                 if (actCrunchyBtn) {
                     actCrunchyBtn.disabled = true;
                     actCrunchyBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Crunchyroll TV agotado (1/1)';
@@ -1650,6 +1704,7 @@ function setupEventListeners() {
                 }
             } else {
                 crunchyTvBtn.style.opacity = '1';
+                crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
                 if (actCrunchyBtn) {
                     actCrunchyBtn.disabled = false;
                     actCrunchyBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Crunchyroll en TV';
@@ -1669,11 +1724,20 @@ function setupEventListeners() {
 
             let rem = 1 - numTv;
             if (rem < 0) rem = 0;
-            disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
 
             const actDisneyCodeBtn = document.getElementById('activate-disney-code-tv-btn');
-            if (rem <= 0) {
+            if (isAdmin) {
+                disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
+                disneyCodeTvBtn.style.opacity = '1';
+                if (actDisneyCodeBtn) {
+                    actDisneyCodeBtn.disabled = false;
+                    actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Disney en TV (Admin ∞)';
+                    actDisneyCodeBtn.style.opacity = '1';
+                    actDisneyCodeBtn.style.cursor = 'pointer';
+                }
+            } else if (rem <= 0) {
                 disneyCodeTvBtn.style.opacity = '0.6';
+                disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (0 veces)`;
                 if (actDisneyCodeBtn) {
                     actDisneyCodeBtn.disabled = true;
                     actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Disney TV con código agotado (1/1)';
@@ -1682,6 +1746,7 @@ function setupEventListeners() {
                 }
             } else {
                 disneyCodeTvBtn.style.opacity = '1';
+                disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
                 if (actDisneyCodeBtn) {
                     actDisneyCodeBtn.disabled = false;
                     actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Disney en TV';
@@ -1701,11 +1766,20 @@ function setupEventListeners() {
 
             let rem = 1 - numTv;
             if (rem < 0) rem = 0;
-            vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
 
             const actVixBtn = document.getElementById('activate-vix-tv-btn');
-            if (rem <= 0) {
+            if (isAdmin) {
+                vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
+                vixTvBtn.style.opacity = '1';
+                if (actVixBtn) {
+                    actVixBtn.disabled = false;
+                    actVixBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar ViX en TV (Admin ∞)';
+                    actVixBtn.style.opacity = '1';
+                    actVixBtn.style.cursor = 'pointer';
+                }
+            } else if (rem <= 0) {
                 vixTvBtn.style.opacity = '0.6';
+                vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (0 veces)`;
                 if (actVixBtn) {
                     actVixBtn.disabled = true;
                     actVixBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de ViX TV agotado (1/1)';
@@ -1714,6 +1788,7 @@ function setupEventListeners() {
                 }
             } else {
                 vixTvBtn.style.opacity = '1';
+                vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
                 if (actVixBtn) {
                     actVixBtn.disabled = false;
                     actVixBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar ViX en TV';
@@ -1773,7 +1848,22 @@ function setupEventListeners() {
             }
 
             let rem = maxUses - numUsed;
-            if (rem <= 0) {
+            if (isAdmin) {
+                dBtn.disabled = false;
+                dBtn.style.opacity = '1';
+                dBtn.style.cursor = 'pointer';
+                if (plat === 'vix') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-mobile-screen-button"></i> Activar Celular ViX <small style="color:#2ecc71; font-weight:bold;">(Admin ∞)</small>`;
+                } else if (plat === 'disney_update') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar / Fuera de casa (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
+                } else if (plat === 'hbomax_update') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obten codigo fuera de casa Hbo Max (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
+                } else if (plat === 'disney_tv') {
+                    dBtn.innerHTML = `<i class="fa-solid fa-envelope"></i> Iniciar sesión Disney TV (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
+                } else {
+                    dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName} (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
+                }
+            } else if (rem <= 0) {
                 dBtn.disabled = true;
                 dBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ${(plat === 'netflix_update' || plat === 'disney_update' || plat === 'hbomax_update') ? 'Actualizaciones agotadas (2/2)' : 'Intento agotado (1/1)'}`;
                 dBtn.style.opacity = '0.5';
@@ -1812,14 +1902,14 @@ function setupEventListeners() {
                     isExhausted = true;
                 }
 
-                if (isExhausted) {
+                if (isExhausted && !isAdmin) {
                     fetchBtn.disabled = true;
                     fetchBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de esta plataforma agotado';
                     fetchBtn.style.opacity = '0.5';
                     fetchBtn.style.cursor = 'not-allowed';
                 } else {
                     fetchBtn.disabled = false;
-                    fetchBtn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Buscar mi Código';
+                    fetchBtn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> Buscar mi Código${isAdmin ? ' (Admin ∞)' : ''}`;
                     fetchBtn.style.opacity = '1';
                     fetchBtn.style.cursor = 'pointer';
                 }
@@ -2767,8 +2857,9 @@ function setupEventListeners() {
         }
 
         // Validar si el intento YA fue consumido (compartido entre cliente y vendedor)
+        const isAdmin = window.isUserAdmin && window.isUserAdmin();
         let isExhausted = false;
-        if (window.clientUsedAttempts) {
+        if (window.clientUsedAttempts && !isAdmin) {
             if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
                 const updatesUsed = parseInt(window.clientUsedAttempts[platform]) || 0;
                 if (updatesUsed >= 2) isExhausted = true;
@@ -3089,7 +3180,8 @@ function setupEventListeners() {
 
     if (showTvBtn && tvPanel) {
         showTvBtn.addEventListener('click', () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || (typeof window.clientUsedAttempts['netflix_tv'] === 'number' && window.clientUsedAttempts['netflix_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || (typeof window.clientUsedAttempts['netflix_tv'] === 'number' && window.clientUsedAttempts['netflix_tv'] >= 1));
             if (isTvUsed) {
                 alert('⚠️ Ya usaste tu intento (1 vez) para activar Smart TV.');
                 return;
@@ -3110,7 +3202,8 @@ function setupEventListeners() {
 
     if (activateTvBtn) {
         activateTvBtn.addEventListener('click', async () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || (typeof window.clientUsedAttempts['netflix_tv'] === 'number' && window.clientUsedAttempts['netflix_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || (typeof window.clientUsedAttempts['netflix_tv'] === 'number' && window.clientUsedAttempts['netflix_tv'] >= 1));
             if (isTvUsed) {
                 return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Smart TV.');
             }
@@ -3281,14 +3374,15 @@ function setupEventListeners() {
                 document.getElementById('tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || window.clientUsedAttempts['netflix_tv'] >= 1);
+                    const isAdmin = window.isUserAdmin && window.isUserAdmin();
+                    const isTvUsedNow = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['netflix_tv'] === true || window.clientUsedAttempts['netflix_tv'] >= 1);
                     if (isTvUsedNow) {
                         activateTvBtn.disabled = true;
                         activateTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Smart TV agotado (1/1)';
                         activateTvBtn.style.opacity = '0.5';
                         activateTvBtn.style.cursor = 'not-allowed';
                     } else {
-                        activateTvBtn.innerHTML = originalBtnText;
+                        activateTvBtn.innerHTML = isAdmin ? (originalBtnText || 'Activar TV (Admin \u221e)') : originalBtnText;
                         activateTvBtn.disabled = false;
                         activateTvBtn.style.opacity = '1';
                         activateTvBtn.style.cursor = 'pointer';
@@ -3307,7 +3401,8 @@ function setupEventListeners() {
 
     if (showHboTvBtn && hboTvPanel) {
         showHboTvBtn.addEventListener('click', () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || (typeof window.clientUsedAttempts['hbomax_tv'] === 'number' && window.clientUsedAttempts['hbomax_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || (typeof window.clientUsedAttempts['hbomax_tv'] === 'number' && window.clientUsedAttempts['hbomax_tv'] >= 1));
             if (isTvUsed) {
                 alert('⚠️ Ya usaste tu intento (1 vez) para activar HBO Max en TV.');
                 return;
@@ -3328,7 +3423,8 @@ function setupEventListeners() {
 
     if (activateHboTvBtn) {
         activateHboTvBtn.addEventListener('click', async () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || (typeof window.clientUsedAttempts['hbomax_tv'] === 'number' && window.clientUsedAttempts['hbomax_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || (typeof window.clientUsedAttempts['hbomax_tv'] === 'number' && window.clientUsedAttempts['hbomax_tv'] >= 1));
             if (isTvUsed) {
                 return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar HBO Max en TV.');
             }
@@ -3472,14 +3568,15 @@ function setupEventListeners() {
                 document.getElementById('hbo-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || window.clientUsedAttempts['hbomax_tv'] >= 1);
+                    const isAdmin = window.isUserAdmin && window.isUserAdmin();
+                    const isTvUsedNow = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['hbomax_tv'] === true || window.clientUsedAttempts['hbomax_tv'] >= 1);
                     if (isTvUsedNow) {
                         activateHboTvBtn.disabled = true;
                         activateHboTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de HBO Max TV agotado (1/1)';
                         activateHboTvBtn.style.opacity = '0.5';
                         activateHboTvBtn.style.cursor = 'not-allowed';
                     } else {
-                        activateHboTvBtn.innerHTML = originalBtnText;
+                        activateHboTvBtn.innerHTML = isAdmin ? (originalBtnText || 'Activar TV (Admin \u221e)') : originalBtnText;
                         activateHboTvBtn.disabled = false;
                         activateHboTvBtn.style.opacity = '1';
                         activateHboTvBtn.style.cursor = 'pointer';
@@ -3496,7 +3593,8 @@ function setupEventListeners() {
 
     if (showPrimeTvBtn && primeTvPanel) {
         showPrimeTvBtn.addEventListener('click', () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || (typeof window.clientUsedAttempts['prime_tv'] === 'number' && window.clientUsedAttempts['prime_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || (typeof window.clientUsedAttempts['prime_tv'] === 'number' && window.clientUsedAttempts['prime_tv'] >= 1));
             if (isTvUsed) {
                 alert('⚠️ Ya usaste tu intento (1 vez) para activar Prime Video en TV.');
                 return;
@@ -3517,7 +3615,8 @@ function setupEventListeners() {
 
     if (activatePrimeTvBtn) {
         activatePrimeTvBtn.addEventListener('click', async () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || (typeof window.clientUsedAttempts['prime_tv'] === 'number' && window.clientUsedAttempts['prime_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || (typeof window.clientUsedAttempts['prime_tv'] === 'number' && window.clientUsedAttempts['prime_tv'] >= 1));
             if (isTvUsed) {
                 return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Prime Video en TV.');
             }
@@ -3659,14 +3758,15 @@ function setupEventListeners() {
                 document.getElementById('prime-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || window.clientUsedAttempts['prime_tv'] >= 1);
+                    const isAdmin = window.isUserAdmin && window.isUserAdmin();
+                    const isTvUsedNow = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['prime_tv'] === true || window.clientUsedAttempts['prime_tv'] >= 1);
                     if (isTvUsedNow) {
                         activatePrimeTvBtn.disabled = true;
                         activatePrimeTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Prime Video TV agotado (1/1)';
                         activatePrimeTvBtn.style.opacity = '0.5';
                         activatePrimeTvBtn.style.cursor = 'not-allowed';
                     } else {
-                        activatePrimeTvBtn.innerHTML = originalBtnText;
+                        activatePrimeTvBtn.innerHTML = isAdmin ? (originalBtnText || 'Activar TV (Admin \u221e)') : originalBtnText;
                         activatePrimeTvBtn.disabled = false;
                         activatePrimeTvBtn.style.opacity = '1';
                         activatePrimeTvBtn.style.cursor = 'pointer';
@@ -3683,7 +3783,8 @@ function setupEventListeners() {
 
     if (showCrunchyTvBtn && crunchyTvPanel) {
         showCrunchyTvBtn.addEventListener('click', () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || (typeof window.clientUsedAttempts['crunchyroll_tv'] === 'number' && window.clientUsedAttempts['crunchyroll_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || (typeof window.clientUsedAttempts['crunchyroll_tv'] === 'number' && window.clientUsedAttempts['crunchyroll_tv'] >= 1));
             if (isTvUsed) {
                 alert('⚠️ Ya usaste tu intento (1 vez) para activar Crunchyroll en TV.');
                 return;
@@ -3704,7 +3805,8 @@ function setupEventListeners() {
 
     if (activateCrunchyTvBtn) {
         activateCrunchyTvBtn.addEventListener('click', async () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || (typeof window.clientUsedAttempts['crunchyroll_tv'] === 'number' && window.clientUsedAttempts['crunchyroll_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || (typeof window.clientUsedAttempts['crunchyroll_tv'] === 'number' && window.clientUsedAttempts['crunchyroll_tv'] >= 1));
             if (isTvUsed) {
                 return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar Crunchyroll en TV.');
             }
@@ -3846,14 +3948,15 @@ function setupEventListeners() {
                 document.getElementById('crunchyroll-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || window.clientUsedAttempts['crunchyroll_tv'] >= 1);
+                    const isAdmin = window.isUserAdmin && window.isUserAdmin();
+                    const isTvUsedNow = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['crunchyroll_tv'] === true || window.clientUsedAttempts['crunchyroll_tv'] >= 1);
                     if (isTvUsedNow) {
                         activateCrunchyTvBtn.disabled = true;
                         activateCrunchyTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Crunchyroll TV agotado (1/1)';
                         activateCrunchyTvBtn.style.opacity = '0.5';
                         activateCrunchyTvBtn.style.cursor = 'not-allowed';
                     } else {
-                        activateCrunchyTvBtn.innerHTML = originalBtnText;
+                        activateCrunchyTvBtn.innerHTML = isAdmin ? (originalBtnText || 'Activar TV (Admin \u221e)') : originalBtnText;
                         activateCrunchyTvBtn.disabled = false;
                         activateCrunchyTvBtn.style.opacity = '1';
                         activateCrunchyTvBtn.style.cursor = 'pointer';
@@ -3870,7 +3973,8 @@ function setupEventListeners() {
 
     if (showDisneyCodeTvBtn && disneyCodeTvPanel) {
         showDisneyCodeTvBtn.addEventListener('click', () => {
-            const isTvUsed = window.clientUsedAttempts && (
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (
                 window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1) ||
                 window.clientUsedAttempts['disney_tv'] === true || (typeof window.clientUsedAttempts['disney_tv'] === 'number' && window.clientUsedAttempts['disney_tv'] >= 1)
             );
@@ -3894,7 +3998,8 @@ function setupEventListeners() {
 
     if (activateDisneyCodeTvBtn) {
         activateDisneyCodeTvBtn.addEventListener('click', async () => {
-            const isTvUsed = window.clientUsedAttempts && (
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (
                 window.clientUsedAttempts['disney_code_tv'] === true || (typeof window.clientUsedAttempts['disney_code_tv'] === 'number' && window.clientUsedAttempts['disney_code_tv'] >= 1) ||
                 window.clientUsedAttempts['disney_tv'] === true || (typeof window.clientUsedAttempts['disney_tv'] === 'number' && window.clientUsedAttempts['disney_tv'] >= 1)
             );
@@ -4043,7 +4148,8 @@ function setupEventListeners() {
                 document.getElementById('disney-code-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    const isTvUsedNow = window.clientUsedAttempts && (
+                    const isAdmin = window.isUserAdmin && window.isUserAdmin();
+                    const isTvUsedNow = !isAdmin && window.clientUsedAttempts && (
                         window.clientUsedAttempts['disney_code_tv'] === true || window.clientUsedAttempts['disney_code_tv'] >= 1 ||
                         window.clientUsedAttempts['disney_tv'] === true || window.clientUsedAttempts['disney_tv'] >= 1
                     );
@@ -4053,7 +4159,7 @@ function setupEventListeners() {
                         activateDisneyCodeTvBtn.style.opacity = '0.5';
                         activateDisneyCodeTvBtn.style.cursor = 'not-allowed';
                     } else {
-                        activateDisneyCodeTvBtn.innerHTML = originalBtnText;
+                        activateDisneyCodeTvBtn.innerHTML = isAdmin ? (originalBtnText || 'Activar TV (Admin \u221e)') : originalBtnText;
                         activateDisneyCodeTvBtn.disabled = false;
                         activateDisneyCodeTvBtn.style.opacity = '1';
                         activateDisneyCodeTvBtn.style.cursor = 'pointer';
@@ -4070,7 +4176,8 @@ function setupEventListeners() {
 
     if (showVixTvBtn && vixTvPanel) {
         showVixTvBtn.addEventListener('click', () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || (typeof window.clientUsedAttempts['vix_tv'] === 'number' && window.clientUsedAttempts['vix_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || (typeof window.clientUsedAttempts['vix_tv'] === 'number' && window.clientUsedAttempts['vix_tv'] >= 1));
             if (isTvUsed) {
                 alert('⚠️ Ya usaste tu intento (1 vez) para activar ViX en TV.');
                 return;
@@ -4091,7 +4198,8 @@ function setupEventListeners() {
 
     if (activateVixTvBtn) {
         activateVixTvBtn.addEventListener('click', async () => {
-            const isTvUsed = window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || (typeof window.clientUsedAttempts['vix_tv'] === 'number' && window.clientUsedAttempts['vix_tv'] >= 1));
+            const isAdmin = window.isUserAdmin && window.isUserAdmin();
+            const isTvUsed = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || (typeof window.clientUsedAttempts['vix_tv'] === 'number' && window.clientUsedAttempts['vix_tv'] >= 1));
             if (isTvUsed) {
                 return alert('⚠️ Ya has utilizado tu intento (1 vez) para activar ViX en TV.');
             }
@@ -4233,14 +4341,15 @@ function setupEventListeners() {
                 document.getElementById('vix-tv-error-msg').innerText = 'Error de conexión. Intenta de nuevo en un momento.';
             } finally {
                 setTimeout(() => {
-                    const isTvUsedNow = window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || window.clientUsedAttempts['vix_tv'] >= 1);
+                    const isAdmin = window.isUserAdmin && window.isUserAdmin();
+                    const isTvUsedNow = !isAdmin && window.clientUsedAttempts && (window.clientUsedAttempts['vix_tv'] === true || window.clientUsedAttempts['vix_tv'] >= 1);
                     if (isTvUsedNow) {
                         activateVixTvBtn.disabled = true;
                         activateVixTvBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de ViX TV agotado (1/1)';
                         activateVixTvBtn.style.opacity = '0.5';
                         activateVixTvBtn.style.cursor = 'not-allowed';
                     } else {
-                        activateVixTvBtn.innerHTML = originalBtnText;
+                        activateVixTvBtn.innerHTML = isAdmin ? (originalBtnText || 'Activar TV (Admin \u221e)') : originalBtnText;
                         activateVixTvBtn.disabled = false;
                         activateVixTvBtn.style.opacity = '1';
                         activateVixTvBtn.style.cursor = 'pointer';

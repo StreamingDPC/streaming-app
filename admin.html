@@ -3749,6 +3749,48 @@
             window.adminActiveClient = null;
         };
 
+        // Helper para descontar intentos del cliente en Firebase cuando el Admin actúa en su nombre
+        window.deductClientAttempt = async function (phone, platform) {
+            if (!phone) return;
+            try {
+                const rawPhone = String(phone).trim();
+                const cleanPhone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '');
+                if (!cleanPhone) return;
+
+                const isCountBased = (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update');
+                let currentAttempts = 0;
+
+                try {
+                    const snap = await db.ref(`clientProfiles/${rawPhone}/codeAttemptUsed/${platform}`).once('value');
+                    if (snap.exists()) {
+                        currentAttempts = parseInt(snap.val()) || 0;
+                    }
+                } catch (e) { }
+
+                const nextVal = isCountBased ? (currentAttempts + 1) : true;
+
+                const phonesToUpdate = new Set([rawPhone, cleanPhone]);
+                if (!cleanPhone.startsWith('57')) {
+                    phonesToUpdate.add('57' + cleanPhone);
+                }
+
+                const updates = {};
+                phonesToUpdate.forEach(p => {
+                    if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
+                    } else {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = nextVal;
+                    }
+                });
+
+                await db.ref().update(updates);
+                console.log(`[Admin] Intento descontado al cliente ${cleanPhone} para ${platform}:`, nextVal);
+            } catch (err) {
+                console.warn('[Admin] Error descontando intento al cliente:', err);
+            }
+        };
+
         window.adminExecuteAction = async function (platform) {
             if (!window.adminActiveClient) {
                 alert('No hay cliente seleccionado. Por favor busca un cliente primero.');
@@ -3836,10 +3878,13 @@
                     content.style.display = 'block';
 
                     if (data.success) {
+                        if (client && client.phone) {
+                            await window.deductClientAttempt(client.phone, platform);
+                        }
                         badgeEl.innerHTML = `<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> SMART TV (${serviceName.toUpperCase()}) ACTIVADA CON ÉXITO</span>`;
                         codeEl.style.color = '#2ecc71';
                         codeEl.innerText = 'ACTIVADA';
-                        msgEl.innerHTML = `¡El televisor de <strong>${client.clientName}</strong> con código <strong>${tvCode}</strong> quedó vinculado y listo para reproducir!`;
+                        msgEl.innerHTML = `¡El televisor de <strong>${client.clientName}</strong> con código <strong>${tvCode}</strong> quedó vinculado y listo para reproducir!<br><span style="font-size:0.8rem;color:#2ecc71;"><i class="fa-solid fa-user-check"></i> Intento descontado al cliente en su perfil.</span>`;
                         if (copyBtn) copyBtn.style.display = 'none';
                         if (waBtn) {
                             waBtn.style.display = 'inline-flex';
@@ -3887,11 +3932,14 @@
                 content.style.display = 'block';
 
                 if (data.success) {
+                    if (client && client.phone) {
+                        await window.deductClientAttempt(client.phone, platform);
+                    }
                     if (platform === 'vix') {
                         badgeEl.innerHTML = '<span style="color:#e67e22; font-weight:bold;"><i class="fa-solid fa-fire"></i> ¡VIX ACTIVADO CON ÉXITO!</span>';
                         codeEl.style.color = '#2ecc71';
                         codeEl.innerText = 'ACTIVADO';
-                        msgEl.innerHTML = `¡El celular de <strong>${client.clientName}</strong> quedó activado en ViX! El navegador procesó el enlace inmediatamente.`;
+                        msgEl.innerHTML = `¡El celular de <strong>${client.clientName}</strong> quedó activado en ViX! El navegador procesó el enlace inmediatamente.<br><span style="font-size:0.8rem;color:#2ecc71;"><i class="fa-solid fa-user-check"></i> Intento descontado al cliente en su perfil.</span>`;
                         if (copyBtn) copyBtn.style.display = 'none';
                         if (waBtn) {
                             waBtn.style.display = 'inline-flex';
@@ -3937,7 +3985,7 @@
                         badgeEl.innerHTML = `<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-key"></i> ${badgeTitle}</span>`;
                         codeEl.style.color = '#2ecc71';
                         codeEl.innerText = data.code;
-                        msgEl.innerHTML = detailsMsg;
+                        msgEl.innerHTML = `${detailsMsg}<br><span style="font-size:0.8rem;color:#2ecc71;"><i class="fa-solid fa-user-check"></i> Intento descontado al cliente en su perfil.</span>`;
                         if (copyBtn) copyBtn.style.display = 'inline-flex';
                         if (waBtn) {
                             waBtn.style.display = 'inline-flex';
@@ -6799,7 +6847,9 @@
                                 });
                                 if (!nfEmails.length) return '';
                                 const emailEncoded = encodeURIComponent(nfEmails[0]);
-                                return `<button onclick="openAdminActivateTvModal('${emailEncoded}')" style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #e50914; background:rgba(229,9,20,0.1); color:#e50914; font-size:0.8rem;" title="Activar Netflix TV para este cliente"><i class='fa-solid fa-tv'></i> Activar TV</button>`;
+                                const safeClientPhone = sale.clientPhone || '';
+                                const safeClientName = encodeURIComponent(sale.client || sale.clientName || 'Cliente');
+                                return `<button onclick="openAdminActivateTvModal('${emailEncoded}', '${safeClientPhone}', '${safeClientName}')" style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #e50914; background:rgba(229,9,20,0.1); color:#e50914; font-size:0.8rem;" title="Activar Netflix TV para este cliente"><i class='fa-solid fa-tv'></i> Activar TV</button>`;
                             })()}
                                 <button onclick="deleteSellerSale('${safeSeller}', '${sale.id}')" 
                                     style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
@@ -7488,6 +7538,22 @@
                         <i class="fa-solid fa-comment-dots"></i> RESPUESTAS
                     </button>
                     ` : ''}
+                    ${(() => {
+                        const saleItems = Array.isArray(sale.items) ? sale.items : Object.values(sale.items || {});
+                        const nfEmails = [];
+                        saleItems.forEach(it => {
+                            const screens = Array.isArray(it && it.specificEmails) ? it.specificEmails : Object.values((it && it.specificEmails) || {});
+                            screens.forEach(sc => { if (sc && sc.platform && sc.platform.toLowerCase().includes('netflix') && sc.email) nfEmails.push(sc.email); });
+                        });
+                        if (!nfEmails.length && sale.email && (itemsStr || '').toLowerCase().includes('netflix')) {
+                            nfEmails.push(sale.email);
+                        }
+                        if (!nfEmails.length) return '';
+                        const emailEncoded = encodeURIComponent(nfEmails[0]);
+                        const safeCName = encodeURIComponent(clientObj.name || 'Cliente');
+                        const safeCPhone = clientObj.phone || '';
+                        return `<button onclick="openAdminActivateTvModal('${emailEncoded}', '${safeCPhone}', '${safeCName}')" style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #e50914; background:rgba(229,9,20,0.1); color:#e50914; font-size:0.8rem; min-width:100px;" title="Activar Netflix TV para este cliente"><i class='fa-solid fa-tv'></i> Activar TV</button>`;
+                    })()}
                     <button onclick="deleteClientSale('${clientObj.phone}', '${sale.id}')" 
                         style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;">
                         <i class="fa-solid fa-trash"></i>
@@ -9249,8 +9315,9 @@
         // ═══════════════════════════════════════════════════════════════
         // MODAL: Activar TV Netflix — para Admin y Vendedores
         // ═══════════════════════════════════════════════════════════════
-        window.openAdminActivateTvModal = function (encodedEmail) {
+        window.openAdminActivateTvModal = function (encodedEmail, clientPhone, clientName) {
             const email = decodeURIComponent(encodedEmail);
+            const decodedClientName = clientName ? decodeURIComponent(clientName) : '';
             let modal = document.getElementById('admin-tv-modal');
             if (!modal) {
                 modal = document.createElement('div');
@@ -9258,11 +9325,12 @@
                 modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;';
                 modal.innerHTML = `
                     <div style="background:#1a1a2e;border:1px solid rgba(229,9,20,0.5);border-radius:16px;padding:2rem;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;">
                             <h3 style="color:#e50914;margin:0;font-size:1.3rem;"><i class="fa-solid fa-tv"></i> Activar Netflix TV</h3>
                             <button onclick="document.getElementById('admin-tv-modal').remove()" style="background:none;border:none;color:#aaa;font-size:1.5rem;cursor:pointer;">&#x2715;</button>
                         </div>
-                        <p style="color:#ccc;font-size:0.85rem;margin-bottom:1rem;">&#128231; Cuenta: <strong id="admin-tv-email-label" style="color:white;"></strong></p>
+                        <p style="color:#ccc;font-size:0.85rem;margin-bottom:0.4rem;">&#128231; Cuenta: <strong id="admin-tv-email-label" style="color:white;"></strong><span id="admin-tv-client-label" style="color:#2ecc71; font-weight:bold; margin-left:6px;"></span></p>
+                        <p style="font-size:0.75rem; color:#2ecc71; margin-bottom:1rem;"><i class="fa-solid fa-infinity"></i> Modo Administrador: Intentos Infinitos (se descontará el uso en el portal del cliente)</p>
                         <p style="color:#aaa;font-size:0.8rem;margin-bottom:1.2rem;line-height:1.5;">Ingresa el c&#243;digo de 8 d&#237;gitos que aparece en la pantalla del TV del cliente.</p>
                         <input id="admin-tv-code" type="number" placeholder="Ej: 12345678"
                             style="width:100%;padding:1rem;font-size:1.4rem;letter-spacing:6px;text-align:center;background:rgba(255,255,255,0.05);border:2px solid rgba(229,9,20,0.4);border-radius:12px;color:white;margin-bottom:1rem;box-sizing:border-box;">
@@ -9276,17 +9344,23 @@
                 document.body.appendChild(modal);
             }
             document.getElementById('admin-tv-email-label').innerText = email;
+            const clientLabel = document.getElementById('admin-tv-client-label');
+            if (clientLabel) {
+                clientLabel.innerText = decodedClientName ? `| ${decodedClientName}` : '';
+            }
             document.getElementById('admin-tv-code').value = '';
             document.getElementById('admin-tv-status').style.display = 'none';
             const btn = document.getElementById('admin-tv-submit-btn');
             btn.disabled = false; btn.style.background = '#e50914';
             btn.innerHTML = '<i class="fa-solid fa-play"></i> Activar TV';
             btn.dataset.email = email;
+            btn.dataset.phone = clientPhone || '';
         };
 
         window.executeAdminTvActivation = async function () {
             const btn = document.getElementById('admin-tv-submit-btn');
             const email = btn.dataset.email;
+            const clientPhone = btn.dataset.phone;
             const tvCode = (document.getElementById('admin-tv-code').value || '').replace(/\D/g, '');
             const statusDiv = document.getElementById('admin-tv-status');
 
@@ -9309,12 +9383,15 @@
             try {
                 const resp = await fetch(`${botUrl}/api/activate-tv`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, tvCode })
+                    body: JSON.stringify({ email, tvCode, phone: clientPhone || 'admin' })
                 });
                 const data = await resp.json();
                 if (data.success) {
+                    if (clientPhone) {
+                        await window.deductClientAttempt(clientPhone, 'netflix_tv');
+                    }
                     statusDiv.style.background = 'rgba(46,204,113,0.15)'; statusDiv.style.color = '#2ecc71';
-                    statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> \u00a1TV Activada exitosamente!';
+                    statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> \u00a1TV Activada exitosamente!<br><span style="font-size:0.8rem;color:#ccc;">(Intento del cliente descontado correctamente)</span>';
                     btn.innerHTML = '<i class="fa-solid fa-check"></i> \u00a1Activado!'; btn.style.background = '#2ecc71';
                 } else {
                     statusDiv.style.background = 'rgba(229,9,20,0.15)'; statusDiv.style.color = '#e50914';
