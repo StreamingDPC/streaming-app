@@ -2181,9 +2181,9 @@
                                 <i class="fa-solid fa-rotate-right"></i> Habilitar / Reiniciar Intentos de un Celular
                                 Específico:
                             </div>
-                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
                                 <select id="admin-platform-reset"
-                                    style="flex:1; min-width:150px; padding:11px 14px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem;">
+                                    style="flex:1; min-width:180px; padding:11px 14px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem;">
                                     <option value="all">TODAS las pantallas</option>
                                     <option value="netflix">Netflix</option>
                                     <option value="netflix_update">Actualiza tu Hogar</option>
@@ -2204,12 +2204,19 @@
                                     <option value="crunchyroll">Crunchyroll</option>
                                 </select>
                                 <input type="text" id="admin-client-phone-reset"
-                                    placeholder="Celular del cliente (Ej: 3105551234)"
+                                    placeholder="Número de celular del cliente (Ej: 3105551234)"
                                     style="flex:2; min-width:180px; padding:11px 14px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem;">
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                                 <button type="button"
                                     onclick="resetClientCodeAttempt(document.getElementById('admin-client-phone-reset').value.trim())"
-                                    style="background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:white; font-weight:bold; padding:11px 18px; border-radius:8px; cursor:pointer; font-size:0.9rem; white-space:nowrap; box-shadow: 0 4px 10px rgba(243,156,18,0.3);">
+                                    style="flex:1; min-width:180px; background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:white; font-weight:bold; padding:11px 18px; border-radius:8px; cursor:pointer; font-size:0.9rem; white-space:nowrap; box-shadow: 0 4px 10px rgba(243,156,18,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">
                                     <i class="fa-solid fa-rotate-right"></i> Habilitar Intento
+                                </button>
+                                <button type="button"
+                                    onclick="disableClientCodeAttempt(document.getElementById('admin-client-phone-reset').value.trim())"
+                                    style="flex:1; min-width:180px; background:linear-gradient(135deg,#e74c3c,#c0392b); border:none; color:white; font-weight:bold; padding:11px 18px; border-radius:8px; cursor:pointer; font-size:0.9rem; white-space:nowrap; box-shadow: 0 4px 10px rgba(231,76,60,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">
+                                    <i class="fa-solid fa-ban"></i> Deshabilitar Intento
                                 </button>
                             </div>
                         </div>
@@ -4118,7 +4125,67 @@
                 }
                 alert(`✅ Intento de ${platLabel} habilitado correctamente para ${clientPhone}. El cliente ya puede solicitar su código nuevamente.`);
             }
-        }
+        };
+
+        // =====================================================
+        // BOTÓN EXCLUSIVO ADMIN: Deshabilitar / Quitar intento de código
+        // =====================================================
+        window.disableClientCodeAttempt = async function (clientPhone) {
+            if (!clientPhone) return alert('Por favor ingresa el número de celular del cliente.');
+
+            const platformSelect = document.getElementById('admin-platform-reset');
+            const platform = platformSelect ? platformSelect.value : 'all';
+            const platLabel = platform === 'all' ? 'TODAS LAS PANTALLAS' : platform.toUpperCase();
+
+            const rawPhone = String(clientPhone).trim();
+            const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
+            if (!cleanP) return alert('Número de celular no válido.');
+
+            let confirmMsg = `¿Estás seguro de que deseas DESHABILITAR / QUITAR el intento en [${platLabel}] para el cliente ${clientPhone}?\n\n`;
+            confirmMsg += `⚠️ Esta acción marcará el intento como YA UTILIZADO en el portal del cliente, bloqueándole el botón para que no pueda pedir más códigos a menos que tú se lo vuelvas a habilitar.`;
+
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const phonesToUpdate = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
+
+                const updates = {};
+                phonesToUpdate.forEach(p => {
+                    if (platform === 'all') {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_update`] = 2;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_temp`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_update`] = 2;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_update`] = 2;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/prime`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/prime_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/vix`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/vix_tv`] = true;
+                    } else if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = 2;
+                    } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
+                    } else {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = true;
+                    }
+                });
+
+                await db.ref().update(updates);
+                alert(`🚫 Intento de [${platLabel}] DESHABILITADO con éxito para ${clientPhone}.\nEl cliente ya verá el botón bloqueado en su portal.`);
+            } catch (err) {
+                alert('Error al deshabilitar el intento: ' + err.message);
+                console.error(err);
+            }
+        };
 
         // =====================================================
         // BUSCAR POR VENDEDOR + NOMBRE CLIENTE: Habilitar intento
@@ -4255,8 +4322,13 @@
                                 </select>
                                 <button type="button"
                                     onclick="doResetAttemptFromSearch('${m.phone}', '${m.clientName.replace(/'/g, "\\'")}', ${idx})"
-                                    style="background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:white; font-weight:bold; padding:8px 14px; border-radius:7px; cursor:pointer; font-size:0.82rem;">
+                                    style="background:linear-gradient(135deg,#f39c12,#e67e22); border:none; color:white; font-weight:bold; padding:8px 12px; border-radius:7px; cursor:pointer; font-size:0.82rem; display:flex; align-items:center; gap:4px;">
                                     <i class="fa-solid fa-rotate-right"></i> Habilitar
+                                </button>
+                                <button type="button"
+                                    onclick="doDisableAttemptFromSearch('${m.phone}', '${m.clientName.replace(/'/g, "\\'")}', ${idx})"
+                                    style="background:linear-gradient(135deg,#e74c3c,#c0392b); border:none; color:white; font-weight:bold; padding:8px 12px; border-radius:7px; cursor:pointer; font-size:0.82rem; display:flex; align-items:center; gap:4px;">
+                                    <i class="fa-solid fa-ban"></i> Deshabilitar
                                 </button>
                             </div>
                         </div>`;
@@ -4325,6 +4397,68 @@
                 const btns = document.querySelectorAll('#reset-seller-result button');
                 if (btns[idx]) btns[idx].disabled = true;
                 alert(`✅ ¡Listo! Nuevo intento [${platLabel}] habilitado para ${clientName} (${phone}).`);
+            }
+        };
+
+        window.doDisableAttemptFromSearch = async function (phone, clientName, idx) {
+            const inlineSelect = document.getElementById(`inline-platform-reset-${idx}`);
+            const platform = inlineSelect ? inlineSelect.value : document.getElementById('admin-platform-reset').value;
+            const platLabel = platform === 'all' ? 'TODAS LAS PANTALLAS' : platform.toUpperCase();
+
+            if (!phone) {
+                alert(`⚠️ Este cliente no tiene número de celular registrado.`);
+                return;
+            }
+
+            if (!confirm(`¿Estás seguro de que deseas DESHABILITAR / QUITAR el intento en [${platLabel}] para el cliente "${clientName}" (${phone})?`)) return;
+
+            try {
+                const rawPhone = String(phone).trim();
+                const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
+                const phonesToUpdate = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
+
+                const updates = {};
+                phonesToUpdate.forEach(p => {
+                    if (platform === 'all') {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_update`] = 2;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_temp`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_update`] = 2;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_update`] = 2;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/prime`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/prime_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/vix`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/vix_tv`] = true;
+                    } else if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = 2;
+                    } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
+                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
+                    } else {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = true;
+                    }
+                });
+
+                await db.ref().update(updates);
+                alert(`🚫 Intento de [${platLabel}] DESHABILITADO con éxito para "${clientName}" (${phone}).`);
+
+                // Refrescar buscador si estaba activo
+                const sName = document.getElementById('reset-seller-name-input') ? document.getElementById('reset-seller-name-input').value.trim() : '';
+                const cSearch = document.getElementById('reset-client-name-input') ? document.getElementById('reset-client-name-input').value.trim() : '';
+                if (sName && cSearch && window.resetClientCodeAttemptBySeller) {
+                    window.resetClientCodeAttemptBySeller(sName, cSearch);
+                }
+            } catch (err) {
+                alert('Error al deshabilitar el intento: ' + err.message);
+                console.error(err);
             }
         };
 
