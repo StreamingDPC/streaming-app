@@ -390,7 +390,7 @@
 <body>
     <div class="admin-layout">
         <div class="admin-header">
-            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.46 (Optimización de Modal de Códigos para Vendedores)</span></h1>
+            <h1>Panel de Control <span style="font-size: 0.8rem; color:#2ecc71;">v3.9.47 (Sincronización de Fechas Excel y Búsqueda de Clientes)</span></h1>
             <div style="display: flex; gap: 0.5rem;">
                 <button class="logout-btn" style="background: #2e86de;" onclick="location.href = location.pathname + '?v=' + Date.now();"><i
                         class="fa-solid fa-arrows-rotate"></i> Actualizar</button>
@@ -7780,8 +7780,17 @@
                             });
 
                             // Si todas sus cuentas están vencidas (0 compras activas),
-                            // su distintivo no debe quedarse aquí como cascarón vacío, sino que va en Historial junto con su cuenta.
-                            if (activeSales.length === 0) return;
+                            // en vista normal su distintivo no debe quedarse aquí como cascarón vacío (va en Historial).
+                            // Pero si el Admin busca explícitamente por nombre o teléfono, permitir visualizarlo con sus cuentas.
+                            if (activeSales.length === 0) {
+                                if (!filterText) return;
+                                expiredSales.forEach(sale => {
+                                    renderAdminSaleCard(sale, false, c, salesContainer);
+                                });
+                                div.appendChild(salesContainer);
+                                listDiv.appendChild(div);
+                                return;
+                            }
 
                             // Render Active Sales
                             activeSales.forEach(sale => {

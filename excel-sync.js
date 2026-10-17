@@ -427,6 +427,20 @@ async function syncExcelToFirebase(customBuffer = null) {
                 if (!match.sale.password) match.sale.password = rec.password;
                 if (!match.sale.profile && rec.profile) match.sale.profile = rec.profile;
 
+                // Sincronizar fechas y datos actualizados desde el Excel
+                if (rec.expMs) {
+                    match.sale.expirationDate = rec.expMs;
+                }
+                if (rec.startMs) {
+                    match.sale.date = rec.startMs;
+                }
+                if (rec.city) {
+                    match.sale.clientCity = rec.city;
+                }
+                if (rec.clientName) {
+                    match.sale.clientName = rec.clientName;
+                }
+
                 // También completar en otras ventas del mismo cliente que tengan ese mismo correo
                 allClientSlots.forEach(other => {
                     if (other !== match && platformMatches(other.specObj.platform, rec.sheetMeta) && other.specObj.email.toLowerCase() === rec.email.toLowerCase()) {
@@ -458,6 +472,14 @@ async function syncExcelToFirebase(customBuffer = null) {
                     latestSale.items = Object.values(latestSale.items || {});
                 }
                 for (const rec of unmatchedRecs) {
+                    if (rec.expMs && (!latestSale.expirationDate || rec.expMs > latestSale.expirationDate)) {
+                        latestSale.expirationDate = rec.expMs;
+                    }
+                    if (rec.startMs && (!latestSale.date || rec.startMs > latestSale.date)) {
+                        latestSale.date = rec.startMs;
+                    }
+                    if (rec.city && !latestSale.clientCity) latestSale.clientCity = rec.city;
+                    if (rec.clientName) latestSale.clientName = rec.clientName;
                     latestSale.items.push({
                         id: 'excel_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
                         name: rec.platform,
