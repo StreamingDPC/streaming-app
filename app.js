@@ -967,7 +967,8 @@ function setupEventListeners() {
     });
 
     closeCodeBtn.addEventListener('click', () => {
-        codeModal.style.display = 'none';
+        if (window.closeCodeModal) window.closeCodeModal();
+        else codeModal.style.display = 'none';
     });
 
     openVendedoresBtn.addEventListener('click', () => {
@@ -1276,7 +1277,10 @@ function setupEventListeners() {
 
     window.addEventListener('click', (e) => {
         if (e.target === cartModal) cartModal.style.display = 'none';
-        if (e.target === codeModal) codeModal.style.display = 'none';
+        if (e.target === codeModal) {
+            if (window.closeCodeModal) window.closeCodeModal();
+            else codeModal.style.display = 'none';
+        }
         if (e.target === sellerModal) sellerModal.style.display = 'none';
         if (sellerDashboardModal && e.target === sellerDashboardModal) {
             sellerDashboardModal.style.display = 'none';
@@ -1828,8 +1832,33 @@ function setupEventListeners() {
     // =====================================================
     window.codeModalTargetPhone = '';
     window.codeModalTargetClientName = '';
+    window.codeModalTargetClientKey = '';
     window.codeModalTargetSellerName = '';
     window.isSellerActivatingClient = false;
+
+    window.closeCodeModal = function () {
+        if (codeModal) codeModal.style.display = 'none';
+        if (window.isSellerActivatingClient) {
+            window.isSellerActivatingClient = false;
+            window.codeModalTargetPhone = '';
+            window.codeModalTargetClientName = '';
+            window.codeModalTargetClientKey = '';
+            window.codeModalTargetSellerName = '';
+            if (clientPhoneLoggedIn && window.startCodeAttemptsLiveSync) {
+                window.startCodeAttemptsLiveSync(clientPhoneLoggedIn);
+            } else if (window.stopCodeAttemptsLiveSync) {
+                window.stopCodeAttemptsLiveSync();
+            }
+            if (typeof renderSellerDashboard === 'function' && isSellerMode) {
+                renderSellerDashboard();
+            }
+        } else {
+            window.codeModalTargetPhone = '';
+            window.codeModalTargetClientName = '';
+            window.codeModalTargetClientKey = '';
+            window.codeModalTargetSellerName = '';
+        }
+    };
 
     window.getEffectiveCodeTargetPhone = function () {
         if (window.isSellerActivatingClient && window.codeModalTargetPhone) {
@@ -1946,13 +1975,19 @@ function setupEventListeners() {
     };
 
     window.onSellerCodeModalClientChange = function (encodedVal) {
-        if (!encodedVal) return;
+        if (!encodedVal) {
+            if (window._sellerActiveClientsCache && window._sellerActiveClientsCache.length > 0) {
+                const curKey = window.codeModalTargetClientKey || window._sellerActiveClientsCache[0].key;
+                window.renderSellerCodeModalClientOptions(window._sellerActiveClientsCache, curKey);
+            }
+            return;
+        }
         try {
             const obj = JSON.parse(decodeURIComponent(encodedVal));
             if (obj) {
                 window.isSellerActivatingClient = true;
                 window.codeModalTargetPhone = obj.phone || '';
-                window.codeModalTargetClientName = obj.name || 'Cliente';
+                window.codeModalTargetClientName = safeDecode(obj.name || 'Cliente');
                 window.codeModalTargetClientKey = obj.key || `${(obj.name || '').toLowerCase()}___${obj.phone || ''}`;
                 window.codeModalTargetSellerName = currentSellerName;
                 window.initCodeModal(true);
@@ -2005,11 +2040,39 @@ function setupEventListeners() {
             window.codeModalTargetSellerName = currentSellerName;
             if (!skipDropdownReload) {
                 const clients = await window.loadSellerClientsForCodeModal(currentSellerName, window.codeModalTargetClientKey || window.codeModalTargetPhone);
-                if (!window.codeModalTargetClientKey && clients.length > 0) {
-                    window.codeModalTargetPhone = clients[0].phone;
-                    window.codeModalTargetClientName = clients[0].name;
-                    window.codeModalTargetClientKey = clients[0].key;
-                    window.renderSellerCodeModalClientOptions(clients, clients[0].key);
+                if (clients && clients.length > 0) {
+                    let matched = null;
+                    if (window.codeModalTargetClientKey) {
+                        matched = clients.find(c => c.key === window.codeModalTargetClientKey || c.phone === window.codeModalTargetClientKey);
+                    }
+                    if (!matched && window.codeModalTargetPhone) {
+                        matched = clients.find(c => c.phone === window.codeModalTargetPhone);
+                    }
+                    if (!matched) {
+                        matched = clients[0];
+                    }
+                    window.codeModalTargetPhone = matched.phone;
+                    window.codeModalTargetClientName = matched.name;
+                    window.codeModalTargetClientKey = matched.key;
+                    window.renderSellerCodeModalClientOptions(clients, matched.key);
+                }
+            }
+        }
+
+        // Respaldo de seguridad en Modo Vendedor: si falta teléfono o nombre, sincronizar desde cache de clientes
+        if (window.isSellerActivatingClient && (!window.codeModalTargetPhone || !window.codeModalTargetClientName)) {
+            if (window._sellerActiveClientsCache && window._sellerActiveClientsCache.length > 0) {
+                let matched = null;
+                if (window.codeModalTargetClientKey) {
+                    matched = window._sellerActiveClientsCache.find(c => c.key === window.codeModalTargetClientKey || c.phone === window.codeModalTargetClientKey);
+                }
+                if (!matched) {
+                    matched = window._sellerActiveClientsCache[0];
+                }
+                if (matched) {
+                    window.codeModalTargetPhone = matched.phone;
+                    window.codeModalTargetClientName = matched.name;
+                    window.codeModalTargetClientKey = matched.key;
                 }
             }
         }
@@ -2020,7 +2083,7 @@ function setupEventListeners() {
         if (window.isSellerActivatingClient) {
             if (sellerBanner) sellerBanner.style.display = 'block';
             if (sellerInfoEl) {
-                if (targetPhone) {
+                if (targetPhone && targetPhone !== 'sin_numero') {
                     sellerInfoEl.innerHTML = `Cliente activo: <span style="color:#4cd137;">${window.codeModalTargetClientName || 'Cliente'} (📱 ${targetPhone})</span>`;
                 } else {
                     sellerInfoEl.innerHTML = `Cliente activo: <span style="color:#4cd137;">${window.codeModalTargetClientName || 'Cliente'}</span>`;
@@ -2034,6 +2097,8 @@ function setupEventListeners() {
         if (!targetPhone && !window.codeModalTargetClientName) {
             if (window.isSellerActivatingClient) {
                 // El vendedor está logueado pero aún no tiene clientes activos
+                if (sellerBanner) sellerBanner.style.display = 'block';
+                if (sellerInfoEl) sellerInfoEl.innerHTML = '<span style="color:#e74c3c;">⚠️ No tienes clientes activos registrados aún.</span>';
                 return;
             }
             noSession.style.display = 'block';
@@ -2098,8 +2163,18 @@ function setupEventListeners() {
                         const sSnap = await db.ref(`sellerSales/${sellerToCheck}`).once('value');
                         const sSalesObj = sSnap.val() || {};
                         Object.entries(sSalesObj).forEach(([sKey, sVal]) => {
+                            if (!sVal) return;
                             const sPhoneClean = window.sanitizePhone ? window.sanitizePhone(sVal.clientPhone) : String(sVal.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
-                            if (sPhoneClean && sPhoneClean === cleanPhone) {
+                            const sClientName = safeDecode(sVal.clientName || '').toLowerCase().trim();
+                            const targetName = (window.codeModalTargetClientName || '').toLowerCase().trim();
+
+                            let isMatch = false;
+                            if (cleanPhone && sPhoneClean && sPhoneClean === cleanPhone) {
+                                isMatch = true;
+                            } else if (targetName && sClientName && sClientName === targetName) {
+                                isMatch = true;
+                            }
+                            if (isMatch) {
                                 sales[`seller_${sKey}`] = sVal;
                             }
                         });
@@ -2529,10 +2604,14 @@ function setupEventListeners() {
                 if (isSellerMode && currentSellerName) {
                     window.isSellerActivatingClient = true;
                     window.codeModalTargetSellerName = currentSellerName;
+                    window.codeModalTargetPhone = '';
+                    window.codeModalTargetClientName = '';
+                    window.codeModalTargetClientKey = '';
                 } else {
                     window.isSellerActivatingClient = false;
                     window.codeModalTargetPhone = '';
                     window.codeModalTargetClientName = '';
+                    window.codeModalTargetClientKey = '';
                     window.codeModalTargetSellerName = '';
                 }
                 codeModal.style.display = 'block';
@@ -2543,20 +2622,10 @@ function setupEventListeners() {
         const codeCloseBtn = document.querySelector('.code-close');
         if (codeCloseBtn) {
             codeCloseBtn.addEventListener('click', () => {
-                codeModal.style.display = 'none';
-                if (window.isSellerActivatingClient) {
-                    window.isSellerActivatingClient = false;
-                    window.codeModalTargetPhone = '';
-                    window.codeModalTargetClientName = '';
-                    window.codeModalTargetSellerName = '';
-                    if (clientPhoneLoggedIn && window.startCodeAttemptsLiveSync) {
-                        window.startCodeAttemptsLiveSync(clientPhoneLoggedIn);
-                    } else if (window.stopCodeAttemptsLiveSync) {
-                        window.stopCodeAttemptsLiveSync();
-                    }
-                    if (typeof renderSellerDashboard === 'function' && isSellerMode) {
-                        renderSellerDashboard();
-                    }
+                if (window.closeCodeModal) {
+                    window.closeCodeModal();
+                } else {
+                    codeModal.style.display = 'none';
                 }
             });
         }
