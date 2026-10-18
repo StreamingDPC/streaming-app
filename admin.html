@@ -4122,16 +4122,42 @@
                 const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
                 const phonesToClean = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
 
+                // Obtener todos los slugs de clientAttempts (por si el teléfono es compartido por varios clientes de vendedor)
+                let existingSlugs = [];
+                if (profileData && profileData.clientAttempts && typeof profileData.clientAttempts === 'object') {
+                    existingSlugs = Object.keys(profileData.clientAttempts);
+                }
                 for (const p of phonesToClean) {
-                    if (platform === 'all') {
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed`).remove();
-                    } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_tv`).remove();
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`).remove();
+                    try {
+                        const cSnap = await db.ref(`clientProfiles/${p}/clientAttempts`).once('value');
+                        const cVal = cSnap.val();
+                        if (cVal && typeof cVal === 'object') {
+                            existingSlugs = Array.from(new Set([...existingSlugs, ...Object.keys(cVal)]));
+                        }
+                    } catch (e) {}
+                }
+
+                const platformsToRemove = (platform === 'all')
+                    ? null
+                    : (platform === 'disney_tv' || platform === 'disney_code_tv')
+                        ? ['disney_tv', 'disney_code_tv']
+                        : [platform];
+
+                const updates = {};
+                for (const p of phonesToClean) {
+                    if (platformsToRemove === null) {
+                        updates[`clientProfiles/${p}/codeAttemptUsed`] = null;
+                        updates[`clientProfiles/${p}/clientAttempts`] = null;
                     } else {
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/${platform}`).remove();
+                        for (const plat of platformsToRemove) {
+                            updates[`clientProfiles/${p}/codeAttemptUsed/${plat}`] = null;
+                            existingSlugs.forEach(slug => {
+                                updates[`clientProfiles/${p}/clientAttempts/${slug}/${plat}`] = null;
+                            });
+                        }
                     }
                 }
+                await db.ref('/').update(updates);
                 alert(`✅ Intento de ${platLabel} habilitado correctamente para ${clientPhone}. El cliente ya puede solicitar su código nuevamente.`);
             }
         };
@@ -4158,33 +4184,36 @@
             try {
                 const phonesToUpdate = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
 
+                let existingSlugs = [];
+                for (const p of phonesToUpdate) {
+                    try {
+                        const cSnap = await db.ref(`clientProfiles/${p}/clientAttempts`).once('value');
+                        const cVal = cSnap.val();
+                        if (cVal && typeof cVal === 'object') {
+                            existingSlugs = Array.from(new Set([...existingSlugs, ...Object.keys(cVal)]));
+                        }
+                    } catch (e) {}
+                }
+
                 const updates = {};
                 phonesToUpdate.forEach(p => {
+                    const setVal = (key, val) => {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/${key}`] = val;
+                        existingSlugs.forEach(slug => {
+                            updates[`clientProfiles/${p}/clientAttempts/${slug}/${key}`] = val;
+                        });
+                    };
+
                     if (platform === 'all') {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_update`] = 2;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_temp`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_update`] = 2;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_update`] = 2;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/prime`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/prime_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/vix`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/vix_tv`] = true;
+                        ['netflix', 'netflix_temp', 'netflix_tv', 'disney', 'disney_tv', 'disney_code_tv', 'hbomax', 'hbomax_tv', 'prime', 'prime_tv', 'crunchyroll', 'crunchyroll_tv', 'vix', 'vix_tv'].forEach(k => setVal(k, true));
+                        ['netflix_update', 'disney_update', 'hbomax_update'].forEach(k => setVal(k, 2));
                     } else if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = 2;
+                        setVal(platform, 2);
                     } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
+                        setVal('disney_tv', true);
+                        setVal('disney_code_tv', true);
                     } else {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = true;
+                        setVal(platform, true);
                     }
                 });
 
@@ -4392,17 +4421,44 @@
                 const rawPhone = String(phone).trim();
                 const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
                 const phonesToClean = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
+                const nameSlug = (clientName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
 
+                let targetSlugs = nameSlug ? [nameSlug] : [];
                 for (const p of phonesToClean) {
-                    if (platform === 'all') {
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed`).remove();
-                    } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_tv`).remove();
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`).remove();
+                    try {
+                        const cSnap = await db.ref(`clientProfiles/${p}/clientAttempts`).once('value');
+                        const cVal = cSnap.val();
+                        if (cVal && typeof cVal === 'object') {
+                            targetSlugs = Array.from(new Set([...targetSlugs, ...Object.keys(cVal)]));
+                        }
+                    } catch (e) {}
+                }
+
+                const platformsToRemove = (platform === 'all')
+                    ? null
+                    : (platform === 'disney_tv' || platform === 'disney_code_tv')
+                        ? ['disney_tv', 'disney_code_tv']
+                        : [platform];
+
+                const updates = {};
+                for (const p of phonesToClean) {
+                    if (platformsToRemove === null) {
+                        updates[`clientProfiles/${p}/codeAttemptUsed`] = null;
+                        if (nameSlug) {
+                            updates[`clientProfiles/${p}/clientAttempts/${nameSlug}`] = null;
+                        } else {
+                            updates[`clientProfiles/${p}/clientAttempts`] = null;
+                        }
                     } else {
-                        await db.ref(`clientProfiles/${p}/codeAttemptUsed/${platform}`).remove();
+                        for (const plat of platformsToRemove) {
+                            updates[`clientProfiles/${p}/codeAttemptUsed/${plat}`] = null;
+                            targetSlugs.forEach(slug => {
+                                updates[`clientProfiles/${p}/clientAttempts/${slug}/${plat}`] = null;
+                            });
+                        }
                     }
                 }
+                await db.ref('/').update(updates);
                 const btns = document.querySelectorAll('#reset-seller-result button');
                 if (btns[idx]) btns[idx].disabled = true;
                 alert(`✅ ¡Listo! Nuevo intento [${platLabel}] habilitado para ${clientName} (${phone}).`);
@@ -4425,34 +4481,38 @@
                 const rawPhone = String(phone).trim();
                 const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
                 const phonesToUpdate = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
+                const nameSlug = (clientName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+                let targetSlugs = nameSlug ? [nameSlug] : [];
+                for (const p of phonesToUpdate) {
+                    try {
+                        const cSnap = await db.ref(`clientProfiles/${p}/clientAttempts`).once('value');
+                        const cVal = cSnap.val();
+                        if (cVal && typeof cVal === 'object') {
+                            targetSlugs = Array.from(new Set([...targetSlugs, ...Object.keys(cVal)]));
+                        }
+                    } catch (e) {}
+                }
 
                 const updates = {};
                 phonesToUpdate.forEach(p => {
+                    const setVal = (key, val) => {
+                        updates[`clientProfiles/${p}/codeAttemptUsed/${key}`] = val;
+                        targetSlugs.forEach(slug => {
+                            updates[`clientProfiles/${p}/clientAttempts/${slug}/${key}`] = val;
+                        });
+                    };
+
                     if (platform === 'all') {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_update`] = 2;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_temp`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/netflix_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_update`] = 2;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_update`] = 2;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/hbomax_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/prime`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/prime_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/crunchyroll_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/vix`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/vix_tv`] = true;
+                        ['netflix', 'netflix_temp', 'netflix_tv', 'disney', 'disney_tv', 'disney_code_tv', 'hbomax', 'hbomax_tv', 'prime', 'prime_tv', 'crunchyroll', 'crunchyroll_tv', 'vix', 'vix_tv'].forEach(k => setVal(k, true));
+                        ['netflix_update', 'disney_update', 'hbomax_update'].forEach(k => setVal(k, 2));
                     } else if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = 2;
+                        setVal(platform, 2);
                     } else if (platform === 'disney_tv' || platform === 'disney_code_tv') {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_tv`] = true;
-                        updates[`clientProfiles/${p}/codeAttemptUsed/disney_code_tv`] = true;
+                        setVal('disney_tv', true);
+                        setVal('disney_code_tv', true);
                     } else {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/${platform}`] = true;
+                        setVal(platform, true);
                     }
                 });
 
@@ -11410,6 +11470,9 @@
             updates[`clientProfiles/${phone}/codeAttemptUsed`] = null;
             updates[`clientProfiles/${cleanP}/codeAttemptUsed`] = null;
             updates[`clientProfiles/57${cleanP}/codeAttemptUsed`] = null;
+            updates[`clientProfiles/${phone}/clientAttempts`] = null;
+            updates[`clientProfiles/${cleanP}/clientAttempts`] = null;
+            updates[`clientProfiles/57${cleanP}/clientAttempts`] = null;
             try {
                 await db.ref('/').update(updates);
                 showDbToast(`🔑 Todas las veces de código activadas para ${clientName || phone}`);

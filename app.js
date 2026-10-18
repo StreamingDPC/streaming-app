@@ -1410,6 +1410,16 @@ function setupEventListeners() {
         return Boolean(isLocalAdmin || isSellerAdmin);
     };
 
+    window.getCodeAttemptPathSuffix = function (phone, clientName = '') {
+        const rawPhone = String(phone || '').trim();
+        const cleanPhone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '').replace(/^57/, '');
+        const cName = clientName || window.codeModalTargetClientName || '';
+        const nameSlug = cName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const isSharedSellerPhone = window.isSellerActivatingClient && nameSlug &&
+            window._sellerActiveClientsCache && window._sellerActiveClientsCache.filter(c => c.phone === cleanPhone).length > 1;
+        return (isSharedSellerPhone && nameSlug) ? `clientAttempts/${nameSlug}` : 'codeAttemptUsed';
+    };
+
     window.startCodeAttemptsLiveSync = function (phone, clientName = '') {
         if (!phone || typeof db === 'undefined') return;
         window.stopCodeAttemptsLiveSync();
@@ -1417,14 +1427,7 @@ function setupEventListeners() {
         const rawPhone = String(phone).trim();
         const cleanPhone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '').replace(/^57/, '');
         const altPhone = (!rawPhone.startsWith('57')) ? `57${cleanPhone}` : cleanPhone;
-        const cName = clientName || window.codeModalTargetClientName || '';
-        const nameSlug = cName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-
-        // Determinar si este teléfono es compartido por varios clientes del vendedor
-        const isSharedSellerPhone = window.isSellerActivatingClient && nameSlug &&
-            window._sellerActiveClientsCache && window._sellerActiveClientsCache.filter(c => c.phone === cleanPhone).length > 1;
-
-        const pathSuffix = (isSharedSellerPhone && nameSlug) ? `clientAttempts/${nameSlug}` : 'codeAttemptUsed';
+        const pathSuffix = window.getCodeAttemptPathSuffix(phone, clientName);
 
         let primaryData = null;
         let altData = null;
@@ -1456,8 +1459,11 @@ function setupEventListeners() {
             primaryData = snap.val();
             if ((primaryData === null || primaryData === undefined) && pathSuffix !== 'codeAttemptUsed') {
                 try {
-                    const fb = await db.ref(`clientProfiles/${rawPhone}/codeAttemptUsed`).once('value');
-                    if (fb.val() !== null && fb.val() !== undefined) primaryData = fb.val();
+                    const caSnap = await db.ref(`clientProfiles/${rawPhone}/clientAttempts`).once('value');
+                    if (!caSnap.exists()) {
+                        const fb = await db.ref(`clientProfiles/${rawPhone}/codeAttemptUsed`).once('value');
+                        if (fb.val() !== null && fb.val() !== undefined) primaryData = fb.val();
+                    }
                 } catch (e) { }
             }
             applySync();
@@ -1470,8 +1476,11 @@ function setupEventListeners() {
                 altData = snap.val();
                 if ((altData === null || altData === undefined) && pathSuffix !== 'codeAttemptUsed') {
                     try {
-                        const fb = await db.ref(`clientProfiles/${altPhone}/codeAttemptUsed`).once('value');
-                        if (fb.val() !== null && fb.val() !== undefined) altData = fb.val();
+                        const caSnap = await db.ref(`clientProfiles/${altPhone}/clientAttempts`).once('value');
+                        if (!caSnap.exists()) {
+                            const fb = await db.ref(`clientProfiles/${altPhone}/codeAttemptUsed`).once('value');
+                            if (fb.val() !== null && fb.val() !== undefined) altData = fb.val();
+                        }
                     } catch (e) { }
                 }
                 applySync();
@@ -2206,10 +2215,7 @@ function setupEventListeners() {
         const cleanP = cleanPhone;
         const altP = (!rawP.startsWith('57')) ? `57${cleanP}` : cleanP;
 
-        const isSharedSellerPhone = window.isSellerActivatingClient &&
-            window._sellerActiveClientsCache && window._sellerActiveClientsCache.filter(c => c.phone === cleanPhone).length > 1;
-        const nameSlug = (window.codeModalTargetClientName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
-        const pathSuffix = (isSharedSellerPhone && nameSlug) ? `clientAttempts/${nameSlug}` : 'codeAttemptUsed';
+        const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetPhone, window.codeModalTargetClientName) : 'codeAttemptUsed';
 
         let combinedUsed = {};
         const pList = Array.from(new Set([rawP, cleanP, altP])).filter(Boolean);
@@ -2218,8 +2224,11 @@ function setupEventListeners() {
             let v = snap.val();
             if ((v === null || v === undefined) && pathSuffix !== 'codeAttemptUsed') {
                 try {
-                    const fallbackSnap = await db.ref(`clientProfiles/${pk}/codeAttemptUsed`).once('value');
-                    if (fallbackSnap.val() !== null && fallbackSnap.val() !== undefined) v = fallbackSnap.val();
+                    const caSnap = await db.ref(`clientProfiles/${pk}/clientAttempts`).once('value');
+                    if (!caSnap.exists()) {
+                        const fallbackSnap = await db.ref(`clientProfiles/${pk}/codeAttemptUsed`).once('value');
+                        if (fallbackSnap.val() !== null && fallbackSnap.val() !== undefined) v = fallbackSnap.val();
+                    }
                 } catch (e) { }
             }
             if (v === true) Object.assign(combinedUsed, { netflix: true, disney: true, hbomax: true, prime: true });
@@ -2946,10 +2955,7 @@ function setupEventListeners() {
                 const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetPhone) : targetPhone;
                 if (!window.clientUsedAttempts) window.clientUsedAttempts = {};
 
-                const isSharedSellerPhone = window.isSellerActivatingClient &&
-                    window._sellerActiveClientsCache && window._sellerActiveClientsCache.filter(c => c.phone === cleanPhone).length > 1;
-                const nameSlug = (window.codeModalTargetClientName || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
-                const pathSuffix = (isSharedSellerPhone && nameSlug) ? `clientAttempts/${nameSlug}` : 'codeAttemptUsed';
+                const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetPhone, window.codeModalTargetClientName) : 'codeAttemptUsed';
 
                 if (platform === 'netflix_update' || platform === 'disney_update' || platform === 'hbomax_update') {
                     const currentAttempts = parseInt(window.clientUsedAttempts[platform]) || 0;
@@ -3344,14 +3350,16 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/netflix_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/netflix_tv`).set(true);
+                    const targetP = window.getEffectiveCodeTargetPhone();
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetP) : targetP;
+                    const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetP, window.codeModalTargetClientName) : 'codeAttemptUsed';
+                    await db.ref(`clientProfiles/${targetP}/tvActivations`).push({ tvCode, email, timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${targetP}/${pathSuffix}/netflix_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== targetP) {
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/netflix_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/netflix_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/netflix_tv`).set(true);
                     }
 
                     if (window.clientUsedAttempts) {
@@ -3542,14 +3550,16 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'hbomax_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/hbomax_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/hbomax_tv`).set(true);
+                    const targetP = window.getEffectiveCodeTargetPhone();
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetP) : targetP;
+                    const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetP, window.codeModalTargetClientName) : 'codeAttemptUsed';
+                    await db.ref(`clientProfiles/${targetP}/tvActivations`).push({ tvCode, email, platform: 'hbomax_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${targetP}/${pathSuffix}/hbomax_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== targetP) {
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/hbomax_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/hbomax_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/hbomax_tv`).set(true);
                     }
 
                     if (window.clientUsedAttempts) {
@@ -3732,14 +3742,16 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'prime_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/prime_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/prime_tv`).set(true);
+                    const targetP = window.getEffectiveCodeTargetPhone();
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetP) : targetP;
+                    const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetP, window.codeModalTargetClientName) : 'codeAttemptUsed';
+                    await db.ref(`clientProfiles/${targetP}/tvActivations`).push({ tvCode, email, platform: 'prime_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${targetP}/${pathSuffix}/prime_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== targetP) {
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/prime_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/prime_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/prime_tv`).set(true);
                     }
 
                     if (window.clientUsedAttempts) {
@@ -3922,14 +3934,16 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'crunchyroll_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/crunchyroll_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/crunchyroll_tv`).set(true);
+                    const targetP = window.getEffectiveCodeTargetPhone();
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetP) : targetP;
+                    const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetP, window.codeModalTargetClientName) : 'codeAttemptUsed';
+                    await db.ref(`clientProfiles/${targetP}/tvActivations`).push({ tvCode, email, platform: 'crunchyroll_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${targetP}/${pathSuffix}/crunchyroll_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== targetP) {
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/crunchyroll_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/crunchyroll_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/crunchyroll_tv`).set(true);
                     }
 
                     if (window.clientUsedAttempts) {
@@ -4118,17 +4132,19 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento para AMBOS métodos de Disney TV (email y código)
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'disney_code_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/disney_code_tv`).set(true);
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/disney_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
+                    const targetP = window.getEffectiveCodeTargetPhone();
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetP) : targetP;
+                    const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetP, window.codeModalTargetClientName) : 'codeAttemptUsed';
+                    await db.ref(`clientProfiles/${targetP}/tvActivations`).push({ tvCode, email, platform: 'disney_code_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${targetP}/${pathSuffix}/disney_code_tv`).set(true);
+                    await db.ref(`clientProfiles/${targetP}/${pathSuffix}/disney_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== targetP) {
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/disney_code_tv`).set(true);
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/disney_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_code_tv`).set(true);
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/disney_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/disney_code_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/disney_tv`).set(true);
                     }
 
                     if (window.clientUsedAttempts) {
@@ -4315,14 +4331,16 @@ function setupEventListeners() {
 
                 if (data.success) {
                     // Registrar en Firebase y consumir intento
-                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(window.getEffectiveCodeTargetPhone()) : window.getEffectiveCodeTargetPhone();
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/tvActivations`).push({ tvCode, email, platform: 'vix_tv', timestamp: Date.now() });
-                    await db.ref(`clientProfiles/${window.getEffectiveCodeTargetPhone()}/codeAttemptUsed/vix_tv`).set(true);
-                    if (cleanPhone && cleanPhone !== window.getEffectiveCodeTargetPhone()) {
-                        await db.ref(`clientProfiles/${cleanPhone}/codeAttemptUsed/vix_tv`).set(true);
+                    const targetP = window.getEffectiveCodeTargetPhone();
+                    const cleanPhone = window.sanitizePhone ? window.sanitizePhone(targetP) : targetP;
+                    const pathSuffix = window.getCodeAttemptPathSuffix ? window.getCodeAttemptPathSuffix(targetP, window.codeModalTargetClientName) : 'codeAttemptUsed';
+                    await db.ref(`clientProfiles/${targetP}/tvActivations`).push({ tvCode, email, platform: 'vix_tv', timestamp: Date.now() });
+                    await db.ref(`clientProfiles/${targetP}/${pathSuffix}/vix_tv`).set(true);
+                    if (cleanPhone && cleanPhone !== targetP) {
+                        await db.ref(`clientProfiles/${cleanPhone}/${pathSuffix}/vix_tv`).set(true);
                     }
                     if (cleanPhone && !cleanPhone.startsWith('57')) {
-                        await db.ref(`clientProfiles/57${cleanPhone}/codeAttemptUsed/vix_tv`).set(true);
+                        await db.ref(`clientProfiles/57${cleanPhone}/${pathSuffix}/vix_tv`).set(true);
                     }
 
                     if (window.clientUsedAttempts) {
