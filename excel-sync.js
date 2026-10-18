@@ -559,22 +559,33 @@ async function syncExcelToFirebase(customBuffer = null) {
                     if (assigned) break;
                 }
 
-                // 2. Si no encajó en ninguna pantalla existente, agregar como nuevo item
+                // 2. Si no encajó en ninguna pantalla existente, verificar que no exista ya ese item idéntico
                 if (!assigned) {
-                    const newItem = {
-                        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                        name: cleanPlatformName(rec.platform),
-                        category: 'individual',
-                        finalPrice: 0,
-                        specificEmails: [{
-                            platform: cleanPlatformName(rec.platform),
-                            email: rec.email || '',
-                            pass: rec.password || '',
-                            profile: rec.profile || '',
-                            pin: rec.profilePin || ''
-                        }]
-                    };
-                    itemsArr.push(newItem);
+                    const alreadyExists = itemsArr.some(it => {
+                        const itPlat = cleanPlatformName(it.name || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].platform) || '');
+                        const itEmail = (it.email || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].email) || '').trim().toLowerCase();
+                        const itProf = (it.profile || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].profile) || '').trim().toLowerCase();
+                        return platformMatches(itPlat, rec.sheetMeta) &&
+                               (itEmail === (rec.email || '').trim().toLowerCase()) &&
+                               (itProf === (rec.profile || '').trim().toLowerCase());
+                    });
+
+                    if (!alreadyExists) {
+                        const newItem = {
+                            id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                            name: cleanPlatformName(rec.platform),
+                            category: 'individual',
+                            finalPrice: 0,
+                            specificEmails: [{
+                                platform: cleanPlatformName(rec.platform),
+                                email: rec.email || '',
+                                pass: rec.password || '',
+                                profile: rec.profile || '',
+                                pin: rec.profilePin || ''
+                            }]
+                        };
+                        itemsArr.push(newItem);
+                    }
                 }
                 updatedScreensCount++;
             }

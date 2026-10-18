@@ -6534,7 +6534,20 @@
                     totalIncome += (s.total || 0);
                     totalSalesCount++;
 
-                    const items = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                    let rawItems = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                    const seenItemSigs = new Set();
+                    const items = [];
+                    rawItems.forEach(it => {
+                        if (!it) return;
+                        const itPlat = (it.name || '').trim().toLowerCase();
+                        const itEmail = (it.email || it.correo || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].email) || '').trim().toLowerCase();
+                        const itProf = (it.profile || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].profile) || '').trim().toLowerCase();
+                        const itSig = `${itPlat}_${itEmail}_${itProf}`;
+                        if (seenItemSigs.has(itSig) && itSig !== '__') return;
+                        seenItemSigs.add(itSig);
+                        items.push(it);
+                    });
+
                     items.forEach(it => {
                         const prod = dynamicProducts.find(p => p.name === it.name || p.id === it.id);
                         const cost = prod ? (prod.purchasePrice || 0) : 0;
@@ -6840,11 +6853,24 @@
                             const clientPhone = s.clientPhone || (defaultSeller === 'Directo' ? phoneOrSeller : 'N/A');
                             const seller = s.sellerName || defaultSeller;
 
-                            const items = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                            let rawItems = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                            const seenItemSigs = new Set();
+                            const items = [];
+                            rawItems.forEach(it => {
+                                if (!it) return;
+                                const itPlat = (it.name || '').trim().toLowerCase();
+                                const itEmail = (it.email || it.correo || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].email) || '').trim().toLowerCase();
+                                const itProf = (it.profile || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].profile) || '').trim().toLowerCase();
+                                const itSig = `${itPlat}_${itEmail}_${itProf}`;
+                                if (seenItemSigs.has(itSig) && itSig !== '__') return;
+                                seenItemSigs.add(itSig);
+                                items.push(it);
+                            });
+
                             items.forEach(it => {
                                 const prod = dynamicProducts.find(p => p.name === it.name || p.id === it.id);
                                 const cost = prod ? (prod.purchasePrice || 0) : 0;
-                                const income = it.finalPrice || 0;
+                                const income = it.finalPrice || (s.total / Math.max(1, items.length));
                                 const profit = income - cost;
                                 const cat = it.category || 'Otros';
 
