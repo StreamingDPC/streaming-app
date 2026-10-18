@@ -8998,6 +8998,7 @@
             if (elem) elem.style.display = 'none';
         }
         const KNOWN_PLATFORM_PATTERNS = [
+            { key: 'Netflix Privada', regex: /\b(netflix\s*privad[ao]?|nopv|npv)\b/i },
             { key: 'Netflix', regex: /\b(netflix)\b/i },
             { key: 'Disney', regex: /\b(disney\+?|disneyplus)\b/i },
             { key: 'HBO Max', regex: /\b(hbo\s*max|hbomax|max\b)/i },
@@ -9013,15 +9014,25 @@
 
         function extractPlatformsFromName(name) {
             if (!name) return [];
-            const matches = [];
+            let matches = [];
             for (const p of KNOWN_PLATFORM_PATTERNS) {
                 const match = name.match(p.regex);
                 if (match) {
-                    matches.push({ platform: p.key, index: match.index });
+                    matches.push({ platform: p.key, index: match.index, end: match.index + match[0].length });
                 }
             }
-            matches.sort((a, b) => a.index - b.index);
-            return matches.map(m => m.platform);
+            // Filtrar coincidencias que se superpongan (ej: 'Netflix' dentro de 'Netflix Privada')
+            // Priorizando la coincidencia más larga/específica
+            matches.sort((a, b) => (b.end - b.index) - (a.end - a.index));
+            const nonOverlapping = [];
+            for (const m of matches) {
+                const overlaps = nonOverlapping.some(existing => (m.index < existing.end && m.end > existing.index));
+                if (!overlaps) {
+                    nonOverlapping.push(m);
+                }
+            }
+            nonOverlapping.sort((a, b) => a.index - b.index);
+            return nonOverlapping.map(m => m.platform);
         }
 
         function cleanPlatformName(str) {

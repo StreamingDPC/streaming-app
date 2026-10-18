@@ -144,6 +144,7 @@ function sameDate(t1, t2) {
 }
 
 const KNOWN_PLATFORM_PATTERNS = [
+    { key: 'Netflix Privada', regex: /\b(netflix\s*privad[ao]?|nopv|npv)\b/i },
     { key: 'Netflix', regex: /\b(netflix)\b/i },
     { key: 'Disney', regex: /\b(disney\+?|disneyplus)\b/i },
     { key: 'Max (HBO)', regex: /\b(hbo\s*max|hbomax|max\b)/i },
@@ -159,15 +160,25 @@ const KNOWN_PLATFORM_PATTERNS = [
 
 function extractPlatformsFromName(name) {
     if (!name) return [];
-    const matches = [];
+    let matches = [];
     for (const p of KNOWN_PLATFORM_PATTERNS) {
         const match = name.match(p.regex);
         if (match) {
-            matches.push({ platform: p.key, index: match.index });
+            matches.push({ platform: p.key, index: match.index, end: match.index + match[0].length });
         }
     }
-    matches.sort((a, b) => a.index - b.index);
-    return matches.map(m => m.platform);
+    // Filtrar coincidencias que se superpongan (ej: 'Netflix' dentro de 'Netflix Privada')
+    // Priorizando la coincidencia más larga/específica
+    matches.sort((a, b) => (b.end - b.index) - (a.end - a.index));
+    const nonOverlapping = [];
+    for (const m of matches) {
+        const overlaps = nonOverlapping.some(existing => (m.index < existing.end && m.end > existing.index));
+        if (!overlaps) {
+            nonOverlapping.push(m);
+        }
+    }
+    nonOverlapping.sort((a, b) => a.index - b.index);
+    return nonOverlapping.map(m => m.platform);
 }
 
 function cleanPlatformName(str) {
@@ -361,10 +372,18 @@ function parseWorkbookFromBuffer(buffer) {
                 }
             }
 
+            // Determinar si es Netflix Privada (Nopv / Miembro Extra / cuenta propia)
+            let recordPlatform = cleanPlatformName(platform);
+            if (sheetMeta.key === 'NO') {
+                if (/nopv|npv|privad/i.test(pantallasCode) || rawPinCol.includes('@')) {
+                    recordPlatform = 'Netflix Privada';
+                }
+            }
+
             records.push({
                 sheet: actualName,
                 sheetMeta,
-                platform: cleanPlatformName(platform),
+                platform: recordPlatform,
                 seller,
                 city,
                 clientName,
@@ -481,13 +500,46 @@ async function syncExcelToFirebase(customBuffer = null) {
         const excelExpMs = phoneRecs.map(r => r.expMs).find(Boolean) || firstRec.expMs || (excelStartMs + 30 * 86400000);
         const nowMs = Date.now();
 
-        // Buscar si existe una venta cuya fecha de inicio coincida con la del Excel
-        let matchingSaleKey = existingSaleKeys.find(k => {
-            const s = targetStore[k];
-            if (!s) return false;
-            const sDate = s.date || s.fechaCompraOriginal;
-            return sameDate(sDate, excelStartMs);
-        });
+        // Dar prioridad SIEMPRE a ventas reales manuales (no 'excel_') sobre placeholders técnicos
+        const manualSaleKeys = existingSaleKeys.filter(k => !k.startsWith('excel_'));
+        const searchPools = manualSaleKeys.length > 0 ? [manualSaleKeys, existingSaleKeys] : [existingSaleKeys];
+
+        let matchingSaleKey = null;
+        const excelEmails = phoneRecs.map(r => (r.email || '').trim().toLowerCase()).filter(Boolean);
+
+        for (const pool of searchPools) {
+            // 1. Buscar coincidencia por correo de cuenta de la venta
+            matchingSaleKey = pool.find(k => {
+                const s = targetStore[k];
+                if (!s) return false;
+                const sEmails = [s.email, ...(Array.isArray(s.items) ? s.items : Object.values(s.items || {})).map(it => {
+                    const sp = (it.specificEmails && it.specificEmails[0]) || {};
+                    return it.email || sp.email;
+                })].filter(Boolean).map(e => String(e).trim().toLowerCase());
+
+                return excelEmails.some(ee => sEmails.includes(ee));
+            });
+            if (matchingSaleKey) break;
+
+            // 2. Buscar si existe una venta cuya fecha de inicio coincida exactamente con la del Excel
+            matchingSaleKey = pool.find(k => {
+                const s = targetStore[k];
+                if (!s) return false;
+                const sDate = s.date || s.fechaCompraOriginal;
+                return sameDate(sDate, excelStartMs);
+            });
+            if (matchingSaleKey) break;
+
+            // 3. Si el cliente tiene exactamente UNA venta activa en este pool
+            const activePoolSales = pool.filter(k => {
+                const s = targetStore[k];
+                return s && (Number(s.expirationDate) || 0) >= nowMs - (30 * 86400000);
+            });
+            if (activePoolSales.length === 1) {
+                matchingSaleKey = activePoolSales[0];
+                break;
+            }
+        }
 
         // Resetear intento de código del cliente si se actualizan datos
         const baseCleanEx = phone.replace(/^57/, '');
@@ -497,12 +549,13 @@ async function syncExcelToFirebase(customBuffer = null) {
 
         if (matchingSaleKey) {
             // ============================================================
-            // CASO 1: LA FECHA DE INICIO COINCIDE -> SOBREESCRIBIR
+            // CASO 1: VENTA COINCIDENTE ENCONTRADA -> ACTUALIZAR Y PRESERVAR
             // ============================================================
-            // "si la fecha de inicio coincide debe sobre escribir ya que la fecha de fin se modifica cuando renueva"
             const sale = targetStore[matchingSaleKey];
             sale.expirationDate = excelExpMs;
-            sale.date = excelStartMs;
+            if (!sale.fechaCompraOriginal && !sale.date) {
+                sale.date = excelStartMs;
+            }
             if (firstRec.clientName) sale.clientName = firstRec.clientName;
             if (firstRec.city) sale.clientCity = firstRec.city;
             if (sName) sale.sellerName = sName;
@@ -547,7 +600,19 @@ async function syncExcelToFirebase(customBuffer = null) {
                         const sp = it.specificEmails[sIdx];
                         const spPlat = sp.platform || guesses[sIdx] || it.name;
                         if (platformMatches(spPlat, rec.sheetMeta)) {
-                            sp.platform = cleanPlatformName(rec.platform);
+                            // Preservar 'Netflix Privada' si la pantalla o el registro es privada en la pestaña NO
+                            if (rec.sheetMeta.key === 'NO') {
+                                if (/privad/i.test(spPlat) || /privad/i.test(rec.platform) || /nopv|npv/i.test(rec.pantallasCode)) {
+                                    sp.platform = 'Netflix Privada';
+                                    if (it.name.toLowerCase() === 'netflix') {
+                                        it.name = 'Netflix Privada';
+                                    }
+                                } else {
+                                    sp.platform = cleanPlatformName(rec.platform);
+                                }
+                            } else {
+                                sp.platform = cleanPlatformName(rec.platform);
+                            }
                             sp.email = rec.email || sp.email || '';
                             sp.pass = rec.password || sp.pass || '';
                             sp.profile = rec.profile || sp.profile || '';
@@ -598,13 +663,13 @@ async function syncExcelToFirebase(customBuffer = null) {
 
             // "para que solo exista un registro y ese registro debe ser verificado del excel para que no alla mas duplicados"
             // Cualquier otra venta para este cliente:
-            // Si es un duplicado técnico de excel_ previo con total 0 -> borrar
+            // Si es un duplicado técnico de excel_ previo -> borrar
             // Si es otra venta real anterior -> pasarla al historial expirándola (expirationDate en el pasado)
             for (const otherKey of existingSaleKeys) {
                 if (otherKey === matchingSaleKey) continue;
                 const otherSale = targetStore[otherKey];
                 if (!otherSale) continue;
-                if (otherKey.startsWith('excel_') && (otherSale.total === 0 || !otherSale.total)) {
+                if (otherKey.startsWith('excel_')) {
                     delete targetStore[otherKey];
                 } else if ((Number(otherSale.expirationDate) || 0) >= nowMs) {
                     otherSale.expirationDate = Math.min(Number(otherSale.date || 0) + 30 * 86400000, nowMs - 1000);
