@@ -7103,8 +7103,9 @@
             const sourceName = safeDecode(sourceNameEnc);
             const itemsStr = decodeURIComponent(itemsEncoded);
 
-            const autoRenew = confirm(`¿Deseas REGISTRAR esta RENOVACIÓN en el sistema ahora?\n\n- Se renovará manteniendo el día de corte original (ajustado al mes).\n- Se marcará como PAGADO.\n\n(Si pulsas Cancelar, solo se enviará el mensaje de WhatsApp)`);
+            const autoRenew = confirm(`¿Deseas REGISTRAR esta RENOVACIÓN en el sistema ahora?\n\n- Se renovará manteniendo el día de corte original (ajustado al mes).\n- Se marcará como PAGADO.\n\n(Si pulsas Cancelar, solo se enviará el mensaje de WhatsApp sin modificar la fecha)`);
             let finalMsgTS = parseInt(expirationDateTS) || Date.now();
+            const nowRenewTS = Date.now();
 
             if (autoRenew) {
                 try {
@@ -7129,6 +7130,7 @@
                         updates[`clientSales/${cleanPhone}/${saleId}/expirationDate`] = newExp;
                         updates[`clientSales/${cleanPhone}/${saleId}/fechaCompraOriginal`] = anchorDate; // Guarda ancla para el futuro
                         updates[`clientSales/${cleanPhone}/${saleId}/isPaid`] = true;
+                        updates[`clientSales/${cleanPhone}/${saleId}/adminRenewedAt`] = nowRenewTS;
 
                         // 2. Buscar en sellerSales donde coincida el telefono y la fecha original
                         for (let sName in sellerSales) {
@@ -7138,6 +7140,7 @@
                                     updates[`sellerSales/${sName}/${sid}/date`] = currentExp;
                                     updates[`sellerSales/${sName}/${sid}/expirationDate`] = newExp;
                                     updates[`sellerSales/${sName}/${sid}/isPaid`] = true;
+                                    updates[`sellerSales/${sName}/${sid}/adminRenewedAt`] = nowRenewTS;
                                 }
                             }
                         }
@@ -7153,6 +7156,7 @@
                         updates[`sellerSales/${sourceName}/${saleId}/expirationDate`] = newExp;
                         updates[`sellerSales/${sourceName}/${saleId}/fechaCompraOriginal`] = anchorDate;
                         updates[`sellerSales/${sourceName}/${saleId}/isPaid`] = true;
+                        updates[`sellerSales/${sourceName}/${saleId}/adminRenewedAt`] = nowRenewTS;
 
                         // Intentar buscar en clientSales por fecha
                         if (clientSales[cleanPhone]) {
@@ -7162,6 +7166,7 @@
                                     updates[`clientSales/${cleanPhone}/${cid}/expirationDate`] = newExp;
                                     updates[`clientSales/${cleanPhone}/${cid}/fechaCompraOriginal`] = anchorDate;
                                     updates[`clientSales/${cleanPhone}/${cid}/isPaid`] = true;
+                                    updates[`clientSales/${cleanPhone}/${cid}/adminRenewedAt`] = nowRenewTS;
                                 }
                             }
                         }
@@ -7183,6 +7188,21 @@
                     console.error(e);
                     alert("Error al actualizar sistema: " + e.message);
                 }
+            } else {
+                // Si el Admin ya había actualizado la fecha en Excel/Editar y pulsa Cancelar solo para notificar,
+                // marcar adminRenewedAt hoy sin modificar la fecha de renovación para habilitarle el botón "Renovada" al vendedor
+                try {
+                    const cleanPhone = clientPhone.replace(/\D/g, '');
+                    const updates = {};
+                    if (sourceType === 'seller' && sourceName && saleId) {
+                        updates[`sellerSales/${sourceName}/${saleId}/adminRenewedAt`] = nowRenewTS;
+                    } else if (cleanPhone && saleId) {
+                        updates[`clientSales/${cleanPhone}/${saleId}/adminRenewedAt`] = nowRenewTS;
+                    }
+                    if (Object.keys(updates).length > 0) {
+                        await db.ref('/').update(updates);
+                    }
+                } catch (e) { /* ignore */ }
             }
 
             // Preparar y enviar mensaje
@@ -8583,7 +8603,14 @@
                                 globalUpdates['clientSales/' + pKey + '/' + saleKey + '/clientCity'] = newCity;
                             }
                             if (isSpecificSale) {
-                                if (endVal) globalUpdates['clientSales/' + pKey + '/' + saleKey + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
+                                if (endVal) {
+                                    const newExpTs = new Date(endVal + 'T' + endTime).getTime();
+                                    const prevExpTs = Number(sales[saleKey] && sales[saleKey].expirationDate) || 0;
+                                    globalUpdates['clientSales/' + pKey + '/' + saleKey + '/expirationDate'] = newExpTs;
+                                    if (prevExpTs > 0 && newExpTs > prevExpTs + 5 * 86400000) {
+                                        globalUpdates['clientSales/' + pKey + '/' + saleKey + '/adminRenewedAt'] = Date.now();
+                                    }
+                                }
                                 if (newEmail !== null) globalUpdates['clientSales/' + pKey + '/' + saleKey + '/email'] = newEmail;
 
                                 if (hasHistoryEmails) {
@@ -8631,7 +8658,14 @@
                                     if (newEmail !== null) globalUpdates['sellerSales/' + sn + '/' + sid + '/email'] = newEmail;
                                 }
                                 if (isSpecificSale) {
-                                    if (endVal) globalUpdates['sellerSales/' + sn + '/' + sid + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
+                                    if (endVal) {
+                                        const newExpTs = new Date(endVal + 'T' + endTime).getTime();
+                                        const prevExpTs = Number(ss.expirationDate) || 0;
+                                        globalUpdates['sellerSales/' + sn + '/' + sid + '/expirationDate'] = newExpTs;
+                                        if (prevExpTs > 0 && newExpTs > prevExpTs + 5 * 86400000) {
+                                            globalUpdates['sellerSales/' + sn + '/' + sid + '/adminRenewedAt'] = Date.now();
+                                        }
+                                    }
 
                                     // Guardar emails específicos y alias en sellerSales también
                                     if (hasHistoryEmails) {
@@ -12441,6 +12475,10 @@
                     if (matchingSaleKey) {
                         // CASO 1: Coincide fecha de inicio -> Sobreescribir
                         const targetSale = targetSales[matchingSaleKey];
+                        const prevExpMs = Number(targetSale.expirationDate) || 0;
+                        if (prevExpMs > 0 && excelExpMs > prevExpMs + 5 * 86400000) {
+                            targetSale.adminRenewedAt = nowMs;
+                        }
                         targetSale.expirationDate = excelExpMs;
                         targetSale.date = excelStartMs;
                         if (firstRec.clientName) targetSale.clientName = firstRec.clientName;

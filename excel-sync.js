@@ -602,6 +602,10 @@ async function syncExcelToFirebase(customBuffer = null) {
             // CASO 1: VENTA COINCIDENTE ENCONTRADA -> ACTUALIZAR Y PRESERVAR
             // ============================================================
             const sale = targetStore[matchingSaleKey];
+            const prevExpMs = Number(sale.expirationDate) || 0;
+            if (prevExpMs > 0 && excelExpMs > prevExpMs + 5 * 86400000) {
+                sale.adminRenewedAt = nowMs;
+            }
             sale.expirationDate = excelExpMs;
             if (!sale.fechaCompraOriginal && !sale.date) {
                 sale.date = excelStartMs;

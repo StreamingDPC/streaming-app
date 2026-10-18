@@ -4841,6 +4841,23 @@ function renderSellerSaleCard(sale, isExpired, container) {
 
     let buttonsHtml = '';
     const canRenew = !isExpired && daysLeft <= 3; // Solo mostrar Renovar los últimos 3 días
+    const isSameLocalDay = (ts1, ts2) => {
+        if (!ts1 || !ts2) return false;
+        const d1 = new Date(Number(ts1));
+        const d2 = new Date(Number(ts2));
+        return d1.getFullYear() === d2.getFullYear() &&
+               d1.getMonth() === d2.getMonth() &&
+               d1.getDate() === d2.getDate();
+    };
+    const nowDateObj = new Date(now);
+    const expDateObj = sale.expirationDate ? new Date(Number(sale.expirationDate)) : null;
+    const isCutoffDayToday = Boolean(expDateObj && nowDateObj.getDate() === expDateObj.getDate());
+    const isFirstDayOfNewSale = isSameLocalDay(sale.fechaCompraOriginal || sale.date, now) && !sale.adminRenewedAt;
+    // La pestaña "Renovada" solo aparece el día de corte/vencimiento y únicamente si el Admin ya la renovó
+    const canShowRenovada = !isExpired && (
+        isSameLocalDay(sale.adminRenewedAt, now) ||
+        (isCutoffDayToday && daysLeft >= 25 && !isFirstDayOfNewSale)
+    );
     const sellerCodeAllowed = window.canSellerUseCodeActivation ? window.canSellerUseCodeActivation(currentSellerName) : true;
     const cleanCardPhone = window.sanitizePhone ? window.sanitizePhone(sale.clientPhone) : String(sale.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
     const statusBadgeId = `seller-card-code-status-${sale.id || cleanCardPhone}`;
@@ -4884,10 +4901,11 @@ function renderSellerSaleCard(sale, isExpired, container) {
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #4cd137; background: rgba(76, 209, 55, 0.1); color:#4cd137;">
                     <i class="fa-brands fa-whatsapp"></i> Recordar
                 </button>
+                ${canShowRenovada ? `
                 <button onclick="sendRenovadaFromDash('${encodeURIComponent(sale.clientName)}', '${sale.clientPhone || ''}', '${encodeURIComponent(itemsStr)}', ${(sale.items && sale.items.length > 1) ? true : false}, ${sale.expirationDate || 0}, '${sale.id}')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #f39c12; background: rgba(243, 156, 18, 0.1); color:#f39c12;">
                     <i class="fa-brands fa-whatsapp"></i> Renovada
-                </button>
+                </button>` : ''}
                 <button onclick="editClientFromDash('${sale.id}', '${safeDecode(sale.clientName)}', '${sale.clientPhone || ''}', '${sale.clientCity || ''}')" 
                     style="flex: 1; min-width:120px; padding:0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #c48dfc; background: rgba(196, 141, 252, 0.1); color:#c48dfc;">
                     <i class="fa-solid fa-pen"></i> Editar
@@ -5076,9 +5094,8 @@ window.sendRenovadaFromDash = function (clientNameEnc, clientPhone, itemsEncoded
     const clientName = decodeURIComponent(clientNameEnc);
     const itemsStr = decodeURIComponent(itemsEncoded);
 
-    // ✅ CAP MONTH FIX v2: Lee fechaCompraOriginal real del registro en Firebase
-    // para calcular el próximo vencimiento preservando el día original de compra
-    // (ej: compró el 5 → siempre vence el 5 del siguiente mes, no +30 días fijos).
+    // Solo informativo: NO modifica ni recalcula la fecha de vencimiento en Firebase ni le suma otro mes,
+    // ya que la renovación y nueva fecha de vencimiento la define únicamente el Admin.
     const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
     const _buildAndSend = (monthText) => {
@@ -5097,28 +5114,8 @@ window.sendRenovadaFromDash = function (clientNameEnc, clientPhone, itemsEncoded
     };
 
     if (expirationDateTS && expirationDateTS !== 0) {
-        (async () => {
-            // Buscar fechaCompraOriginal real en Firebase (fuente de verdad del día de compra)
-            let fco = parseInt(expirationDateTS); // fallback: ventas antiguas sin ese campo
-            if (saleId) {
-                try {
-                    const snapAll = await db.ref('sellerSales').once('value');
-                    const all = snapAll.val() || {};
-                    outer: for (const sellerObj of Object.values(all)) {
-                        if (!sellerObj) continue;
-                        for (const [key, sale] of Object.entries(sellerObj)) {
-                            if ((key === saleId || sale.id === saleId) && sale.fechaCompraOriginal) {
-                                const raw = parseInt(sale.fechaCompraOriginal);
-                                if (!isNaN(raw)) { fco = raw; break outer; }
-                            }
-                        }
-                    }
-                } catch (e) { console.warn('[CAP MONTH] Error leyendo fechaCompraOriginal:', e); }
-            }
-            // Calcular próximo vencimiento desde la fecha exp actual pero anclado al día original
-            const d = window.DPCBillingEngine.calcularProximoVencimiento(fco, parseInt(expirationDateTS));
-            _buildAndSend(`${d.getDate()} ${months[d.getMonth()]}`);
-        })();
+        const d = new Date(parseInt(expirationDateTS));
+        _buildAndSend(`${d.getDate()} ${months[d.getMonth()]}`);
     } else {
         _buildAndSend('el próximo mes');
     }
