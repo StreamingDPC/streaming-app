@@ -323,16 +323,39 @@ async function syncExcelToFirebase(customBuffer = null) {
             clientProfiles[phone].ticketPin = fourDigitPin;
         }
 
-        // 2. Buscar ventas existentes del cliente en clientSales[phone]
-        if (!clientSales[phone]) clientSales[phone] = {};
-        const saleKeys = Object.keys(clientSales[phone]);
+        // 2. Determinar si esta cartera de ventas pertenece a un vendedor o es venta directa
+        const sName = (firstRec.seller || '').trim();
+        const isSellerSale = sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && sName !== 'Directo';
+
+        // Buscar ventas existentes del cliente en su contenedor respectivo:
+        // Si es vendedor -> sellerSales[sName]
+        // Si es directo -> clientSales[phone]
+        let targetStore = null;
+        let saleKeys = [];
+
+        if (isSellerSale) {
+            if (!sellerSales[sName]) sellerSales[sName] = {};
+            targetStore = sellerSales[sName];
+            saleKeys = Object.keys(targetStore).filter(k => {
+                const s = targetStore[k];
+                return s && sanitizePhone(s.clientPhone) === phone;
+            });
+            // Eliminar cualquier duplicado accidental de este cliente de vendedor en clientSales
+            if (clientSales[phone]) {
+                delete clientSales[phone];
+            }
+        } else {
+            if (!clientSales[phone]) clientSales[phone] = {};
+            targetStore = clientSales[phone];
+            saleKeys = Object.keys(targetStore);
+        }
 
         // Ordenar ventas de más reciente a más antigua
-        saleKeys.sort((a, b) => (clientSales[phone][b]?.date || 0) - (clientSales[phone][a]?.date || 0));
+        saleKeys.sort((a, b) => (targetStore[b]?.date || 0) - (targetStore[a]?.date || 0));
 
         // Expandir slots priorizando ventas activas (o la más reciente si todas vencieron)
         const nowMs = Date.now();
-        const activeSaleKeys = saleKeys.filter(k => (Number(clientSales[phone][k]?.expirationDate) || 0) >= nowMs);
+        const activeSaleKeys = saleKeys.filter(k => (Number(targetStore[k]?.expirationDate) || 0) >= nowMs);
         const targetSaleKeys = activeSaleKeys.length > 0 ? activeSaleKeys : (saleKeys.length > 0 ? [saleKeys[0]] : []);
         const targetSaleKeySet = new Set(targetSaleKeys);
 
@@ -340,7 +363,7 @@ async function syncExcelToFirebase(customBuffer = null) {
         const allClientSlots = [];
 
         for (const sKey of saleKeys) {
-            const sale = clientSales[phone][sKey];
+            const sale = targetStore[sKey];
             if (!sale) continue;
 
             let itemsArr = [];
@@ -467,7 +490,7 @@ async function syncExcelToFirebase(customBuffer = null) {
             if (saleKeys.length > 0) {
                 // Añadir como pantallas adicionales en la venta más reciente del cliente
                 const latestSaleKey = saleKeys[0];
-                const latestSale = clientSales[phone][latestSaleKey];
+                const latestSale = targetStore[latestSaleKey];
                 if (!Array.isArray(latestSale.items)) {
                     latestSale.items = Object.values(latestSale.items || {});
                 }
@@ -528,37 +551,10 @@ async function syncExcelToFirebase(customBuffer = null) {
                     items: newItems
                 };
 
-                clientSales[phone][newSaleKey] = newSaleObj;
-
-                // Si pertenece a un vendedor, reflejar también en sellerSales
-                if (newSaleObj.sellerName && newSaleObj.sellerName !== 'Página Web Oficial' && newSaleObj.sellerName !== 'Admin') {
-                    if (!sellerSales[newSaleObj.sellerName]) sellerSales[newSaleObj.sellerName] = {};
-                    sellerSales[newSaleObj.sellerName][newSaleKey] = { ...newSaleObj };
-                }
+                targetStore[newSaleKey] = newSaleObj;
 
                 createdSalesCount++;
                 updatedScreensCount += unmatchedRecs.length;
-            }
-        }
-
-        // Paso 4: Sincronizar ventas actualizadas de este teléfono hacia sellerSales
-        for (const sKey of Object.keys(clientSales[phone])) {
-            const cSale = clientSales[phone][sKey];
-            const sName = cSale.sellerName;
-            if (sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && sellerSales[sName]) {
-                let targetSid = sKey;
-                if (!sellerSales[sName][targetSid]) {
-                    targetSid = Object.keys(sellerSales[sName]).find(sid => {
-                        const ss = sellerSales[sName][sid];
-                        return ss && sanitizePhone(ss.clientPhone) === phone && Math.abs((ss.date || 0) - (cSale.date || 0)) < 172800000;
-                    });
-                }
-                if (targetSid && sellerSales[sName][targetSid]) {
-                    sellerSales[sName][targetSid].items = cSale.items;
-                    if (cSale.email) sellerSales[sName][targetSid].email = cSale.email;
-                    if (cSale.password) sellerSales[sName][targetSid].password = cSale.password;
-                    if (cSale.profile) sellerSales[sName][targetSid].profile = cSale.profile;
-                }
             }
         }
 

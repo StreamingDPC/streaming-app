@@ -2268,6 +2268,22 @@ function setupEventListeners() {
                                 sales[`seller_${sKey}`] = sVal;
                             }
                         });
+                    } else if (cleanPhone) {
+                        // Búsqueda para cliente autónomo en sellerSales (todos los vendedores)
+                        const allSellersSnap = await db.ref('sellerSales').once('value');
+                        const allSellersData = allSellersSnap.val() || {};
+                        Object.entries(allSellersData).forEach(([sName, sSalesObj]) => {
+                            if (!sSalesObj || sName === 'Página Web Oficial' || sName === 'Admin') return;
+                            Object.entries(sSalesObj).forEach(([sKey, sVal]) => {
+                                if (!sVal) return;
+                                const sPhoneClean = window.sanitizePhone ? window.sanitizePhone(sVal.clientPhone) : String(sVal.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
+                                if (sPhoneClean === cleanPhone) {
+                                    sales[`seller_${sKey}`] = { ...sVal, sellerName: sVal.sellerName || sName };
+                                    window.codeModalTargetSellerName = sVal.sellerName || sName;
+                                    window.isSellerClientInCodeModal = true;
+                                }
+                            });
+                        });
                     }
                 } catch (e) { }
 
@@ -4646,39 +4662,19 @@ function setupEventListeners() {
             saleData.sellerName = publicSellerRef || extrasOriginalOwner;
         }
 
+        const isSellerSaleOrder = isSellerMode || publicSellerRef || extrasOriginalOwner;
+
         if (window.renewalSaleId) {
             // UPDATE EL MISMO REGISTRO, NO GENERAR UNO NUEVO
-            if (window.renewalSource === 'seller') {
-                if (isSellerMode || publicSellerRef || extrasOriginalOwner) {
-                    await db.ref(`sellerSales/${finalSellerDestination}/${window.renewalSaleId}`).set(saleData);
-                }
-                if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
-                    try {
-                        const cSnap = await db.ref(`clientSales/${cleanPhoneTracking}`).once('value');
-                        const cSales = cSnap.val();
-                        let targetKey = null;
-                        if (cSales) {
-                            for (const [k, v] of Object.entries(cSales)) {
-                                if (v && (v.date === prevStart || v.expirationDate === prevExp || v.date === saleData.date)) {
-                                    targetKey = k;
-                                    break;
-                                }
-                            }
-                        }
-                        if (targetKey) {
-                            await db.ref(`clientSales/${cleanPhoneTracking}/${targetKey}`).set(saleData);
-                        } else {
-                            await db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
-                        }
-                    } catch (e) {
-                        await db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
-                    }
-                }
-            } else if (window.renewalSource === 'client') {
+            if (isSellerSaleOrder || window.renewalSource === 'seller') {
+                // EXCLUSIVO VENDEDOR: Actualizar únicamente en sellerSales del vendedor
+                await db.ref(`sellerSales/${finalSellerDestination}/${window.renewalSaleId}`).set(saleData);
+            } else {
+                // DIRECTO / GLOBAL: Actualizar en clientSales y reflejar en Página Web Oficial
                 if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
                     await db.ref(`clientSales/${cleanPhoneTracking}/${window.renewalSaleId}`).set(saleData);
                 }
-                for (let sName of [finalSellerDestination, 'Página Web Oficial', currentSellerName].filter(Boolean)) {
+                for (let sName of ['Página Web Oficial', currentSellerName].filter(Boolean)) {
                     try {
                         const sSnap = await db.ref(`sellerSales/${sName}`).once('value');
                         const sSales = sSnap.val();
@@ -4708,16 +4704,20 @@ function setupEventListeners() {
             window.renewalSaleStart = null;
         } else {
             // NUEVA VENTA
-            // For admin or direct purchases when no seller is attached, track under 'Página Web Oficial'
-            if (!isSellerMode && !publicSellerRef && !extrasOriginalOwner) {
-                db.ref(`sellerSales/Página Web Oficial`).push(saleData);
-            } else if (isSellerMode || publicSellerRef || extrasOriginalOwner) {
+            if (isSellerSaleOrder) {
+                // EXCLUSIVO VENDEDOR: Guardar únicamente en la cartera del vendedor correspondiente
                 db.ref(`sellerSales/${finalSellerDestination}`).push(saleData);
+            } else {
+                // DIRECTO / GLOBAL: Guardar en clientSales y en sellerSales/Página Web Oficial
+                db.ref(`sellerSales/Página Web Oficial`).push(saleData);
+                if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
+                    db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
+                }
             }
 
+            // Registrar datos del perfil en clientProfiles (nombre, reset intentos) para que el cliente pueda acceder a la web, sin duplicar la venta en clientSales
             if (cleanPhoneTracking && cleanPhoneTracking.length > 5) {
                 const baseClean = cleanPhoneTracking.replace(/^57/, '');
-                db.ref(`clientSales/${cleanPhoneTracking}`).push(saleData);
                 db.ref(`clientProfiles/${cleanPhoneTracking}`).update({
                     name: cName || 'Cliente',
                     codeAttemptUsed: null

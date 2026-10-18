@@ -6452,76 +6452,59 @@
             const categoryStats = {}; // { cat: count }
             const monthlyHistory = {}; // { "YYYY-MM": income }
 
-            // Procesar Ventas Directas
+            const processedSignatures = new Set();
+
+            function processStatSale(s) {
+                if (!s || s.isPaid === false) return;
+                const cleanPhone = String(s.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
+                const sig = (s.fechaCompraOriginal || s.date || 0) + '_' + cleanPhone;
+                if (sig && sig !== '0_' && processedSignatures.has(sig)) return; // Evitar duplicidad estricta entre carteras
+                if (sig && sig !== '0_') processedSignatures.add(sig);
+
+                const sDate = new Date(s.date || s.fechaCompraOriginal || Date.now());
+                const month = sDate.getMonth();
+                const year = sDate.getFullYear();
+                const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+                monthlyHistory[monthKey] = (monthlyHistory[monthKey] || 0) + (s.total || 0);
+
+                if (month === parseInt(document.getElementById('stats-month-filter').value) &&
+                    year === parseInt(document.getElementById('stats-year-filter').value)) {
+
+                    totalIncome += (s.total || 0);
+                    totalSalesCount++;
+
+                    const items = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                    items.forEach(it => {
+                        const prod = dynamicProducts.find(p => p.name === it.name || p.id === it.id);
+                        const cost = prod ? (prod.purchasePrice || 0) : 0;
+                        totalCost += cost;
+
+                        const itName = it.name || 'Pantalla Streaming';
+                        if (!productStats[itName]) productStats[itName] = { count: 0, income: 0, cost: 0 };
+                        productStats[itName].count++;
+                        productStats[itName].income += (it.finalPrice || (s.total / Math.max(1, items.length)));
+                        productStats[itName].cost += cost;
+
+                        const cat = it.category || 'Otros';
+                        categoryStats[cat] = (categoryStats[cat] || 0) + 1;
+                    });
+                }
+            }
+
+            // 1. Procesar Ventas Directas (clientSales)
             Object.keys(window.allClientSalesMap || {}).forEach(phone => {
-                const sales = window.allClientSalesMap[phone];
+                const sales = window.allClientSalesMap[phone] || {};
                 Object.keys(sales).forEach(key => {
-                    const s = sales[key];
-                    if (s.isPaid === false) return; // Omitir no pagados
-
-                    const sDate = new Date(s.date);
-                    const month = sDate.getMonth();
-                    const year = sDate.getFullYear();
-                    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-
-                    // Histórico (siempre recolectar)
-                    monthlyHistory[monthKey] = (monthlyHistory[monthKey] || 0) + (s.total || 0);
-
-                    // Filtrado para resumen actual
-                    if (month === parseInt(document.getElementById('stats-month-filter').value) &&
-                        year === parseInt(document.getElementById('stats-year-filter').value)) {
-
-                        totalIncome += (s.total || 0);
-                        totalSalesCount++;
-
-                        const items = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
-                        items.forEach(it => {
-                            // Buscar costo en el catálogo actual
-                            const prod = dynamicProducts.find(p => p.name === it.name || p.id === it.id);
-                            const cost = prod ? (prod.purchasePrice || 0) : 0;
-                            totalCost += cost;
-
-                            // Stats por producto
-                            if (!productStats[it.name]) productStats[it.name] = { count: 0, income: 0, cost: 0 };
-                            productStats[it.name].count++;
-                            productStats[it.name].income += (it.finalPrice || 0);
-                            productStats[it.name].cost += cost;
-
-                            // Stats por categoría
-                            const cat = it.category || 'Otros';
-                            categoryStats[cat] = (categoryStats[cat] || 0) + 1;
-                        });
-                    }
+                    processStatSale(sales[key]);
                 });
             });
 
-            // NOTA: sellerSales NO se suma aquí porque cada venta ya está en clientSales.
-            // sellerSales es solo para el panel de vendedores. Sumar ambos causaría doble conteo.
-
-            // Sin embargo, usamos sellerSales solo para el historial mensual de ventas SIN número de celular
-            // (ventas que no tienen clientSales porque no se capturó el teléfono)
-            const clientSaleDates = new Set();
-            Object.keys(window.allClientSalesMap || {}).forEach(phone => {
-                Object.keys(window.allClientSalesMap[phone] || {}).forEach(key => {
-                    const s = window.allClientSalesMap[phone][key];
-                    if (s.date) clientSaleDates.add(s.date + '_' + (s.clientPhone || '').replace(/\D/g, ''));
-                });
-            });
-
-            // Historial mensual desde sellerSales (solo los que no están ya en clientSales)
+            // 2. Procesar Ventas de Vendedores (sellerSales)
             Object.keys(window.globalSellerSalesDataStore || {}).forEach(seller => {
-                const sales = window.globalSellerSalesDataStore[seller];
+                const sales = window.globalSellerSalesDataStore[seller] || {};
                 Object.keys(sales).forEach(key => {
-                    const s = sales[key];
-                    if (s.isPaid === false) return;
-                    const sig = s.date + '_' + (s.clientPhone || '').replace(/\D/g, '');
-                    if (clientSaleDates.has(sig)) return; // ya está en clientSales, no contar de nuevo
-
-                    const sDate = new Date(s.date);
-                    const month = sDate.getMonth();
-                    const year = sDate.getFullYear();
-                    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-                    monthlyHistory[monthKey] = (monthlyHistory[monthKey] || 0) + (s.total || 0);
+                    processStatSale(sales[key]);
                 });
             });
 
@@ -7917,33 +7900,44 @@
                     return;
                 }
 
+                // Clientes directos (Global): Excluir ventas/clientes exclusivos de vendedores
                 const clientsData = phones.map(phone => {
                     const sales = allClientSalesMap[phone] || {};
                     const salesArray = Array.isArray(sales) ? sales : Object.values(sales);
 
-                    // Count valid sales only
+                    // Filtrar solo ventas directas (sin vendedor externo)
+                    const directSales = salesArray.filter(s => {
+                        if (!s) return false;
+                        const sName = (s.sellerName || '').trim();
+                        return !sName || sName === 'Página Web Oficial' || sName === 'Admin' || sName === 'Directo';
+                    });
+
+                    // Si todas las compras eran de un vendedor, este cliente pertenece exclusivamente al vendedor
+                    if (directSales.length === 0) return null;
+
+                    // Count valid direct sales only
                     let validCount = 0;
-                    salesArray.forEach(s => {
+                    directSales.forEach(s => {
                         if (!s) return;
                         if (s.isPaid !== false) validCount++;
                     });
 
-                    const sortedSales = salesArray.sort((a, b) => (b.date || 0) - (a.date || 0));
+                    const sortedSales = directSales.sort((a, b) => (b.date || 0) - (a.date || 0));
                     const latestSale = sortedSales[0] || {};
 
                     return {
                         phone,
                         name: safeDecode(latestSale.clientName || 'Desconocido'),
                         city: safeDecode(latestSale.clientCity || 'N/A'),
-                        count: validCount
+                        count: validCount,
+                        salesList: sortedSales
                     };
-                });
+                }).filter(Boolean);
 
                 clientsData.filter(c => (c.phone || '').includes(filterText) || (c.name || '').toLowerCase().includes(filterText)).forEach(c => {
                     try {
                         const phone = c.phone;
-                        const sales = allClientSalesMap[phone] || {};
-                        const salesArray = Object.keys(sales).map(k => ({ id: k, ...sales[k] })).sort((a, b) => b.date - a.date);
+                        const salesArray = c.salesList || [];
 
                         const div = document.createElement('div');
                         div.className = 'admin-item';
@@ -10742,24 +10736,37 @@
             const sSalesStore = window.globalSellerSalesDataStore || {};
             const now = Date.now();
 
-            // 1. Clonar estructura base de clientSales y fusionar ventas de sellerSales que no estén en clientSales
+            // 1. Cargar ventas de clientes directos desde clientSales
+            // IMPORTANTE: Si una venta en clientSales pertenece a un vendedor externo y ya existe en sellerSales,
+            // no se duplica aquí para garantizar que sea exclusivo del vendedor.
             const mergedClients = {};
 
             Object.keys(cSalesMap).forEach(rawPhone => {
                 const cleanP = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '');
                 if (!cleanP) return;
-                if (!mergedClients[cleanP]) {
-                    mergedClients[cleanP] = {
-                        phone: cleanP,
-                        rawPhoneKey: rawPhone,
-                        profile: cProfiles[cleanP] || cProfiles[rawPhone] || {},
-                        sales: {}
-                    };
-                }
+
                 const salesObj = cSalesMap[rawPhone] || {};
                 Object.keys(salesObj).forEach(saleKey => {
                     const s = salesObj[saleKey];
                     if (!s || typeof s !== 'object') return;
+
+                    const sName = (s.sellerName || '').trim();
+                    const isExternalSeller = sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && sName !== 'Directo';
+
+                    // Si pertenece a un vendedor externo y existe en sellerSales, se cargará desde sellerSales
+                    if (isExternalSeller && sSalesStore[sName]) {
+                        return;
+                    }
+
+                    if (!mergedClients[cleanP]) {
+                        mergedClients[cleanP] = {
+                            phone: cleanP,
+                            rawPhoneKey: rawPhone,
+                            profile: cProfiles[cleanP] || cProfiles[rawPhone] || {},
+                            sales: {}
+                        };
+                    }
+
                     mergedClients[cleanP].sales[saleKey] = {
                         ...s,
                         _saleKey: saleKey,
@@ -10769,8 +10776,9 @@
                 });
             });
 
-            // También vincular ventas de sellerSales por si alguna venta de vendedor no se copió a clientSales
+            // 2. Cargar ventas de vendedores desde sellerSales (exclusivo vendedor)
             Object.keys(sSalesStore).forEach(sellerName => {
+                if (sellerName === 'Página Web Oficial' || sellerName === 'Admin') return;
                 const sMap = sSalesStore[sellerName] || {};
                 Object.keys(sMap).forEach(sKey => {
                     const s = sMap[sKey];
@@ -10787,24 +10795,26 @@
                         };
                     }
 
-                    // Verificar si ya existe por clave o por timestamp cercano
+                    // Verificar si ya existe por clave, fecha de compra original o coincidencia de fechas (menos de 2 días)
                     let matchedKey = null;
                     if (mergedClients[cleanP].sales[sKey]) {
                         matchedKey = sKey;
                     } else {
                         matchedKey = Object.keys(mergedClients[cleanP].sales).find(k => {
                             const ex = mergedClients[cleanP].sales[k];
-                            return ex.date && s.date && Math.abs(ex.date - s.date) < 5000;
+                            return (ex.fechaCompraOriginal && s.fechaCompraOriginal && ex.fechaCompraOriginal === s.fechaCompraOriginal) ||
+                                   (ex.date && s.date && Math.abs(ex.date - s.date) < 172800000);
                         });
                     }
 
                     if (matchedKey) {
-                        mergedClients[cleanP].sales[matchedKey]._sellerName = sellerName;
-                        mergedClients[cleanP].sales[matchedKey]._sellerSaleKey = sKey;
-                        if (!mergedClients[cleanP].sales[matchedKey].sellerName) {
-                            mergedClients[cleanP].sales[matchedKey].sellerName = sellerName;
-                        }
-                    } else if (sellerName !== 'Página Web Oficial' && sellerName !== 'Admin') {
+                        const existing = mergedClients[cleanP].sales[matchedKey];
+                        existing.sellerName = sellerName;
+                        existing._sellerName = sellerName;
+                        existing._sellerSaleKey = sKey;
+                        if (!s.email && existing.email) s.email = existing.email;
+                        if (!s.password && existing.password) s.password = existing.password;
+                    } else {
                         mergedClients[cleanP].sales[sKey] = {
                             ...s,
                             sellerName: s.sellerName || sellerName,
