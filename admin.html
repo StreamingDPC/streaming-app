@@ -3991,13 +3991,22 @@
 
                         badgeEl.innerHTML = `<span style="color:#2ecc71; font-weight:bold;"><i class="fa-solid fa-key"></i> ${badgeTitle}</span>`;
                         codeEl.style.color = '#2ecc71';
-                        codeEl.innerText = data.code;
+                        const isUrlCode = typeof data.code === 'string' && data.code.startsWith('http');
+                        if (isUrlCode) {
+                            codeEl.innerHTML = `<a href="${data.code}" target="_blank" style="display:inline-flex; align-items:center; gap:8px; background:#E50914; color:#fff; padding:10px 18px; border-radius:8px; text-decoration:none; font-size:0.95rem; font-weight:bold; letter-spacing:normal;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Enlace Oficial</a>`;
+                            if (waBtn) {
+                                waBtn.style.display = 'inline-flex';
+                                window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Aquí tienes tu enlace oficial de acceso para ${platName}:\n${data.code}\nÁbrelo antes de 15 minutos para completar tu acceso.`;
+                            }
+                        } else {
+                            codeEl.innerText = data.code;
+                            if (waBtn) {
+                                waBtn.style.display = 'inline-flex';
+                                window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Aquí tienes tu código para ${platName}: *${data.code}*. Ingrésalo en tu pantalla antes de 15 minutos.`;
+                            }
+                        }
                         msgEl.innerHTML = `${detailsMsg}<br><span style="font-size:0.8rem;color:#2ecc71;"><i class="fa-solid fa-user-check"></i> Intento descontado al cliente en su perfil.</span>`;
                         if (copyBtn) copyBtn.style.display = 'inline-flex';
-                        if (waBtn) {
-                            waBtn.style.display = 'inline-flex';
-                            window.adminLastGeneratedMessage = `¡Hola ${client.clientName}! Aquí tienes tu código para ${platName}: *${data.code}*. Ingrésalo en tu pantalla antes de 15 minutos.`;
-                        }
                     }
                 } else {
                     badgeEl.innerHTML = '<span style="color:#ff4d4d; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> NO SE ENCONTRÓ CÓDIGO</span>';

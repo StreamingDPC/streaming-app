@@ -436,6 +436,10 @@ async function processQueue() {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno ViX TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
                 const result = await doActivateVixTv(item.email, item.tvCode);
                 item.resolve(result);
+            } else if (item.platform === 'netflix_temp') {
+                console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Código Temporal Netflix: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
+                const result = await doGetNetflixTempCode(item.email, item.travelLink);
+                item.resolve(result);
             } else {
                 console.log(`\n[BOT-QUEUE] ⏳ Procesando turno Netflix TV: ${item.email} (Quedan en cola: ${activationQueue.length - 1})`);
                 const result = await doActivateTv(item.email, item.tvCode);
@@ -605,6 +609,31 @@ app.post('/api/activate-vix-tv', async (req, res) => {
         return res.status(500).json({
             success: false,
             error: err.message || 'Error en la activación de ViX en el bot local.'
+        });
+    }
+});
+
+// ── ENDPOINT: Obtener Código Temporal Netflix (Pasa por la cola ordenada) ───
+app.post('/api/get-netflix-temp-code', async (req, res) => {
+    const { email, travelLink } = req.body;
+
+    if (!travelLink) {
+        return res.status(400).json({ success: false, error: 'travelLink es requerido.' });
+    }
+
+    const queuePromise = new Promise((resolve, reject) => {
+        activationQueue.push({ platform: 'netflix_temp', email, travelLink, resolve, reject, time: Date.now() });
+    });
+
+    processQueue();
+
+    try {
+        const result = await queuePromise;
+        return res.json(result);
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            error: err.message || 'Error al obtener código temporal de Netflix en bot local.'
         });
     }
 });
@@ -900,6 +929,177 @@ async function doActivateTv(email, tvCode) {
         const payload = { success: false, error: 'Error del bot local: ' + err.message };
         if (screenshot) payload.screenshot = `data:image/png;base64,${screenshot}`;
         return payload;
+    }
+}
+
+// ── FUNCIÓN: Resolver Código Temporal de Netflix (Acceso de Viaje) ─────────
+async function doGetNetflixTempCode(email, travelLink) {
+    let browser = null;
+    try {
+        console.log(`\n[BOT-NETFLIX-TEMP] ════════════════════════════════════`);
+        console.log(`[BOT-NETFLIX-TEMP] 🎫 Solicitando código temporal para: ${email}`);
+        console.log(`[BOT-NETFLIX-TEMP] 🔗 Enlace: ${travelLink}`);
+
+        const chromePath = getChromePath();
+        if (!chromePath) {
+            return { success: false, error: 'Google Chrome no está instalado en esta PC.', link: travelLink };
+        }
+
+        browser = await puppeteer.launch({
+            executablePath: chromePath,
+            headless: false,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-background-timer-throttling',
+                '--disable-renderer-backgrounding',
+                '--window-position=50,50',
+                '--window-size=1100,750'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        });
+
+        // 1. Navegar directamente al enlace de verificación de Netflix
+        console.log(`[BOT-NETFLIX-TEMP] 🌐 Navegando a la página de verificación de Netflix...`);
+        await page.goto(travelLink, { waitUntil: 'networkidle2', timeout: 35000 });
+        await sleep(2500);
+
+        let currentUrl = page.url();
+        console.log(`[BOT-NETFLIX-TEMP] 📍 URL cargada: ${currentUrl}`);
+
+        // 2. Si Netflix nos redirigió a Login, iniciar sesión primero
+        if (currentUrl.includes('/login') || currentUrl.includes('netflix.com/es/login') || currentUrl.includes('netflix.com/Login')) {
+            console.log(`[BOT-NETFLIX-TEMP] 🔒 Netflix solicitó iniciar sesión. Buscando contraseña para ${email}...`);
+            const netflixPass = await findNetflixPassword(email);
+            if (netflixPass) {
+                const emailInput = await page.$('input[name="userLoginId"], input[data-uia="login-field"], input[type="email"], input[type="text"]');
+                if (emailInput) {
+                    await emailInput.click({ clickCount: 3 });
+                    await emailInput.type(email, { delay: 60 });
+                    await sleep(500);
+                    await page.keyboard.press('Enter');
+                    await sleep(3000);
+
+                    const passInput = await page.$('input[name="password"], input[type="password"]');
+                    if (passInput) {
+                        await passInput.type(netflixPass, { delay: 60 });
+                        await sleep(500);
+                        await page.keyboard.press('Enter');
+                        await sleep(4000);
+                    }
+                }
+                console.log(`[BOT-NETFLIX-TEMP] 🔄 Volviendo al enlace de viaje con sesión iniciada...`);
+                await page.goto(travelLink, { waitUntil: 'networkidle2', timeout: 35000 });
+                await sleep(2500);
+            } else {
+                console.warn(`[BOT-NETFLIX-TEMP] ⚠️ No se encontró contraseña de Netflix para ${email} en Firebase.`);
+            }
+        }
+
+        // Helper para extraer el código de 4 dígitos de la página actual
+        const extractCodeFromPage = async () => {
+            return await page.evaluate(() => {
+                const body = (document.body ? document.body.innerText : '') || '';
+                // 1. Buscar coincidencia cercana a la palabra "código" o "code"
+                const nearMatch = body.match(/(?:c[oó]digo|code)[^\d]{1,30}(\b\d{4}\b)/i);
+                if (nearMatch && nearMatch[1]) {
+                    const c = nearMatch[1];
+                    if (!['2023', '2024', '2025', '2026', '2027', '2028'].includes(c)) return c;
+                }
+                // 2. Buscar elementos destacados en la UI (encabezados, textos grandes, contenedores de código)
+                const candidateElements = Array.from(document.querySelectorAll('[data-uia*="code"], [class*="code"], strong, b, h1, h2, h3, .heading'));
+                for (const el of candidateElements) {
+                    const txt = (el.innerText || el.textContent || '').trim();
+                    const m = txt.match(/\b\d{4}\b/);
+                    if (m && !['2023', '2024', '2025', '2026', '2027', '2028', '1080', '1920', '0000'].includes(m[0])) {
+                        return m[0];
+                    }
+                }
+                // 3. Coincidencia de 4 dígitos en el texto general descartando años y resoluciones
+                const allMatches = body.match(/\b\d{4}\b/g);
+                if (allMatches) {
+                    const valid = allMatches.filter(m => !['2023', '2024', '2025', '2026', '2027', '2028', '1080', '1920', '0000'].includes(m));
+                    if (valid.length > 0) return valid[0];
+                }
+                return null;
+            });
+        };
+
+        // 3. Revisar si el código ya está visible en pantalla (ej: si ya se había generado)
+        let foundCode = await extractCodeFromPage();
+        if (foundCode) {
+            console.log(`[BOT-NETFLIX-TEMP] 🎯 Código de 4 dígitos detectado de inmediato: ${foundCode}`);
+            await sleep(1500);
+            await browser.close();
+            return { success: true, code: foundCode };
+        }
+
+        // 4. Buscar y hacer clic en el botón "Obtener código" / "Get code"
+        console.log(`[BOT-NETFLIX-TEMP] 🖱️ Buscando botón 'Obtener código' en la página...`);
+        const clicked = await page.evaluate(() => {
+            const buttons = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="submit"]'));
+            for (const b of buttons) {
+                const txt = (b.innerText || b.textContent || b.value || '').trim().toLowerCase();
+                if (txt.includes('obtener c') || txt.includes('obtener codigo') || txt.includes('get code') || (txt.includes('código') && !txt.includes('volver'))) {
+                    b.click();
+                    return txt;
+                }
+            }
+            // Selector alternativo botón principal rojo de Netflix
+            const primaryBtn = document.querySelector('button[type="submit"], [data-uia*="travel"], [data-uia*="verify"], [data-uia*="action-button"], .btn-submit, .btn-primary');
+            if (primaryBtn) {
+                primaryBtn.click();
+                return 'primary-submit-btn';
+            }
+            return null;
+        });
+
+        if (clicked) {
+            console.log(`[BOT-NETFLIX-TEMP] ✅ Clic realizado en: "${clicked}". Esperando aparición del código...`);
+            // Esperar activamente hasta 8 segundos para que Netflix genere y muestre el código
+            for (let i = 0; i < 8; i++) {
+                await sleep(1000);
+                foundCode = await extractCodeFromPage();
+                if (foundCode) {
+                    console.log(`[BOT-NETFLIX-TEMP] 🎉 ¡Código de 4 dígitos extraído con éxito!: ${foundCode}`);
+                    await sleep(1500);
+                    await browser.close();
+                    return { success: true, code: foundCode };
+                }
+            }
+        } else {
+            console.warn(`[BOT-NETFLIX-TEMP] ⚠️ Botón 'Obtener código' no encontrado explícitamente, esperando posible recarga...`);
+            await sleep(3000);
+        }
+
+        // Última comprobación tras espera
+        foundCode = await extractCodeFromPage();
+        if (foundCode) {
+            console.log(`[BOT-NETFLIX-TEMP] 🎉 ¡Código obtenido!: ${foundCode}`);
+            await sleep(1500);
+            await browser.close();
+            return { success: true, code: foundCode };
+        }
+
+        console.warn(`[BOT-NETFLIX-TEMP] ⚠️ No se pudo extraer el número de 4 dígitos. Retornando enlace.`);
+        await sleep(1500);
+        await browser.close();
+        return { success: false, error: 'No se pudo leer el código en la pantalla de Netflix.', link: travelLink };
+    } catch (err) {
+        console.error(`[BOT-NETFLIX-TEMP] ❌ Error en bot local:`, err.message);
+        if (browser) {
+            try { await browser.close(); } catch (_) { }
+        }
+        return { success: false, error: err.message, link: travelLink };
     }
 }
 

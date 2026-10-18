@@ -109,6 +109,119 @@ async function executeVixActivation(vixLink, email) {
     }
 }
 
+// ============================================================
+// HELPER: Resolver código temporal de 4 dígitos de Netflix
+// ============================================================
+function extract4DigitCode(text) {
+    if (!text) return null;
+    const clean = text.toString();
+    // 1. Coincidencia cercana a la palabra "código" o "code"
+    const contextMatch = clean.match(/(?:c[oó]digo|code)[^\d]{1,30}(\b\d{4}\b)/i);
+    if (contextMatch && contextMatch[1]) {
+        const c = contextMatch[1];
+        if (!['2023', '2024', '2025', '2026', '2027', '2028'].includes(c)) return c;
+    }
+    // 2. Coincidencia en todo el texto descartando años y resoluciones
+    const allMatches = clean.match(/\b\d{4}\b/g);
+    if (allMatches) {
+        const valid = allMatches.filter(m => !['2023', '2024', '2025', '2026', '2027', '2028', '1080', '1920', '0000'].includes(m));
+        if (valid.length > 0) return valid[0];
+    }
+    return null;
+}
+
+async function resolveNetflixTempCode(travelLink, email) {
+    console.log(`[NETFLIX-TEMP] 🎫 Solicitando resolución de código temporal para: ${email}`);
+    console.log(`[NETFLIX-TEMP] 🔗 Enlace: ${travelLink}`);
+
+    // 1º Prioridad: Enviar al Bot Local en la PC del usuario (IP residencial)
+    try {
+        const botUrlResp = await axios.get(`${FIREBASE_DB_URL}/config/botUrl.json`, { timeout: 3000 });
+        const botUrl = botUrlResp.data;
+        if (botUrl && botUrl.startsWith('http')) {
+            console.log(`[NETFLIX-TEMP] 🔀 Bot local detectado en Firebase: ${botUrl}. Solicitando extracción de código...`);
+            const localResp = await axios.post(`${botUrl}/api/get-netflix-temp-code`, { email, travelLink }, {
+                timeout: 90000,
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            if (localResp.data && localResp.data.success && localResp.data.code) {
+                console.log(`[NETFLIX-TEMP] ✅ Bot local extrajo el código con éxito: ${localResp.data.code}`);
+                return localResp.data.code;
+            } else if (localResp.data && localResp.data.code) {
+                return localResp.data.code;
+            }
+        }
+    } catch (e) {
+        console.warn(`[NETFLIX-TEMP] Bot local no disponible o falló (${e.message}). Intentando navegador en Render...`);
+    }
+
+    // 2º Fallback: Ejecución en Render con Puppeteer
+    let browser = null;
+    try {
+        browser = await puppeteer.launch({
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+        });
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        });
+
+        await page.goto(travelLink, { waitUntil: 'networkidle2', timeout: 35000 });
+        await new Promise(r => setTimeout(r, 2500));
+
+        let bodyText = await page.evaluate(() => (document.body ? document.body.innerText : '') || '');
+        let code = extract4DigitCode(bodyText);
+        if (code) {
+            console.log(`[NETFLIX-TEMP] Código encontrado en pantalla antes de clic: ${code}`);
+            return code;
+        }
+
+        // Buscar y hacer clic en el botón "Obtener código"
+        const clicked = await page.evaluate(() => {
+            const buttons = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="submit"]'));
+            for (const b of buttons) {
+                const txt = (b.innerText || b.textContent || b.value || '').trim().toLowerCase();
+                if (txt.includes('obtener c') || txt.includes('obtener codigo') || txt.includes('get code') || (txt.includes('código') && !txt.includes('volver'))) {
+                    b.click();
+                    return txt;
+                }
+            }
+            const primaryBtn = document.querySelector('button[type="submit"], [data-uia*="travel"], [data-uia*="verify"], [data-uia*="action-button"], .btn-submit, .btn-primary');
+            if (primaryBtn) {
+                primaryBtn.click();
+                return 'primary-submit-btn';
+            }
+            return null;
+        });
+
+        if (clicked) {
+            console.log(`[NETFLIX-TEMP] Clic en botón: ${clicked}. Esperando código...`);
+            await new Promise(r => setTimeout(r, 3500));
+            bodyText = await page.evaluate(() => (document.body ? document.body.innerText : '') || '');
+            code = extract4DigitCode(bodyText);
+            if (code) {
+                console.log(`[NETFLIX-TEMP] ✅ Código extraído con éxito tras clic en Render: ${code}`);
+                return code;
+            }
+        }
+    } catch (renderErr) {
+        console.warn(`[NETFLIX-TEMP] Render Puppeteer no pudo extraer el código: ${renderErr.message}`);
+    } finally {
+        if (browser) {
+            try { await browser.close(); } catch (_) { }
+        }
+    }
+
+    // 3º Fallback seguro: Si no se pudo obtener el número en headless, devolver el enlace de viaje
+    console.log(`[NETFLIX-TEMP] Retornando enlace de viaje como fallback seguro: ${travelLink}`);
+    return travelLink;
+}
+
 app.post('/api/get-code', async (req, res) => {
     const { email, platform } = req.body;
 
@@ -317,7 +430,9 @@ app.post('/api/get-code', async (req, res) => {
                                     if (link.includes('travel') || link.includes('verify') || link.includes('token') || link.includes('update-primary-location')) {
                                         accountLogs.found = true;
                                         console.log(`[DEBUG] Enlace temporal Netflix oficial encontrado: ${link}`);
-                                        return link; // Retorna el enlace directo para que el botón "Clic aquí → Ver mi Código en Netflix" lo abra en el navegador
+                                        // Resolver automáticamente el código de 4 dígitos mediante el bot local / Render Puppeteer
+                                        const resolvedCode = await resolveNetflixTempCode(link, account.email);
+                                        return resolvedCode;
                                     }
                                 }
 
