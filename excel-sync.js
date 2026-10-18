@@ -21,14 +21,14 @@ const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://streamingdpc-7e7
 
 const SHEET_MAP = [
     { key: 'NO', platform: 'Netflix', matchKeys: ['netflix'] },
-    { key: 'DO', platform: 'Disney+', matchKeys: ['disney'] },
+    { key: 'DO', platform: 'Disney', matchKeys: ['disney'] },
     { key: 'MO', platform: 'Max (HBO)', matchKeys: ['max', 'hbo'] },
     { key: 'PO', platform: 'Prime Video', matchKeys: ['prime', 'amazon'] },
-    { key: 'PA', platform: 'Paramount+', matchKeys: ['paramount'] },
+    { key: 'PA', platform: 'Paramount', matchKeys: ['paramount'] },
     { key: 'C', platform: 'Crunchyroll', matchKeys: ['crunchy'] },
-    { key: 'V', platform: 'Vix+', matchKeys: ['vix'] },
+    { key: 'V', platform: 'Vix', matchKeys: ['vix'] },
     { key: 'I', platform: 'IPTV', matchKeys: ['iptv', 'magis', 'flujo', 'tele'] },
-    { key: 'Apple', platform: 'Apple TV+', matchKeys: ['apple'] },
+    { key: 'Apple', platform: 'Apple TV', matchKeys: ['apple'] },
     { key: 'Sp', platform: 'Spotify', matchKeys: ['spotify'] },
     { key: 'Youtube', platform: 'YouTube Premium', matchKeys: ['youtube'] }
 ];
@@ -143,28 +143,42 @@ function sameDate(t1, t2) {
            d1.getFullYear() === d2.getFullYear();
 }
 
+function cleanPlatformName(str) {
+    if (!str) return '';
+    return str
+        .replace(/Disney\+/gi, 'Disney')
+        .replace(/Paramount\+/gi, 'Paramount')
+        .replace(/Apple TV\+/gi, 'Apple TV')
+        .replace(/AppleTv\+/gi, 'Apple TV')
+        .replace(/Vix\+/gi, 'Vix')
+        .replace(/Discovery\+/gi, 'Discovery')
+        .replace(/Amc\+/gi, 'Amc')
+        .replace(/Canva\+/gi, 'Canva')
+        .replace(/DisneyPlus/gi, 'Disney')
+        .replace(/ParamountPlus/gi, 'Paramount')
+        .replace(/AppleTvPlus/gi, 'Apple TV')
+        .replace(/VixPlus/gi, 'Vix')
+        .replace(/DiscoveryPlus/gi, 'Discovery')
+        .replace(/AmcPlus/gi, 'Amc')
+        .replace(/CanvaPlus/gi, 'Canva')
+        .replace(/\+/g, '')
+        .trim();
+}
+
 function cleanComboNameForSplitting(str) {
     if (!str) return '';
     return str
-        .replace(/disney\s*\+/gi, 'DisneyPlus')
-        .replace(/paramount\s*\+/gi, 'ParamountPlus')
-        .replace(/apple\s*tv\s*\+/gi, 'AppleTvPlus')
-        .replace(/vix\s*\+/gi, 'VixPlus')
-        .replace(/discovery\s*\+/gi, 'DiscoveryPlus')
-        .replace(/amc\s*\+/gi, 'AmcPlus')
-        .replace(/canva\s*\+/gi, 'CanvaPlus');
+        .replace(/disney\s*\+/gi, 'Disney')
+        .replace(/paramount\s*\+/gi, 'Paramount')
+        .replace(/apple\s*tv\s*\+/gi, 'Apple TV')
+        .replace(/vix\s*\+/gi, 'Vix')
+        .replace(/discovery\s*\+/gi, 'Discovery')
+        .replace(/amc\s*\+/gi, 'Amc')
+        .replace(/canva\s*\+/gi, 'Canva');
 }
 
 function restoreBrandPluses(str) {
-    if (!str) return '';
-    return str
-        .replace(/DisneyPlus/gi, 'Disney+')
-        .replace(/ParamountPlus/gi, 'Paramount+')
-        .replace(/AppleTvPlus/gi, 'Apple TV+')
-        .replace(/VixPlus/gi, 'Vix+')
-        .replace(/DiscoveryPlus/gi, 'Discovery+')
-        .replace(/AmcPlus/gi, 'Amc+')
-        .replace(/CanvaPlus/gi, 'Canva+');
+    return cleanPlatformName(str);
 }
 
 function getScreenCount(category, name) {
@@ -308,7 +322,7 @@ function parseWorkbookFromBuffer(buffer) {
             records.push({
                 sheet: actualName,
                 sheetMeta,
-                platform,
+                platform: cleanPlatformName(platform),
                 seller,
                 city,
                 clientName,
@@ -466,11 +480,11 @@ async function syncExcelToFirebase(customBuffer = null) {
                 if (itemIdx === -1) {
                     const newItem = {
                         id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                        name: rec.platform,
+                        name: cleanPlatformName(rec.platform),
                         category: 'individual',
                         finalPrice: 0,
                         specificEmails: [{
-                            platform: rec.platform,
+                            platform: cleanPlatformName(rec.platform),
                             email: rec.email || '',
                             pass: rec.password || '',
                             profile: rec.profile || '',
@@ -483,7 +497,7 @@ async function syncExcelToFirebase(customBuffer = null) {
                     usedItemIndices.add(itemIdx);
                     const it = itemsArr[itemIdx];
                     it.specificEmails = [{
-                        platform: rec.platform || it.name,
+                        platform: cleanPlatformName(rec.platform || it.name),
                         email: rec.email || '',
                         pass: rec.password || '',
                         profile: rec.profile || '',
@@ -533,11 +547,11 @@ async function syncExcelToFirebase(customBuffer = null) {
             const verifiedSaleKey = 'excel_' + phone;
             const newItems = phoneRecs.map((rec, idx) => ({
                 id: 'excel_item_' + idx,
-                name: rec.platform,
+                name: cleanPlatformName(rec.platform),
                 category: 'individual',
                 finalPrice: 0,
                 specificEmails: [{
-                    platform: rec.platform,
+                    platform: cleanPlatformName(rec.platform),
                     email: rec.email || '',
                     pass: rec.password || '',
                     profile: rec.profile || '',

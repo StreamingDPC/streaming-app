@@ -2970,7 +2970,7 @@
                             </div>
                         </div>
                         <div class="form-col">
-                            <label>Bono Disney+ ($)</label>
+                            <label>Bono Disney ($)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <input type="number" id="conf-incentiveDisney" placeholder="Ej: 500" style="flex:1;">
                                 <button class="save-btn" onclick="saveConfig()"
@@ -2997,7 +2997,7 @@
                             </div>
                         </div>
                         <div class="form-col">
-                            <label>Bono Paramount+ ($)</label>
+                            <label>Bono Paramount ($)</label>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
                                 <input type="number" id="conf-incentiveParamount" placeholder="Ej: 500" style="flex:1;">
                                 <button class="save-btn" onclick="saveConfig()"
@@ -3849,7 +3849,7 @@
                     serviceName = 'Crunchyroll';
                     endpoint = '/api/activate-crunchyroll-tv';
                 } else if (platform === 'disney_code_tv') {
-                    serviceName = 'Disney+';
+                    serviceName = 'Disney';
                     endpoint = '/api/activate-disney-tv';
                 } else if (platform === 'vix_tv') {
                     serviceName = 'ViX';
@@ -3968,21 +3968,21 @@
                             platName = 'Acceso Temporal (Netflix)';
                         } else if (platform === 'disney_update') {
                             if (data.detectedType === 'hogar') {
-                                badgeTitle = 'DISNEY+ (ACTUALIZAR HOGAR)';
-                                platName = 'Actualizar Hogar (Disney+)';
-                                detailsMsg = `Detectado: <strong>¿Vas a actualizar tu Hogar de Disney+?</strong> en <code>${email}</code>.`;
+                                badgeTitle = 'DISNEY (ACTUALIZAR HOGAR)';
+                                platName = 'Actualizar Hogar (Disney)';
+                                detailsMsg = `Detectado: <strong>¿Vas a actualizar tu Hogar de Disney?</strong> en <code>${email}</code>.`;
                             } else if (data.detectedType === 'fuera_de_casa') {
-                                badgeTitle = 'DISNEY+ (FUERA DE CASA)';
-                                platName = 'Acceso Fuera de Casa (Disney+)';
-                                detailsMsg = `Detectado: <strong>Tu código de acceso único para Disney+ (Fuera de Casa)</strong> en <code>${email}</code>.`;
+                                badgeTitle = 'DISNEY (FUERA DE CASA)';
+                                platName = 'Acceso Fuera de Casa (Disney)';
+                                detailsMsg = `Detectado: <strong>Tu código de acceso único para Disney (Fuera de Casa)</strong> en <code>${email}</code>.`;
                             } else {
-                                badgeTitle = 'DISNEY+ (HOGAR / FUERA DE CASA)';
-                                platName = 'Hogar y/o Fuera de casa (Disney+)';
+                                badgeTitle = 'DISNEY (HOGAR / FUERA DE CASA)';
+                                platName = 'Hogar y/o Fuera de casa (Disney)';
                             }
                         } else if (platform === 'disney_tv') {
-                            badgeTitle = 'DISNEY+ (INICIAR SESIÓN EN TV)';
+                            badgeTitle = 'DISNEY (INICIAR SESIÓN EN TV)';
                             platName = 'Iniciar sesión Disney en TV';
-                            detailsMsg = `Detectado: <strong>Tu código de acceso único para Disney+ (TV)</strong> en <code>${email}</code>.`;
+                            detailsMsg = `Detectado: <strong>Tu código de acceso único para Disney (TV)</strong> en <code>${email}</code>.`;
                         } else if (platform === 'hbomax_update') {
                             badgeTitle = 'HBO MAX (FUERA DE CASA)';
                             platName = 'Fuera de Casa (HBO Max)';
@@ -4078,9 +4078,9 @@
             } else if (platform === 'disney_update') {
                 const disneyUpdates = (usedData && typeof usedData === 'object') ? (usedData['disney_update'] || 0) : 0;
                 if (disneyUpdates >= 2) {
-                    msg += `🚨 ALERTA: Este cliente YA AGOTÓ su límite (2/2) actualizaciones de Hogar / Fuera de casa Disney+.\n\n`;
+                    msg += `🚨 ALERTA: Este cliente YA AGOTÓ su límite (2/2) actualizaciones de Hogar / Fuera de casa Disney.\n\n`;
                 } else {
-                    msg += `✅ Estado de Actualizaciones Disney+: ${disneyUpdates} consumidas de 2 posibles.\n\n`;
+                    msg += `✅ Estado de Actualizaciones Disney: ${disneyUpdates} consumidas de 2 posibles.\n\n`;
                 }
             } else if (platform === 'hbomax_update') {
                 const maxUpdates = (usedData && typeof usedData === 'object') ? (usedData['hbomax_update'] || 0) : 0;
@@ -4344,10 +4344,10 @@
                                     <option value="netflix_update">Actualiza tu Hogar</option>
                                     <option value="netflix_temp">Acceso temporal Netflix</option>
                                     <option value="netflix_tv">Activar TV (Netflix)</option>
-                                    <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney+</option>
+                                    <option value="disney" ${defaultPlatform === 'disney' ? 'selected' : ''}>Disney</option>
                                     <option value="disney_tv">Iniciar sesión Disney en TV (con email)</option>
                                     <option value="disney_code_tv">Iniciar sesión Disney en TV (con código)</option>
-                                    <option value="disney_update">Actualiza Hogar Disney+ (2 veces)</option>
+                                    <option value="disney_update">Actualiza Hogar Disney (2 veces)</option>
                                     <option value="hbomax" ${defaultPlatform === 'hbomax' ? 'selected' : ''}>HBO Max</option>
                                     <option value="hbomax_update">Fuera de casa HBO Max (2 veces)</option>
                                     <option value="hbomax_tv">Iniciar sesión HBO Max en TV</option>
@@ -4700,11 +4700,11 @@
         window.enablePlatformToAll = async function (category, btn) {
             const CATEGORY_NAMES = {
                 all: 'TODOS los Códigos (Restauración Total)',
-                hogar: 'Actualiza tu Hogar (Netflix, Disney+, HBO Max)',
+                hogar: 'Actualiza tu Hogar (Netflix, Disney, HBO Max)',
                 temporal: 'Acceso Temporal (Netflix)',
                 smart_tv: 'Smart TV (Todas las apps)',
                 netflix: 'Netflix (Pantalla)',
-                disney: 'Disney+ (Pantalla)',
+                disney: 'Disney (Pantalla)',
                 hbomax: 'HBO Max (Pantalla)',
                 prime: 'Prime Video (Pantalla)',
                 vix: 'ViX (Pantalla)',
@@ -8971,28 +8971,42 @@
             const elem = document.getElementById('auto-reminder-ui');
             if (elem) elem.style.display = 'none';
         }
+        function cleanPlatformName(str) {
+            if (!str) return '';
+            return str
+                .replace(/Disney\+/gi, 'Disney')
+                .replace(/Paramount\+/gi, 'Paramount')
+                .replace(/Apple TV\+/gi, 'Apple TV')
+                .replace(/AppleTv\+/gi, 'Apple TV')
+                .replace(/Vix\+/gi, 'Vix')
+                .replace(/Discovery\+/gi, 'Discovery')
+                .replace(/Amc\+/gi, 'Amc')
+                .replace(/Canva\+/gi, 'Canva')
+                .replace(/DisneyPlus/gi, 'Disney')
+                .replace(/ParamountPlus/gi, 'Paramount')
+                .replace(/AppleTvPlus/gi, 'Apple TV')
+                .replace(/VixPlus/gi, 'Vix')
+                .replace(/DiscoveryPlus/gi, 'Discovery')
+                .replace(/AmcPlus/gi, 'Amc')
+                .replace(/CanvaPlus/gi, 'Canva')
+                .replace(/\+/g, '')
+                .trim();
+        }
+
         function cleanComboNameForSplitting(str) {
             if (!str) return '';
             return str
-                .replace(/disney\s*\+/gi, 'DisneyPlus')
-                .replace(/paramount\s*\+/gi, 'ParamountPlus')
-                .replace(/apple\s*tv\s*\+/gi, 'AppleTvPlus')
-                .replace(/vix\s*\+/gi, 'VixPlus')
-                .replace(/discovery\s*\+/gi, 'DiscoveryPlus')
-                .replace(/amc\s*\+/gi, 'AmcPlus')
-                .replace(/canva\s*\+/gi, 'CanvaPlus');
+                .replace(/disney\s*\+/gi, 'Disney')
+                .replace(/paramount\s*\+/gi, 'Paramount')
+                .replace(/apple\s*tv\s*\+/gi, 'Apple TV')
+                .replace(/vix\s*\+/gi, 'Vix')
+                .replace(/discovery\s*\+/gi, 'Discovery')
+                .replace(/amc\s*\+/gi, 'Amc')
+                .replace(/canva\s*\+/gi, 'Canva');
         }
 
         function restoreBrandPluses(str) {
-            if (!str) return '';
-            return str
-                .replace(/DisneyPlus/gi, 'Disney+')
-                .replace(/ParamountPlus/gi, 'Paramount+')
-                .replace(/AppleTvPlus/gi, 'Apple TV+')
-                .replace(/VixPlus/gi, 'Vix+')
-                .replace(/DiscoveryPlus/gi, 'Discovery+')
-                .replace(/AmcPlus/gi, 'Amc+')
-                .replace(/CanvaPlus/gi, 'Canva+');
+            return cleanPlatformName(str);
         }
 
         function guessPlatforms(productName, screenCount) {
@@ -9005,7 +9019,7 @@
                 .map(restoreBrandPluses);
             let result = [];
             for (let i = 0; i < screenCount; i++) {
-                result.push(parts[i] || restoreBrandPluses(clean) || productName);
+                result.push(cleanPlatformName(parts[i] || clean || productName));
             }
             return result;
         }
@@ -9391,10 +9405,10 @@
                         if (cleanCat.includes('individual') || cleanCat.includes('ventasextras')) {
                             if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
                             else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; itemBonoNombre = 'Netflix'; }
-                            else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney+'; }
+                            else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney'; }
                             else if (prodMarca.includes('max') || prodMarca.includes('hbo')) { itemBono = parseInt(storeConfig.incentiveMax) || 0; itemBonoNombre = 'HBO Max'; }
                             else if (prodMarca.includes('prime')) { itemBono = parseInt(storeConfig.incentivePrime) || 0; itemBonoNombre = 'Prime Video'; }
-                            else if (prodMarca.includes('paramount')) { itemBono = parseInt(storeConfig.incentiveParamount) || 0; itemBonoNombre = 'Paramount+'; }
+                            else if (prodMarca.includes('paramount')) { itemBono = parseInt(storeConfig.incentiveParamount) || 0; itemBonoNombre = 'Paramount'; }
                             else if (prodMarca.includes('vix')) { itemBono = parseInt(storeConfig.incentiveVix) || 0; itemBonoNombre = 'Vix'; }
                             else if (prodMarca.includes('iptv')) { itemBono = parseInt(storeConfig.incentiveIptv) || 0; itemBonoNombre = 'IPTV'; }
                             else if (prodMarca.includes('crunchyroll')) { itemBono = parseInt(storeConfig.incentiveCrunchyroll) || 0; itemBonoNombre = 'Crunchyroll'; }
@@ -9568,10 +9582,10 @@
                                 if (cleanCat.includes('individual') || cleanCat.includes('ventasextras')) {
                                     if (prodMarca.includes('privada')) { itemBono = parseInt(storeConfig.incentiveNetflixPrivada) || 0; itemBonoNombre = 'Netflix Privada'; }
                                     else if (prodMarca.includes('netflix')) { itemBono = parseInt(storeConfig.incentiveNetflix) || 0; itemBonoNombre = 'Netflix'; }
-                                    else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney+'; }
+                                    else if (prodMarca.includes('disney')) { itemBono = parseInt(storeConfig.incentiveDisney) || 0; itemBonoNombre = 'Disney'; }
                                     else if (prodMarca.includes('max') || prodMarca.includes('hbo')) { itemBono = parseInt(storeConfig.incentiveMax) || 0; itemBonoNombre = 'HBO Max'; }
                                     else if (prodMarca.includes('prime')) { itemBono = parseInt(storeConfig.incentivePrime) || 0; itemBonoNombre = 'Prime Video'; }
-                                    else if (prodMarca.includes('paramount')) { itemBono = parseInt(storeConfig.incentiveParamount) || 0; itemBonoNombre = 'Paramount+'; }
+                                    else if (prodMarca.includes('paramount')) { itemBono = parseInt(storeConfig.incentiveParamount) || 0; itemBonoNombre = 'Paramount'; }
                                     else if (prodMarca.includes('vix')) { itemBono = parseInt(storeConfig.incentiveVix) || 0; itemBonoNombre = 'Vix'; }
                                     else if (prodMarca.includes('iptv')) { itemBono = parseInt(storeConfig.incentiveIptv) || 0; itemBonoNombre = 'IPTV'; }
                                     else if (prodMarca.includes('crunchyroll')) { itemBono = parseInt(storeConfig.incentiveCrunchyroll) || 0; itemBonoNombre = 'Crunchyroll'; }
@@ -11080,7 +11094,8 @@
                         const screens = [];
                         for (let sIdx = 0; sIdx < totalScreens; sIdx++) {
                             const sp = validExistingSpec[sIdx] || {};
-                            const plat = (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim();
+                            const rawPlat = (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim();
+                            const plat = cleanPlatformName(rawPlat);
                             const email = (sp.email || (sIdx === 0 && totalScreens === 1 ? (s.email || '') : '')).toString().trim();
                             const pass = (sp.pass || (sIdx === 0 && totalScreens === 1 ? (s.password || '') : '')).toString().trim();
                             const profile = (sp.profile || (sIdx === 0 && totalScreens === 1 ? (s.profile || '') : '')).toString().trim();
@@ -11090,7 +11105,7 @@
                             screens.push({
                                 itemIdx,
                                 screenIdx: sIdx,
-                                productName: it.name || 'Pantalla',
+                                productName: cleanPlatformName(it.name || 'Pantalla'),
                                 customName: it.customName || '',
                                 platform: plat,
                                 email,
@@ -11595,7 +11610,7 @@
                 const screenRows = sBlock.querySelectorAll('.db-screen-row');
                 screenRows.forEach(row => {
                     const itemIdx = parseInt(row.getAttribute('data-item-idx')) || 0;
-                    const plat = (row.querySelector('.db-inp-platform')?.value || '').trim();
+                    const plat = cleanPlatformName((row.querySelector('.db-inp-platform')?.value || '').trim());
                     const email = (row.querySelector('.db-inp-email')?.value || '').trim();
                     const pass = (row.querySelector('.db-inp-pass')?.value || '').trim();
                     const profile = (row.querySelector('.db-inp-profile')?.value || '').trim();
@@ -11906,7 +11921,8 @@
             const phone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '');
             if (phone.length < 7) return alert('Número de celular inválido.');
 
-            const platform = prompt('📺 Plataforma (Ej: Netflix, Disney+, Max, Prime Video):', 'Netflix') || 'Netflix';
+            const rawPlatPrompt = prompt('📺 Plataforma (Ej: Netflix, Disney, Max, Prime Video):', 'Netflix') || 'Netflix';
+            const platform = cleanPlatformName(rawPlatPrompt);
             const rndPin = Math.floor(1000 + Math.random() * 9000).toString();
             const accountPin = prompt('🔑 PIN de Cuenta Web (4 dígitos):', rndPin) || rndPin;
 
@@ -12006,14 +12022,14 @@
         // =====================================================
         const DB_EXCEL_SHEET_MAP = [
             { key: 'NO', platform: 'Netflix', matchKeys: ['netflix'] },
-            { key: 'DO', platform: 'Disney+', matchKeys: ['disney'] },
+            { key: 'DO', platform: 'Disney', matchKeys: ['disney'] },
             { key: 'MO', platform: 'Max (HBO)', matchKeys: ['max', 'hbo'] },
             { key: 'PO', platform: 'Prime Video', matchKeys: ['prime', 'amazon'] },
-            { key: 'PA', platform: 'Paramount+', matchKeys: ['paramount'] },
+            { key: 'PA', platform: 'Paramount', matchKeys: ['paramount'] },
             { key: 'C', platform: 'Crunchyroll', matchKeys: ['crunchy'] },
-            { key: 'V', platform: 'Vix+', matchKeys: ['vix'] },
+            { key: 'V', platform: 'Vix', matchKeys: ['vix'] },
             { key: 'I', platform: 'IPTV', matchKeys: ['iptv', 'magis', 'flujo', 'tele'] },
-            { key: 'Apple', platform: 'Apple TV+', matchKeys: ['apple'] },
+            { key: 'Apple', platform: 'Apple TV', matchKeys: ['apple'] },
             { key: 'Sp', platform: 'Spotify', matchKeys: ['spotify'] },
             { key: 'Youtube', platform: 'YouTube Premium', matchKeys: ['youtube'] }
         ];

@@ -416,11 +416,11 @@
                                 style="display:flex; flex-direction:column; gap:6px;">
                                 <button type="button" class="platform-tab-btn" data-platform="disney"
                                     style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid #005AD6; background:rgba(0,90,214,0.22); color:#ffffff; font-weight:700; font-size:0.85rem; cursor:pointer; box-shadow:0 4px 12px rgba(0,90,214,0.35); transition:all 0.2s; width:100%;">
-                                    <span style="font-size:1.1rem;">🏰</span> Disney+ (1 vez)
+                                    <span style="font-size:1.1rem;">🏰</span> Disney (1 vez)
                                 </button>
                                 <button type="button" class="direct-fetch-code-btn" data-platform="disney"
                                     style="background: linear-gradient(135deg, #005AD6, #00227B); border:none; color:white; font-weight:bold; padding:11px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(0,90,214,0.3); transition:all 0.2s;">
-                                    <i class="fa-solid fa-satellite-dish"></i> Obtener Código Disney+
+                                    <i class="fa-solid fa-satellite-dish"></i> Obtener Código Disney
                                 </button>
                             </div>
                             <!-- HBO Max con botón de Obtener Código directo abajo -->
@@ -499,11 +499,11 @@
                                 style="display:flex; flex-direction:column; gap:6px;">
                                 <button type="button" class="platform-tab-btn" data-platform="disney_update"
                                     style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; border:2px solid #113CCF; background:rgba(17,60,207,0.22); color:#ffffff; font-weight:700; font-size:0.85rem; cursor:pointer; box-shadow:0 4px 12px rgba(17,60,207,0.35); transition:all 0.2s; width:100%;">
-                                    <span style="font-size:1.1rem;">🏰</span> Actualiza hogar con Disney+ (2 veces)
+                                    <span style="font-size:1.1rem;">🏰</span> Actualiza hogar con Disney (2 veces)
                                 </button>
                                 <button type="button" class="direct-fetch-code-btn" data-platform="disney_update"
                                     style="background: linear-gradient(135deg, #113CCF, #00d2d3); border:none; color:white; font-weight:bold; padding:11px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(17,60,207,0.3); transition:all 0.2s;">
-                                    <i class="fa-solid fa-house-chimney-window"></i> Obtener Código Hogar Disney+
+                                    <i class="fa-solid fa-house-chimney-window"></i> Obtener Código Hogar Disney
                                 </button>
                             </div>
 
@@ -663,14 +663,14 @@
                             style="display:none; margin-top:0.8rem; margin-bottom:0.8rem; background:rgba(0,0,0,0.3); border:1px solid rgba(0,90,214,0.3); border-radius:14px; padding:1.2rem;">
                             <p style="font-size:0.85rem; color:#aaa; margin-bottom:1rem;">
                                 <i class="fa-solid fa-circle-info" style="color:#005AD6;"></i>
-                                En tu Smart TV abre Disney+, selecciona <strong style="color:white;">"Iniciar sesión"</strong> o <strong style="color:white;">"Vincular dispositivo"</strong>.
+                                En tu Smart TV abre Disney, selecciona <strong style="color:white;">"Iniciar sesión"</strong> o <strong style="color:white;">"Vincular dispositivo"</strong>.
                                 Aparecerá un código de 8 dígitos. Ingrésalo aquí y tu TV quedará activa.
                             </p>
 
                             <!-- Correo con que se activará -->
                             <div style="margin-bottom:0.8rem;">
                                 <label style="display:block; font-size:0.82rem; color:#aaa; margin-bottom:0.4rem;">
-                                    <i class="fa-solid fa-envelope" style="color:#005AD6;"></i> Cuenta Disney+ a usar:
+                                    <i class="fa-solid fa-envelope" style="color:#005AD6;"></i> Cuenta Disney a usar:
                                 </label>
                                 <select id="disney-code-tv-email-select" class="input-modern"
                                     style="font-size:0.9rem; padding:10px 12px;">
@@ -703,7 +703,7 @@
                                 <div style="background:rgba(20,20,28,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px 14px; text-align:left;">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                                         <span id="disney-code-tv-status-phase" style="font-size:0.84rem; color:#005AD6; font-weight:600; display:flex; align-items:center; gap:6px;">
-                                            <i class="fa-solid fa-spinner fa-spin"></i> Conectando con Disney+...
+                                            <i class="fa-solid fa-spinner fa-spin"></i> Conectando con Disney...
                                         </span>
                                         <span id="disney-code-tv-countdown-timer" style="font-size:0.85rem; color:#fff; font-weight:700; background:rgba(0,90,214,0.3); border:1px solid rgba(0,90,214,0.6); padding:2px 8px; border-radius:6px; min-width:38px; text-align:center;">
                                             45s
@@ -723,7 +723,7 @@
                             <div id="disney-code-tv-activation-result" style="display:none; margin-top:1rem; text-align:center; padding:1.2rem; border-radius:10px; background:rgba(46,204,113,0.1); border:1px solid #2ecc71;">
                                 <i class="fa-solid fa-circle-check" style="color:#2ecc71; font-size:2rem; margin-bottom:0.5rem;" id="disney-code-tv-activation-icon"></i>
                                 <p style="color:#2ecc71; font-weight:bold; font-size:1.1rem; margin-bottom: 0.3rem;" id="disney-code-tv-activation-msg">¡TV Activada Exitosamente!</p>
-                                <p style="color:#eee; font-size:0.9rem; margin-top:0.3rem;" id="disney-code-tv-activation-desc">¡Dispositivo Disney+ activado con éxito en tu Smart TV! Ya puedes disfrutar de todo el contenido.</p>
+                                <p style="color:#eee; font-size:0.9rem; margin-top:0.3rem;" id="disney-code-tv-activation-desc">¡Dispositivo Disney activado con éxito en tu Smart TV! Ya puedes disfrutar de todo el contenido.</p>
                             </div>
 
                             <!-- Error -->
