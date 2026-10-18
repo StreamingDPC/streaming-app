@@ -535,8 +535,9 @@ async function syncExcelToFirebase(customBuffer = null) {
             return s && sanitizePhone(s.clientPhone) === phone;
         });
 
-        // Fechas provenientes del Excel para este cliente (usar la fecha de vencimiento más reciente entre sus pantallas activas)
-        const excelStartMs = phoneRecs.map(r => r.startMs).find(Boolean) || firstRec.startMs || Date.now();
+        // Fechas provenientes del Excel para este cliente (todas las fechas de inicio y fin deben coincidir con el Excel)
+        const maxStartMs = Math.max(0, ...phoneRecs.map(r => Number(r.startMs) || 0));
+        const excelStartMs = maxStartMs > 0 ? maxStartMs : (firstRec.startMs || Date.now());
         const maxExpMs = Math.max(0, ...phoneRecs.map(r => Number(r.expMs) || 0));
         const excelExpMs = maxExpMs > 0 ? maxExpMs : (firstRec.expMs || (excelStartMs + 30 * 86400000));
         const nowMs = Date.now();
@@ -607,9 +608,8 @@ async function syncExcelToFirebase(customBuffer = null) {
                 sale.adminRenewedAt = nowMs;
             }
             sale.expirationDate = excelExpMs;
-            if (!sale.fechaCompraOriginal && !sale.date) {
-                sale.date = excelStartMs;
-            }
+            sale.date = excelStartMs;
+            sale.fechaCompraOriginal = excelStartMs;
             if (firstRec.clientName) sale.clientName = firstRec.clientName;
             if (firstRec.city) sale.clientCity = firstRec.city;
             if (sName) sale.sellerName = sName;
