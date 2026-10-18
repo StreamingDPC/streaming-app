@@ -592,11 +592,15 @@ async function syncExcelToFirebase(customBuffer = null) {
             }
         }
 
-        // Resetear intento de código del cliente si se actualizan datos
         const baseCleanEx = phone.replace(/^57/, '');
-        if (clientProfiles[phone]) delete clientProfiles[phone].codeAttemptUsed;
-        if (clientProfiles[baseCleanEx]) delete clientProfiles[baseCleanEx].codeAttemptUsed;
-        if (clientProfiles['57' + baseCleanEx]) delete clientProfiles['57' + baseCleanEx].codeAttemptUsed;
+        const resetProfileAttempts = () => {
+            [phone, baseCleanEx, '57' + baseCleanEx].forEach(pKey => {
+                if (clientProfiles[pKey]) {
+                    delete clientProfiles[pKey].codeAttemptUsed;
+                    delete clientProfiles[pKey].clientAttempts;
+                }
+            });
+        };
 
         if (matchingSaleKey) {
             // ============================================================
@@ -606,6 +610,9 @@ async function syncExcelToFirebase(customBuffer = null) {
             const prevExpMs = Number(sale.expirationDate) || 0;
             if (prevExpMs > 0 && excelExpMs > prevExpMs + 5 * 86400000) {
                 sale.adminRenewedAt = nowMs;
+                resetProfileAttempts();
+            } else if (sameDate(excelStartMs, nowMs)) {
+                resetProfileAttempts();
             }
             sale.expirationDate = excelExpMs;
             sale.date = excelStartMs;
@@ -810,6 +817,7 @@ async function syncExcelToFirebase(customBuffer = null) {
             // ============================================================
             // CASO 2: NO EXISTE VENTA PREVIA -> CREAR REGISTRO CON PRECIO OFICIAL
             // ============================================================
+            resetProfileAttempts();
             for (const oldKey of existingSaleKeys) {
                 const oldSale = targetStore[oldKey];
                 if (!oldSale) continue;

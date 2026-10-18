@@ -3859,20 +3859,33 @@
                 if (statusText) statusText.innerText = `Conectando con el bot de ${serviceName} TV e iniciando sesión...`;
 
                 try {
-                    // Resolver URL del bot (ngrok o localhost o backend)
+                    // Resolver URL del bot: 1° localhost:3099 (PC local), 2° ngrok en Firebase, 3° Render
                     let botUrl = 'https://streaming-backend-ce1u.onrender.com';
+                    let resolvedLocal = false;
                     try {
-                        const snap = await db.ref('config/botUrl').once('value');
-                        const ngrok = snap.val();
-                        if (ngrok) botUrl = ngrok;
-                        else {
-                            const localCheck = await Promise.race([
-                                fetch('http://localhost:3099/status'),
-                                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 2000))
-                            ]);
-                            if (localCheck.ok) botUrl = 'http://localhost:3099';
+                        const localCheck = await Promise.race([
+                            fetch('http://localhost:3099/status'),
+                            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 1500))
+                        ]);
+                        if (localCheck.ok) {
+                            botUrl = 'http://localhost:3099';
+                            resolvedLocal = true;
                         }
                     } catch (e) { }
+
+                    if (!resolvedLocal) {
+                        try {
+                            const snap = await db.ref('config/botUrl').once('value');
+                            const ngrok = snap.val();
+                            if (ngrok) {
+                                const ngrokCheck = await Promise.race([
+                                    fetch(`${ngrok}/status`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
+                                    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+                                ]);
+                                if (ngrokCheck.ok) botUrl = ngrok;
+                            }
+                        } catch (e) { }
+                    }
 
                     const response = await fetch(`${botUrl}${endpoint}`, {
                         method: 'POST',
