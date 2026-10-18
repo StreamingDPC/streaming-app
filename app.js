@@ -1513,301 +1513,143 @@ function setupEventListeners() {
 
         const isAdmin = window.isUserAdmin && window.isUserAdmin();
 
-        function updateBtn(plat, icon, name, maxUses) {
+        const PLATFORM_THEMES = {
+            netflix: { border: '#E50914', bg: 'rgba(229, 9, 20, 0.22)', activeBg: 'rgba(229, 9, 20, 0.45)', shadow: 'rgba(229, 9, 20, 0.35)' },
+            disney: { border: '#005AD6', bg: 'rgba(0, 90, 214, 0.22)', activeBg: 'rgba(0, 90, 214, 0.45)', shadow: 'rgba(0, 90, 214, 0.35)' },
+            hbomax: { border: '#8A2BE2', bg: 'rgba(138, 43, 226, 0.22)', activeBg: 'rgba(138, 43, 226, 0.45)', shadow: 'rgba(138, 43, 226, 0.35)' },
+            prime: { border: '#00A8E1', bg: 'rgba(0, 168, 225, 0.22)', activeBg: 'rgba(0, 168, 225, 0.45)', shadow: 'rgba(0, 168, 225, 0.35)' },
+            vix: { border: '#FF5B00', bg: 'rgba(255, 91, 0, 0.22)', activeBg: 'rgba(255, 91, 0, 0.45)', shadow: 'rgba(255, 91, 0, 0.35)' },
+            crunchyroll: { border: '#F47521', bg: 'rgba(244, 117, 33, 0.22)', activeBg: 'rgba(244, 117, 33, 0.45)', shadow: 'rgba(244, 117, 33, 0.35)' },
+            netflix_update: { border: '#f39c12', bg: 'rgba(243, 156, 18, 0.22)', activeBg: 'rgba(243, 156, 18, 0.45)', shadow: 'rgba(243, 156, 18, 0.35)' },
+            netflix_temp: { border: '#00d2d3', bg: 'rgba(0, 210, 211, 0.22)', activeBg: 'rgba(0, 210, 211, 0.45)', shadow: 'rgba(0, 210, 211, 0.35)' },
+            disney_update: { border: '#113CCF', bg: 'rgba(17, 60, 207, 0.22)', activeBg: 'rgba(17, 60, 207, 0.45)', shadow: 'rgba(17, 60, 207, 0.35)' },
+            hbomax_update: { border: '#6c5ce7', bg: 'rgba(108, 92, 231, 0.22)', activeBg: 'rgba(108, 92, 231, 0.45)', shadow: 'rgba(108, 92, 231, 0.35)' },
+            netflix_tv: { border: '#E50914', bg: 'rgba(229, 9, 20, 0.22)', activeBg: 'rgba(229, 9, 20, 0.45)', shadow: 'rgba(229, 9, 20, 0.35)' },
+            disney_tv: { border: '#005AD6', bg: 'rgba(0, 90, 214, 0.22)', activeBg: 'rgba(0, 90, 214, 0.45)', shadow: 'rgba(0, 90, 214, 0.35)' },
+            disney_code_tv: { border: '#005AD6', bg: 'rgba(0, 90, 214, 0.22)', activeBg: 'rgba(0, 90, 214, 0.45)', shadow: 'rgba(0, 90, 214, 0.35)' },
+            hbomax_tv: { border: '#8A2BE2', bg: 'rgba(138, 43, 226, 0.22)', activeBg: 'rgba(138, 43, 226, 0.45)', shadow: 'rgba(138, 43, 226, 0.35)' },
+            prime_tv: { border: '#00A8E1', bg: 'rgba(0, 168, 225, 0.22)', activeBg: 'rgba(0, 168, 225, 0.45)', shadow: 'rgba(0, 168, 225, 0.35)' },
+            crunchyroll_tv: { border: '#F47521', bg: 'rgba(244, 117, 33, 0.22)', activeBg: 'rgba(244, 117, 33, 0.45)', shadow: 'rgba(244, 117, 33, 0.35)' },
+            vix_tv: { border: '#FF5B00', bg: 'rgba(255, 91, 0, 0.22)', activeBg: 'rgba(255, 91, 0, 0.45)', shadow: 'rgba(255, 91, 0, 0.35)' }
+        };
+        window.PLATFORM_THEMES = PLATFORM_THEMES;
+
+        function updateTabBtn(plat, icon, name, maxUses) {
             const btn = document.querySelector(`.platform-tab-btn[data-platform="${plat}"]`);
-            if (btn) {
-                let used = window.clientUsedAttempts[plat];
-                let numUsed = 0;
-                if (used === true) numUsed = 1;
-                else if (typeof used === 'number') numUsed = used;
+            if (!btn) return;
 
-                let rem = maxUses - numUsed;
-                if (rem < 0) rem = 0;
+            const card = btn.closest('.platform-action-card');
+            const theme = PLATFORM_THEMES[plat] || { border: '#E50914', bg: 'rgba(229, 9, 20, 0.22)', activeBg: 'rgba(229, 9, 20, 0.45)', shadow: 'rgba(229, 9, 20, 0.35)' };
 
-                if (isAdmin) {
-                    btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
-                    btn.style.opacity = '1';
-                    btn.disabled = false;
-                    btn.style.cursor = 'pointer';
+            let used = window.clientUsedAttempts[plat];
+            let numUsed = 0;
+            if (used === true) numUsed = 1;
+            else if (typeof used === 'number') numUsed = used;
+
+            let rem = maxUses - numUsed;
+            if (rem < 0) rem = 0;
+
+            const hasPurchased = card ? (card.dataset.hasPurchased !== 'false') : true;
+
+            // Si el cliente no es admin y ya agotó intentos o no compró la plataforma: ocultar tarjeta
+            if (!isAdmin && (rem <= 0 || !hasPurchased)) {
+                if (card) {
+                    card.style.display = 'none';
+                    // Si tenía un panel de TV abierto, cerrarlo
+                    const innerPanel = card.querySelector('[id$="-panel"]');
+                    if (innerPanel) innerPanel.style.display = 'none';
                 } else {
-                    btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                    if (rem <= 0) {
-                        btn.style.opacity = '0.6';
-                    } else {
-                        btn.style.opacity = '1';
-                    }
+                    btn.style.display = 'none';
                 }
+                return;
+            }
+
+            // Si tiene intentos disponibles (o es admin) y la plataforma está habilitada: mostrar
+            if (card && hasPurchased) card.style.display = 'flex';
+            else if (btn && hasPurchased) btn.style.display = 'flex';
+
+            const isActive = btn.classList.contains('active-platform');
+            btn.style.border = `2px solid ${theme.border}`;
+            btn.style.color = '#ffffff';
+            btn.style.fontWeight = '700';
+            btn.style.opacity = '1';
+            btn.disabled = false;
+            btn.style.cursor = 'pointer';
+
+            if (isActive) {
+                btn.style.background = theme.activeBg;
+                btn.style.boxShadow = `0 0 16px ${theme.shadow}, inset 0 0 10px rgba(255,255,255,0.15)`;
+                btn.style.filter = 'brightness(1.15)';
+            } else {
+                btn.style.background = theme.bg;
+                btn.style.boxShadow = `0 4px 12px ${theme.shadow}`;
+                btn.style.filter = 'none';
+            }
+
+            if (isAdmin) {
+                btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
+            } else {
+                btn.innerHTML = `<span style="font-size:1.1rem;">${icon}</span> ${name} (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
             }
         }
 
-        updateBtn('netflix', '🎬', 'Netflix', 1);
-        updateBtn('disney', '🏰', 'Disney+', 1);
-        updateBtn('hbomax', '📺', 'HBO Max', 1);
-        updateBtn('prime', '📦', 'Prime Video', 1);
-        updateBtn('vix', '🔥', 'ViX', 1);
-        updateBtn('netflix_update', '🏠', 'Actualiza tu Hogar con Netflix', 2);
-        updateBtn('netflix_temp', '✈️', 'Acceso temporal con Netflix CEL O PC', 1);
-        updateBtn('disney_update', '🏰', 'Actualiza hogar con Disney', 2);
-        updateBtn('hbomax_update', '🟣', 'Fuera de casa HBO Max', 2);
-        updateBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV con email', 1);
-        updateBtn('disney_code_tv', '🏰', 'Iniciar sesión Disney en TV con código', 1);
-        updateBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
-        updateBtn('prime_tv', '📺', 'Iniciar sesión Prime Video en TV', 1);
-        updateBtn('crunchyroll_tv', '📺', 'Iniciar sesión Crunchyroll en TV', 1);
-        updateBtn('vix_tv', '📺', 'Iniciar sesión Vix en TV', 1);
+        // 1. Botones de CEL/PC
+        updateTabBtn('netflix', '🎬', 'Netflix', 1);
+        updateTabBtn('disney', '🏰', 'Disney+', 1);
+        updateTabBtn('hbomax', '📺', 'HBO Max', 1);
+        updateTabBtn('prime', '📦', 'Prime Video', 1);
+        updateTabBtn('vix', '🔥', 'ViX', 1);
 
-        // Actualizar botón de Smart TV
-        const tvBtn = document.getElementById('show-tv-login-btn');
-        if (tvBtn) {
-            let tvUsed = window.clientUsedAttempts['netflix_tv'];
-            let numTv = 0;
-            if (tvUsed === true) numTv = 1;
-            else if (typeof tvUsed === 'number') numTv = tvUsed;
+        // 2. Botones de Hogar / Actualizaciones
+        updateTabBtn('netflix_update', '🏠', 'Actualiza tu Hogar con Netflix', 2);
+        updateTabBtn('netflix_temp', '✈️', 'Acceso temporal con Netflix CEL O PC', 1);
+        updateTabBtn('disney_update', '🏰', 'Actualiza hogar con Disney', 2);
+        updateTabBtn('hbomax_update', '🟣', 'Fuera de casa HBO Max', 2);
 
-            let rem = 1 - numTv;
+        // 3. Botones de Smart TV
+        updateTabBtn('netflix_tv', '📺', 'Iniciar sesión Netflix en TV', 1);
+        updateTabBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV con email', 1);
+        updateTabBtn('disney_code_tv', '🏰', 'Iniciar sesión Disney en TV con código', 1);
+        updateTabBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
+        updateTabBtn('prime_tv', '📺', 'Iniciar sesión Prime Video en TV', 1);
+        updateTabBtn('crunchyroll_tv', '📺', 'Iniciar sesión Crunchyroll en TV', 1);
+        updateTabBtn('vix_tv', '📺', 'Iniciar sesión Vix en TV', 1);
+
+        // Actualizar botones de activación dentro de los paneles TV
+        function updateTvActivateBtn(btnId, plat, defaultText, exhaustedText) {
+            const actBtn = document.getElementById(btnId);
+            if (!actBtn) return;
+            let used = window.clientUsedAttempts[plat];
+            let numUsed = (used === true) ? 1 : ((typeof used === 'number') ? used : 0);
+            let rem = 1 - numUsed;
             if (rem < 0) rem = 0;
 
-            const actBtn = document.getElementById('activate-tv-btn');
             if (isAdmin) {
-                tvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
-                tvBtn.style.opacity = '1';
-                if (actBtn) {
-                    actBtn.disabled = false;
-                    actBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar TV (Admin ∞)';
-                    actBtn.style.opacity = '1';
-                    actBtn.style.cursor = 'pointer';
-                }
+                actBtn.disabled = false;
+                actBtn.innerHTML = `<i class="fa-solid fa-tv"></i> ${defaultText} (Admin ∞)`;
+                actBtn.style.opacity = '1';
+                actBtn.style.cursor = 'pointer';
             } else if (rem <= 0) {
-                tvBtn.style.opacity = '0.6';
-                if (actBtn) {
-                    actBtn.disabled = true;
-                    actBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Smart TV agotado (1/1)';
-                    actBtn.style.opacity = '0.5';
-                    actBtn.style.cursor = 'not-allowed';
-                }
+                actBtn.disabled = true;
+                actBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ${exhaustedText}`;
+                actBtn.style.opacity = '0.5';
+                actBtn.style.cursor = 'not-allowed';
             } else {
-                tvBtn.style.opacity = '1';
-                tvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Netflix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                if (actBtn) {
-                    actBtn.disabled = false;
-                    actBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar TV';
-                    actBtn.style.opacity = '1';
-                    actBtn.style.cursor = 'pointer';
-                }
+                actBtn.disabled = false;
+                actBtn.innerHTML = `<i class="fa-solid fa-tv"></i> ${defaultText}`;
+                actBtn.style.opacity = '1';
+                actBtn.style.cursor = 'pointer';
             }
         }
 
-        // Actualizar botón de HBO Max Smart TV
-        const hboTvBtn = document.getElementById('show-hbo-tv-login-btn');
-        if (hboTvBtn) {
-            let tvUsed = window.clientUsedAttempts['hbomax_tv'];
-            let numTv = 0;
-            if (tvUsed === true) numTv = 1;
-            else if (typeof tvUsed === 'number') numTv = tvUsed;
+        updateTvActivateBtn('activate-tv-btn', 'netflix_tv', 'Activar TV', 'Intento de Smart TV agotado (1/1)');
+        updateTvActivateBtn('activate-disney-code-tv-btn', 'disney_code_tv', 'Activar Disney en TV', 'Intento de Disney TV agotado (1/1)');
+        updateTvActivateBtn('activate-hbo-tv-btn', 'hbomax_tv', 'Activar HBO Max en TV', 'Intento de HBO Max TV agotado (1/1)');
+        updateTvActivateBtn('activate-prime-tv-btn', 'prime_tv', 'Activar Prime en TV', 'Intento de Prime Video TV agotado (1/1)');
+        updateTvActivateBtn('activate-crunchyroll-tv-btn', 'crunchyroll_tv', 'Activar Crunchyroll en TV', 'Intento de Crunchyroll TV agotado (1/1)');
+        updateTvActivateBtn('activate-vix-tv-btn', 'vix_tv', 'Activar ViX en TV', 'Intento de ViX TV agotado (1/1)');
 
-            let rem = 1 - numTv;
-            if (rem < 0) rem = 0;
-
-            const actHboBtn = document.getElementById('activate-hbo-tv-btn');
-            if (isAdmin) {
-                hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
-                hboTvBtn.style.opacity = '1';
-                if (actHboBtn) {
-                    actHboBtn.disabled = false;
-                    actHboBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar HBO Max en TV (Admin ∞)';
-                    actHboBtn.style.opacity = '1';
-                    actHboBtn.style.cursor = 'pointer';
-                }
-            } else if (rem <= 0) {
-                hboTvBtn.style.opacity = '0.6';
-                hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (0 veces)`;
-                if (actHboBtn) {
-                    actHboBtn.disabled = true;
-                    actHboBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de HBO Max TV agotado (1/1)';
-                    actHboBtn.style.opacity = '0.5';
-                    actHboBtn.style.cursor = 'not-allowed';
-                }
-            } else {
-                hboTvBtn.style.opacity = '1';
-                hboTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión HBO Max en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                if (actHboBtn) {
-                    actHboBtn.disabled = false;
-                    actHboBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar HBO Max en TV';
-                    actHboBtn.style.opacity = '1';
-                    actHboBtn.style.cursor = 'pointer';
-                }
-            }
-        }
-
-        // Actualizar botón de Prime Video Smart TV
-        const primeTvBtn = document.getElementById('show-prime-tv-login-btn');
-        if (primeTvBtn) {
-            let tvUsed = window.clientUsedAttempts['prime_tv'];
-            let numTv = 0;
-            if (tvUsed === true) numTv = 1;
-            else if (typeof tvUsed === 'number') numTv = tvUsed;
-
-            let rem = 1 - numTv;
-            if (rem < 0) rem = 0;
-
-            const actPrimeBtn = document.getElementById('activate-prime-tv-btn');
-            if (isAdmin) {
-                primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
-                primeTvBtn.style.opacity = '1';
-                if (actPrimeBtn) {
-                    actPrimeBtn.disabled = false;
-                    actPrimeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Prime en TV (Admin ∞)';
-                    actPrimeBtn.style.opacity = '1';
-                    actPrimeBtn.style.cursor = 'pointer';
-                }
-            } else if (rem <= 0) {
-                primeTvBtn.style.opacity = '0.6';
-                primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (0 veces)`;
-                if (actPrimeBtn) {
-                    actPrimeBtn.disabled = true;
-                    actPrimeBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Prime Video TV agotado (1/1)';
-                    actPrimeBtn.style.opacity = '0.5';
-                    actPrimeBtn.style.cursor = 'not-allowed';
-                }
-            } else {
-                primeTvBtn.style.opacity = '1';
-                primeTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Prime Video en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                if (actPrimeBtn) {
-                    actPrimeBtn.disabled = false;
-                    actPrimeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Prime en TV';
-                    actPrimeBtn.style.opacity = '1';
-                    actPrimeBtn.style.cursor = 'pointer';
-                }
-            }
-        }
-
-        // Actualizar botón de Crunchyroll Smart TV
-        const crunchyTvBtn = document.getElementById('show-crunchyroll-tv-login-btn');
-        if (crunchyTvBtn) {
-            let tvUsed = window.clientUsedAttempts['crunchyroll_tv'];
-            let numTv = 0;
-            if (tvUsed === true) numTv = 1;
-            else if (typeof tvUsed === 'number') numTv = tvUsed;
-
-            let rem = 1 - numTv;
-            if (rem < 0) rem = 0;
-
-            const actCrunchyBtn = document.getElementById('activate-crunchyroll-tv-btn');
-            if (isAdmin) {
-                crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
-                crunchyTvBtn.style.opacity = '1';
-                if (actCrunchyBtn) {
-                    actCrunchyBtn.disabled = false;
-                    actCrunchyBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Crunchyroll en TV (Admin ∞)';
-                    actCrunchyBtn.style.opacity = '1';
-                    actCrunchyBtn.style.cursor = 'pointer';
-                }
-            } else if (rem <= 0) {
-                crunchyTvBtn.style.opacity = '0.6';
-                crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (0 veces)`;
-                if (actCrunchyBtn) {
-                    actCrunchyBtn.disabled = true;
-                    actCrunchyBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Crunchyroll TV agotado (1/1)';
-                    actCrunchyBtn.style.opacity = '0.5';
-                    actCrunchyBtn.style.cursor = 'not-allowed';
-                }
-            } else {
-                crunchyTvBtn.style.opacity = '1';
-                crunchyTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Crunchyroll en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                if (actCrunchyBtn) {
-                    actCrunchyBtn.disabled = false;
-                    actCrunchyBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Crunchyroll en TV';
-                    actCrunchyBtn.style.opacity = '1';
-                    actCrunchyBtn.style.cursor = 'pointer';
-                }
-            }
-        }
-
-        // Actualizar botón de Disney+ Smart TV con código
-        const disneyCodeTvBtn = document.getElementById('show-disney-code-tv-login-btn');
-        if (disneyCodeTvBtn) {
-            let tvUsed = window.clientUsedAttempts['disney_code_tv'];
-            let numTv = 0;
-            if (tvUsed === true) numTv = 1;
-            else if (typeof tvUsed === 'number') numTv = tvUsed;
-
-            let rem = 1 - numTv;
-            if (rem < 0) rem = 0;
-
-            const actDisneyCodeBtn = document.getElementById('activate-disney-code-tv-btn');
-            if (isAdmin) {
-                disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
-                disneyCodeTvBtn.style.opacity = '1';
-                if (actDisneyCodeBtn) {
-                    actDisneyCodeBtn.disabled = false;
-                    actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Disney en TV (Admin ∞)';
-                    actDisneyCodeBtn.style.opacity = '1';
-                    actDisneyCodeBtn.style.cursor = 'pointer';
-                }
-            } else if (rem <= 0) {
-                disneyCodeTvBtn.style.opacity = '0.6';
-                disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (0 veces)`;
-                if (actDisneyCodeBtn) {
-                    actDisneyCodeBtn.disabled = true;
-                    actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de Disney TV con código agotado (1/1)';
-                    actDisneyCodeBtn.style.opacity = '0.5';
-                    actDisneyCodeBtn.style.cursor = 'not-allowed';
-                }
-            } else {
-                disneyCodeTvBtn.style.opacity = '1';
-                disneyCodeTvBtn.innerHTML = `<span style="font-size:1.1rem;">🏰</span> Iniciar sesión Disney en TV con código (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                if (actDisneyCodeBtn) {
-                    actDisneyCodeBtn.disabled = false;
-                    actDisneyCodeBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar Disney en TV';
-                    actDisneyCodeBtn.style.opacity = '1';
-                    actDisneyCodeBtn.style.cursor = 'pointer';
-                }
-            }
-        }
-
-        // Actualizar botón de ViX Smart TV
-        const vixTvBtn = document.getElementById('show-vix-tv-login-btn');
-        if (vixTvBtn) {
-            let tvUsed = window.clientUsedAttempts['vix_tv'];
-            let numTv = 0;
-            if (tvUsed === true) numTv = 1;
-            else if (typeof tvUsed === 'number') numTv = tvUsed;
-
-            let rem = 1 - numTv;
-            if (rem < 0) rem = 0;
-
-            const actVixBtn = document.getElementById('activate-vix-tv-btn');
-            if (isAdmin) {
-                vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (${rem > 0 ? rem : '0'} disp. | <span style="color:#2ecc71; font-weight:bold;">Admin ∞</span>)`;
-                vixTvBtn.style.opacity = '1';
-                if (actVixBtn) {
-                    actVixBtn.disabled = false;
-                    actVixBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar ViX en TV (Admin ∞)';
-                    actVixBtn.style.opacity = '1';
-                    actVixBtn.style.cursor = 'pointer';
-                }
-            } else if (rem <= 0) {
-                vixTvBtn.style.opacity = '0.6';
-                vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (0 veces)`;
-                if (actVixBtn) {
-                    actVixBtn.disabled = true;
-                    actVixBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Intento de ViX TV agotado (1/1)';
-                    actVixBtn.style.opacity = '0.5';
-                    actVixBtn.style.cursor = 'not-allowed';
-                }
-            } else {
-                vixTvBtn.style.opacity = '1';
-                vixTvBtn.innerHTML = `<span style="font-size:1.1rem;">📺</span> Iniciar sesión Vix en TV (${rem} ${rem === 1 ? 'vez' : 'veces'})`;
-                if (actVixBtn) {
-                    actVixBtn.disabled = false;
-                    actVixBtn.innerHTML = '<i class="fa-solid fa-tv"></i> Activar ViX en TV';
-                    actVixBtn.style.opacity = '1';
-                    actVixBtn.style.cursor = 'pointer';
-                }
-            }
-        }
-
-        // Actualizar botones de acción directa bajo cada servicio (Netflix, Hogar, Acceso Temporal)
+        // Actualizar botones de acción directa bajo cada servicio
         const directButtons = document.querySelectorAll('.direct-fetch-code-btn');
         directButtons.forEach(dBtn => {
             const plat = dBtn.dataset.platform;
@@ -1857,6 +1699,8 @@ function setupEventListeners() {
             }
 
             let rem = maxUses - numUsed;
+            if (rem < 0) rem = 0;
+
             if (isAdmin) {
                 dBtn.disabled = false;
                 dBtn.style.opacity = '1';
@@ -1896,15 +1740,59 @@ function setupEventListeners() {
             }
         });
 
+        // 4. Ocultar secciones si no tienen tarjetas visibles
+        const updateSectionVisibility = (secId) => {
+            const secEl = document.getElementById(secId);
+            if (!secEl) return 0;
+            let visibleCount = 0;
+            secEl.querySelectorAll('.platform-action-card').forEach(c => {
+                if (c.style.display !== 'none') visibleCount++;
+            });
+            secEl.style.display = visibleCount > 0 ? 'block' : 'none';
+            return visibleCount;
+        };
+
+        const vCel = updateSectionVisibility('section-cel-pc');
+        const vHogar = updateSectionVisibility('section-hogar');
+        const vTv = updateSectionVisibility('section-tv');
+        const totalVisible = vCel + vHogar + vTv;
+
+        const emptyNotice = document.getElementById('no-attempts-remaining-notice');
+        const emailContainer = document.getElementById('code-email-container');
+        const fetchBtn = document.getElementById('fetch-code-btn');
+
+        if (!isAdmin && totalVisible === 0) {
+            if (emptyNotice) emptyNotice.style.display = 'block';
+            if (emailContainer) emailContainer.style.display = 'none';
+            if (fetchBtn) fetchBtn.style.display = 'none';
+        } else {
+            if (emptyNotice) emptyNotice.style.display = 'none';
+            if (emailContainer) emailContainer.style.display = 'block';
+        }
+
+        // 5. Si la pestaña actualmente activa quedó oculta, auto-seleccionar la primera visible
+        const activeBtn = document.querySelector('.platform-tab-btn.active-platform');
+        const activeCard = activeBtn ? activeBtn.closest('.platform-action-card') : null;
+        if (!activeBtn || (activeCard && activeCard.style.display === 'none')) {
+            const visibleCards = document.querySelectorAll('.platform-action-card');
+            for (let c of visibleCards) {
+                if (c.style.display !== 'none') {
+                    const b = c.querySelector('.platform-tab-btn');
+                    if (b) {
+                        b.click();
+                        break;
+                    }
+                }
+            }
+        }
+
         // Reactividad en vivo: bloquear o desbloquear botón de búsqueda inferior si está visible
         const codePlatformInput = document.getElementById('code-platform');
-        const fetchBtn = document.getElementById('fetch-code-btn');
         if (codePlatformInput && fetchBtn) {
             const chosen = codePlatformInput.value;
-            // Si es una de las opciones con botón directo, mantener el inferior oculto
             if (['netflix', 'disney', 'hbomax', 'prime', 'vix', 'netflix_update', 'disney_update', 'hbomax_update', 'netflix_temp'].includes(chosen)) {
                 fetchBtn.style.display = 'none';
-            } else {
+            } else if (totalVisible > 0) {
                 fetchBtn.style.display = 'block';
                 let isExhausted = false;
                 if (window.clientUsedAttempts[chosen] === true || (typeof window.clientUsedAttempts[chosen] === 'number' && window.clientUsedAttempts[chosen] >= 1)) {
@@ -2538,14 +2426,11 @@ function setupEventListeners() {
 
                 // Filtrar botones según las pantallas/servicios activos del cliente
                 const hasPurchasedAny = userPurchasedPlatforms.size > 0;
-                let firstValidPlatform = null;
                 const platformTabBtns = document.querySelectorAll('.platform-tab-btn');
-
                 platformTabBtns.forEach(btn => {
                     const plat = btn.dataset.platform;
                     const basePlat = PLATFORM_TO_BASE[plat] || plat;
                     const card = btn.closest('.platform-action-card');
-                    const targetEl = card || btn;
 
                     // Mostrar si el cliente compró la plataforma base, o fallback si tiene cuentas activas sin plataforma clasificada
                     let isVisible = false;
@@ -2555,37 +2440,27 @@ function setupEventListeners() {
                         isVisible = true;
                     }
 
+                    if (card) {
+                        card.dataset.hasPurchased = isVisible ? 'true' : 'false';
+                    }
                     if (isVisible) {
-                        targetEl.style.display = 'flex';
-                        if (!firstValidPlatform) {
-                            firstValidPlatform = btn;
-                        }
+                        if (card) card.style.display = 'flex';
+                        else btn.style.display = 'flex';
                     } else {
-                        targetEl.style.display = 'none';
+                        if (card) card.style.display = 'none';
+                        else btn.style.display = 'none';
                     }
                 });
 
-                // Ocultar secciones completas (CEL/PC, Hogar, TV) si no contienen ninguna tarjeta visible
-                const updateSectionVisibility = (secId) => {
-                    const secEl = document.getElementById(secId);
-                    if (!secEl) return;
-                    let hasVisibleCard = false;
-                    secEl.querySelectorAll('.platform-action-card').forEach(c => {
-                        if (c.style.display !== 'none') hasVisibleCard = true;
-                    });
-                    secEl.style.display = hasVisibleCard ? 'block' : 'none';
-                };
+                // Inmediatamente aplicar el estado de intentos y estilos encendidos
+                if (window.updateCodeCountersUI) {
+                    window.updateCodeCountersUI();
+                }
 
-                updateSectionVisibility('section-cel-pc');
-                updateSectionVisibility('section-hogar');
-                updateSectionVisibility('section-tv');
-
-                if (firstValidPlatform) {
-                    firstValidPlatform.click();
-                } else if (platformTabBtns[0] && platformTabBtns[0].closest('.platform-action-card')?.style.display !== 'none') {
-                    platformTabBtns[0].click();
-                } else {
-                    emailSelect.innerHTML = '<option value="">-- No tienes pantallas activas --</option>';
+                // Si ninguna plataforma quedó visible
+                const anyVisibleCard = document.querySelector('.platform-action-card:not([style*="display: none"])');
+                if (!anyVisibleCard) {
+                    emailSelect.innerHTML = '<option value="">-- No tienes pantallas activas o intentos disponibles --</option>';
                 }
 
                 // Poblar específicamente el selector de correos para Activar TV (Solo Netflix y global)
@@ -2749,24 +2624,6 @@ function setupEventListeners() {
     // =============================================
     // SUBTABS DE PLATAFORMA — Colores por servicio
     // =============================================
-    const PLATFORM_STYLES = {
-        netflix: { border: '#E50914', bg: 'rgba(229,9,20,0.18)', color: 'white' },
-        netflix_update: { border: '#E50914', bg: 'rgba(229,9,20,0.18)', color: 'white' },
-        netflix_temp: { border: '#E50914', bg: 'rgba(229,9,20,0.18)', color: 'white' },
-        disney: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
-        disney_update: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
-        disney_tv: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
-        disney_code_tv: { border: '#005AD6', bg: 'rgba(0,90,214,0.18)', color: 'white' },
-        hbomax: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
-        hbomax_update: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
-        hbomax_tv: { border: '#8A2BE2', bg: 'rgba(50,0,120,0.25)', color: 'white' },
-        prime_tv: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
-        prime: { border: '#00A8E1', bg: 'rgba(0,168,225,0.18)', color: 'white' },
-        vix: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' },
-        crunchyroll: { border: '#F47521', bg: 'rgba(244,117,33,0.18)', color: 'white' },
-        crunchyroll_tv: { border: '#F47521', bg: 'rgba(244,117,33,0.18)', color: 'white' },
-        vix_tv: { border: '#FF5B00', bg: 'rgba(255,91,0,0.18)', color: 'white' }
-    };
     const platformTabBtns = document.querySelectorAll('.platform-tab-btn');
     const codePlatformInput = document.getElementById('code-platform');
     platformTabBtns.forEach(btn => {
@@ -2774,19 +2631,28 @@ function setupEventListeners() {
             const chosen = btn.dataset.platform;
             // Actualizar el campo oculto
             if (codePlatformInput) codePlatformInput.value = chosen;
-            // Resetear todos los tabs a estado inactivo
+
+            // Mantener todos los tabs encendidos con sus colores de marca
+            const themes = window.PLATFORM_THEMES || {};
             platformTabBtns.forEach(b => {
-                b.style.border = '2px solid rgba(255,255,255,0.2)';
-                b.style.background = 'rgba(255,255,255,0.03)';
-                b.style.color = '#aaa';
-                b.classList.remove('active-platform');
+                const bPlat = b.dataset.platform;
+                const theme = themes[bPlat] || { border: '#E50914', bg: 'rgba(229,9,20,0.22)', activeBg: 'rgba(229,9,20,0.45)', shadow: 'rgba(229,9,20,0.35)' };
+                if (b === btn) {
+                    b.classList.add('active-platform');
+                    b.style.border = `2px solid ${theme.border}`;
+                    b.style.background = theme.activeBg;
+                    b.style.color = '#ffffff';
+                    b.style.boxShadow = `0 0 16px ${theme.shadow}, inset 0 0 10px rgba(255,255,255,0.15)`;
+                    b.style.filter = 'brightness(1.15)';
+                } else {
+                    b.classList.remove('active-platform');
+                    b.style.border = `2px solid ${theme.border}`;
+                    b.style.background = theme.bg;
+                    b.style.color = '#ffffff';
+                    b.style.boxShadow = `0 4px 12px ${theme.shadow}`;
+                    b.style.filter = 'none';
+                }
             });
-            // Activar el tab elegido con el color de su plataforma
-            const s = PLATFORM_STYLES[chosen] || { border: 'var(--accent-primary)', bg: 'rgba(255,165,0,0.12)', color: 'white' };
-            btn.style.border = `2px solid ${s.border}`;
-            btn.style.background = s.bg;
-            btn.style.color = s.color;
-            btn.classList.add('active-platform');
 
             // Actualizar el selector de correos según las plataformas validadas (window.clientActivePlatforms)
             const emailSelect = document.getElementById('code-email');
@@ -3211,9 +3077,10 @@ function setupEventListeners() {
 
             const isOpen = tvPanel.style.display !== 'none';
             tvPanel.style.display = isOpen ? 'none' : 'block';
-            showTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#E50914';
-            showTvBtn.style.color = isOpen ? '#aaa' : 'white';
-            showTvBtn.style.background = isOpen ? 'rgba(60,60,60,0.2)' : 'rgba(229,9,20,0.15)';
+            showTvBtn.style.borderColor = '#E50914';
+            showTvBtn.style.color = '#ffffff';
+            showTvBtn.style.background = isOpen ? 'rgba(229,9,20,0.22)' : 'rgba(229,9,20,0.45)';
+            showTvBtn.style.boxShadow = '0 4px 12px rgba(229,9,20,0.35)';
             if (!isOpen) {
                 document.getElementById('tv-activation-loading').style.display = 'none';
                 document.getElementById('tv-activation-result').style.display = 'none';
@@ -3434,9 +3301,10 @@ function setupEventListeners() {
 
             const isOpen = hboTvPanel.style.display !== 'none';
             hboTvPanel.style.display = isOpen ? 'none' : 'block';
-            showHboTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#8A2BE2';
-            showHboTvBtn.style.color = isOpen ? '#aaa' : 'white';
-            showHboTvBtn.style.background = isOpen ? 'rgba(138,43,226,0.1)' : 'rgba(138,43,226,0.25)';
+            showHboTvBtn.style.borderColor = '#8A2BE2';
+            showHboTvBtn.style.color = '#ffffff';
+            showHboTvBtn.style.background = isOpen ? 'rgba(138,43,226,0.22)' : 'rgba(138,43,226,0.45)';
+            showHboTvBtn.style.boxShadow = '0 4px 12px rgba(138,43,226,0.35)';
             if (!isOpen) {
                 document.getElementById('hbo-tv-activation-loading').style.display = 'none';
                 document.getElementById('hbo-tv-activation-result').style.display = 'none';
@@ -3628,9 +3496,10 @@ function setupEventListeners() {
 
             const isOpen = primeTvPanel.style.display !== 'none';
             primeTvPanel.style.display = isOpen ? 'none' : 'block';
-            showPrimeTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#00A8E1';
-            showPrimeTvBtn.style.color = isOpen ? '#aaa' : 'white';
-            showPrimeTvBtn.style.background = isOpen ? 'rgba(0,168,225,0.1)' : 'rgba(0,168,225,0.25)';
+            showPrimeTvBtn.style.borderColor = '#00A8E1';
+            showPrimeTvBtn.style.color = '#ffffff';
+            showPrimeTvBtn.style.background = isOpen ? 'rgba(0,168,225,0.22)' : 'rgba(0,168,225,0.45)';
+            showPrimeTvBtn.style.boxShadow = '0 4px 12px rgba(0,168,225,0.35)';
             if (!isOpen) {
                 document.getElementById('prime-tv-activation-loading').style.display = 'none';
                 document.getElementById('prime-tv-activation-result').style.display = 'none';
@@ -3820,9 +3689,10 @@ function setupEventListeners() {
 
             const isOpen = crunchyTvPanel.style.display !== 'none';
             crunchyTvPanel.style.display = isOpen ? 'none' : 'block';
-            showCrunchyTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#F47521';
-            showCrunchyTvBtn.style.color = isOpen ? '#aaa' : 'white';
-            showCrunchyTvBtn.style.background = isOpen ? 'rgba(244,117,33,0.1)' : 'rgba(244,117,33,0.25)';
+            showCrunchyTvBtn.style.borderColor = '#F47521';
+            showCrunchyTvBtn.style.color = '#ffffff';
+            showCrunchyTvBtn.style.background = isOpen ? 'rgba(244,117,33,0.22)' : 'rgba(244,117,33,0.45)';
+            showCrunchyTvBtn.style.boxShadow = '0 4px 12px rgba(244,117,33,0.35)';
             if (!isOpen) {
                 document.getElementById('crunchyroll-tv-activation-loading').style.display = 'none';
                 document.getElementById('crunchyroll-tv-activation-result').style.display = 'none';
@@ -4015,9 +3885,10 @@ function setupEventListeners() {
 
             const isOpen = disneyCodeTvPanel.style.display !== 'none';
             disneyCodeTvPanel.style.display = isOpen ? 'none' : 'block';
-            showDisneyCodeTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#005AD6';
-            showDisneyCodeTvBtn.style.color = isOpen ? '#aaa' : 'white';
-            showDisneyCodeTvBtn.style.background = isOpen ? 'rgba(0,90,214,0.1)' : 'rgba(0,90,214,0.25)';
+            showDisneyCodeTvBtn.style.borderColor = '#005AD6';
+            showDisneyCodeTvBtn.style.color = '#ffffff';
+            showDisneyCodeTvBtn.style.background = isOpen ? 'rgba(0,90,214,0.22)' : 'rgba(0,90,214,0.45)';
+            showDisneyCodeTvBtn.style.boxShadow = '0 4px 12px rgba(0,90,214,0.35)';
             if (!isOpen) {
                 document.getElementById('disney-code-tv-activation-loading').style.display = 'none';
                 document.getElementById('disney-code-tv-activation-result').style.display = 'none';
@@ -4217,9 +4088,10 @@ function setupEventListeners() {
 
             const isOpen = vixTvPanel.style.display !== 'none';
             vixTvPanel.style.display = isOpen ? 'none' : 'block';
-            showVixTvBtn.style.borderColor = isOpen ? 'rgba(255,255,255,0.2)' : '#FF5B00';
-            showVixTvBtn.style.color = isOpen ? '#aaa' : 'white';
-            showVixTvBtn.style.background = isOpen ? 'rgba(255,91,0,0.1)' : 'rgba(255,91,0,0.25)';
+            showVixTvBtn.style.borderColor = '#FF5B00';
+            showVixTvBtn.style.color = '#ffffff';
+            showVixTvBtn.style.background = isOpen ? 'rgba(255,91,0,0.22)' : 'rgba(255,91,0,0.45)';
+            showVixTvBtn.style.boxShadow = '0 4px 12px rgba(255,91,0,0.35)';
             if (!isOpen) {
                 document.getElementById('vix-tv-activation-loading').style.display = 'none';
                 document.getElementById('vix-tv-activation-result').style.display = 'none';
