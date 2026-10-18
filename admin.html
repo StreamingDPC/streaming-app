@@ -8214,15 +8214,17 @@
             sortedKeys.forEach(k => {
                 const s = sales[k];
                 const clientName = (s.clientName || '').toLowerCase();
-                if (q && !clientName.includes(q)) return; // filtrar
+                const sellerName = (s._sellerName || s.sellerName || '').toLowerCase();
+                if (q && !clientName.includes(q) && !sellerName.includes(q)) return; // filtrar
 
                 const opt = document.createElement('option');
                 opt.value = k;
-                const itemsText = s.items ? s.items.map(i => i.name).join(', ') : 'Pantalla';
+                const itemsText = s.items ? (Array.isArray(s.items) ? s.items.map(i => i.name).join(', ') : Object.values(s.items).map(i => i.name).join(', ')) : 'Pantalla';
                 const dateText = s.date ? new Date(s.date).toLocaleDateString() : 'N/A';
+                const sellerTag = (s._sellerName || (s.sellerName && s.sellerName !== 'Página Web Oficial' && s.sellerName !== 'Admin')) ? `[Vendedor: ${s._sellerName || s.sellerName}] ` : '';
                 const nameTag = s.clientName ? `[${s.clientName}] ` : '';
-                let fName = nameTag + itemsText;
-                if (fName.length > 60) fName = fName.substring(0, 57) + '...';
+                let fName = sellerTag + nameTag + itemsText;
+                if (fName.length > 65) fName = fName.substring(0, 62) + '...';
                 opt.text = `${fName} (${dateText})`;
                 select.appendChild(opt);
                 if (!firstMatch) firstMatch = k;
@@ -8246,20 +8248,75 @@
         };
 
         async function searchClient() {
-            const phone = window.sanitizePhone(document.getElementById('search-client-phone').value);
+            const rawPhone = document.getElementById('search-client-phone').value;
+            const phone = window.sanitizePhone ? window.sanitizePhone(rawPhone) : rawPhone.replace(/\D/g, '');
             if (!phone || phone.length < 5) return alert('Ingresa un número de teléfono válido.');
 
+            const cleanPhone = phone.replace(/\D/g, '').replace(/^57/, '');
+            const phone57 = '57' + cleanPhone;
+
             try {
-                const snap = await db.ref(`clientSales/${phone}`).once('value');
-                const sales = snap.val();
-                if (!sales) {
+                const [snap1, snap2, sSnap] = await Promise.all([
+                    db.ref(`clientSales/${cleanPhone}`).once('value'),
+                    db.ref(`clientSales/${phone57}`).once('value'),
+                    db.ref('sellerSales').once('value')
+                ]);
+
+                const sales = {};
+
+                // 1. Direct client sales (sin 57)
+                const s1 = snap1.val() || {};
+                Object.keys(s1).forEach(k => {
+                    sales[k] = Object.assign({}, s1[k], {
+                        _source: 'clientSales',
+                        _sourcePhone: cleanPhone,
+                        _saleId: k,
+                        sellerName: s1[k].sellerName || 'Página Web Oficial'
+                    });
+                });
+
+                // 2. Direct client sales (con 57)
+                const s2 = snap2.val() || {};
+                Object.keys(s2).forEach(k => {
+                    if (!sales[k]) {
+                        sales[k] = Object.assign({}, s2[k], {
+                            _source: 'clientSales',
+                            _sourcePhone: phone57,
+                            _saleId: k,
+                            sellerName: s2[k].sellerName || 'Página Web Oficial'
+                        });
+                    }
+                });
+
+                // 3. Seller sales (todas las ventas de todos los vendedores)
+                const allSellers = sSnap.val() || {};
+                Object.keys(allSellers).forEach(sellerName => {
+                    const sMap = allSellers[sellerName] || {};
+                    Object.keys(sMap).forEach(sid => {
+                        const s = sMap[sid];
+                        if (!s || typeof s !== 'object') return;
+                        const sPhone = (s.clientPhone || '').toString().replace(/\D/g, '').replace(/^57/, '');
+                        if (sPhone === cleanPhone) {
+                            const key = sales[sid] ? (sid + '_' + sellerName) : sid;
+                            sales[key] = Object.assign({}, s, {
+                                _source: 'sellerSales',
+                                _sellerName: sellerName,
+                                _sellerSaleKey: sid,
+                                _sourcePhone: s.clientPhone || cleanPhone,
+                                sellerName: s.sellerName || sellerName
+                            });
+                        }
+                    });
+                });
+
+                if (Object.keys(sales).length === 0) {
                     alert('No se encontraron compras en el historial para ese número de teléfono.');
                     document.getElementById('client-edit-area').style.display = 'none';
                     return;
                 }
 
                 // Get the most recent details
-                const sortedKeys = Object.keys(sales).sort((k1, k2) => sales[k2].date - sales[k1].date);
+                const sortedKeys = Object.keys(sales).sort((k1, k2) => (sales[k2].date || 0) - (sales[k1].date || 0));
                 window.currentClientSales = sales;
 
                 // Detectar si hay múltiples clientes distintos bajo este número
@@ -8278,12 +8335,12 @@
                         const s = sales[k];
                         const opt = document.createElement('option');
                         opt.value = k;
-                        const itemsText = s.items ? s.items.map(i => i.name).join(', ') : 'Pantalla';
+                        const itemsText = s.items ? (Array.isArray(s.items) ? s.items.map(i => i.name).join(', ') : Object.values(s.items).map(i => i.name).join(', ')) : 'Pantalla';
                         const dateText = s.date ? new Date(s.date).toLocaleDateString() : 'N/A';
-                        // Si hay múltiples clientes, mostrar el nombre en la opción
+                        const sellerTag = (s._sellerName || (s.sellerName && s.sellerName !== 'Página Web Oficial' && s.sellerName !== 'Admin')) ? `[Vendedor: ${s._sellerName || s.sellerName}] ` : '';
                         const nameTag = hasMultipleClients && s.clientName ? `[${s.clientName}] ` : '';
-                        let fName = nameTag + itemsText;
-                        if (fName.length > 60) fName = fName.substring(0, 57) + '...';
+                        let fName = sellerTag + nameTag + itemsText;
+                        if (fName.length > 65) fName = fName.substring(0, 62) + '...';
                         opt.text = `${fName} (Comprado: ${dateText})`;
                         selectElement.appendChild(opt);
                     });
@@ -8307,7 +8364,8 @@
                 const badge = document.getElementById('active-sale-client-badge');
                 const badgeName = document.getElementById('active-sale-client-name');
                 if (badge && badgeName) {
-                    badgeName.textContent = latestSale.clientName || 'Sin nombre';
+                    const sellerSuffix = (latestSale._sellerName || (latestSale.sellerName && latestSale.sellerName !== 'Página Web Oficial' && latestSale.sellerName !== 'Admin')) ? ` (Vendedor: ${latestSale._sellerName || latestSale.sellerName})` : '';
+                    badgeName.textContent = (latestSale.clientName || 'Sin nombre') + sellerSuffix;
                     badge.style.display = 'block';
                 }
 
@@ -8315,8 +8373,11 @@
                 updateEditClientDatesUI(latestSale);
 
                 // Fetch PIN and Ticket PIN if any
-                const pinSnap = await db.ref(`clientProfiles/${phone}`).once('value');
-                const profileData = pinSnap.val() || {};
+                const [pinSnap1, pinSnap2] = await Promise.all([
+                    db.ref(`clientProfiles/${cleanPhone}`).once('value'),
+                    db.ref(`clientProfiles/${phone57}`).once('value')
+                ]);
+                const profileData = pinSnap1.val() || pinSnap2.val() || {};
                 document.getElementById('edit-client-pin').value = profileData.pin || '';
                 document.getElementById('edit-client-ticket-pin').value = profileData.ticketPin || '';
 
@@ -8327,13 +8388,13 @@
 
                 updateEditSaleEmailsUI(latestSale);
 
-                currentEditingClientPhone = phone;
+                currentEditingClientPhone = cleanPhone;
                 document.getElementById('client-edit-area').style.display = 'block';
 
                 // Check block status
                 const blocked = storeConfig.blockedClients || [];
                 const blockBtn = document.getElementById('btn-block-client');
-                if (blocked.includes(phone)) {
+                if (blocked.includes(cleanPhone) || blocked.includes(phone57)) {
                     blockBtn.innerHTML = '<i class="fa-solid fa-unlock"></i> Desbloquear Celular';
                     blockBtn.style.background = '#4cd137';
                 } else {
@@ -8354,29 +8415,37 @@
             if (!confirm('¿Estás SEGURO de eliminar esta venta permanentemente de TODAS las listas (cliente y vendedor)? Esta acción no se puede deshacer.')) return;
 
             try {
-                const sale = window.currentClientSales[saleKey];
-                const sellerName = sale.sellerName || 'Página Web Oficial';
+                const sale = window.currentClientSales ? window.currentClientSales[saleKey] : null;
+                const cleanPhone = currentEditingClientPhone.replace(/\D/g, '').replace(/^57/, '');
                 const updates = {};
 
-                // 1. Eliminar de clientSales
-                updates[`clientSales/${currentEditingClientPhone}/${saleKey}`] = null;
+                // 1. Eliminar de clientSales (ambas variantes: con y sin 57)
+                updates[`clientSales/${cleanPhone}/${saleKey}`] = null;
+                updates[`clientSales/57${cleanPhone}/${saleKey}`] = null;
+                if (sale && sale._saleId) {
+                    updates[`clientSales/${cleanPhone}/${sale._saleId}`] = null;
+                    updates[`clientSales/57${cleanPhone}/${sale._saleId}`] = null;
+                }
 
-                // 2. Eliminar de sellerSales
-                // Buscamos la venta en el vendedor (usamos el saleKey o buscamos por fecha si el key es distinto)
-                const sellerSnap = await db.ref(`sellerSales/${sellerName}`).once('value');
-                const sellerSales = sellerSnap.val() || {};
+                // 2. Eliminar de sellerSales si corresponde
+                const sellerName = (sale && (sale._sellerName || sale.sellerName)) ? (sale._sellerName || sale.sellerName) : null;
+                if (sellerName && sellerName !== 'Página Web Oficial' && sellerName !== 'Admin') {
+                    const sid = (sale && sale._sellerSaleKey) ? sale._sellerSaleKey : ((sale && sale._saleId) ? sale._saleId : saleKey);
+                    updates[`sellerSales/${sellerName}/${sid}`] = null;
+                }
 
-                let foundInSeller = false;
-                if (sellerSales[saleKey]) {
-                    updates[`sellerSales/${sellerName}/${saleKey}`] = null;
-                    foundInSeller = true;
-                } else {
-                    // Si el ID no coincide (raro pero posible), buscamos por fecha
-                    for (let sid in sellerSales) {
-                        if (sellerSales[sid].date === sale.date && sellerSales[sid].clientPhone === currentEditingClientPhone) {
-                            updates[`sellerSales/${sellerName}/${sid}`] = null;
-                            foundInSeller = true;
-                            break;
+                // Barrido adicional en sellerSales por si el id o fecha coincide
+                const sellerSnap = await db.ref('sellerSales').once('value');
+                const allSellers = sellerSnap.val() || {};
+                for (let sn in allSellers) {
+                    for (let sid in allSellers[sn]) {
+                        const ss = allSellers[sn][sid];
+                        if (!ss) continue;
+                        const sPhone = (ss.clientPhone || '').toString().replace(/\D/g, '').replace(/^57/, '');
+                        if (sPhone === cleanPhone) {
+                            if (sid === saleKey || (sale && (sid === sale._sellerSaleKey || sid === sale._saleId)) || (sale && sale.date && ss.date === sale.date)) {
+                                updates[`sellerSales/${sn}/${sid}`] = null;
+                            }
                         }
                     }
                 }
@@ -8400,7 +8469,7 @@
             const endVal = document.getElementById('edit-client-end-date').value;
             const endTime = document.getElementById('edit-client-end-time').value || '23:59';
             const newPin = document.getElementById('edit-client-pin').value.trim();
-            const newPhoneInput = (document.getElementById('edit-client-phone-new').value || '').replace(/\D/g, '');
+            const newPhoneInput = (document.getElementById('edit-client-phone-new').value || '').replace(/\D/g, '').replace(/^57/, '');
             const newEmail = document.getElementById('edit-client-email') ? document.getElementById('edit-client-email').value.trim() : null;
 
             // Capturar emails por pantalla del DOM antes del confirm
@@ -8431,88 +8500,138 @@
             if (!confirm('¿Actualizar registros?')) return;
 
             try {
-                const [snap, sSnap] = await Promise.all([
-                    db.ref('clientSales/' + currentEditingClientPhone).once('value'),
+                const cleanCurrPhone = currentEditingClientPhone.replace(/\D/g, '').replace(/^57/, '');
+                const [snap1, snap2, sSnap] = await Promise.all([
+                    db.ref('clientSales/' + cleanCurrPhone).once('value'),
+                    db.ref('clientSales/57' + cleanCurrPhone).once('value'),
                     db.ref('sellerSales').once('value')
                 ]);
-                const sales = snap.val();
+                const sales1 = snap1.val();
+                const sales2 = snap2.val();
                 const allSellers = sSnap.val();
                 const globalUpdates = {};
-                if (sales) {
-                    Object.keys(sales).forEach(saleKey => {
-                        const isSpecificSale = (saleKey === window.currentEditingSaleKey);
-                        if (updateAllHistory || isSpecificSale) {
-                            globalUpdates['clientSales/' + currentEditingClientPhone + '/' + saleKey + '/clientName'] = newName;
-                            globalUpdates['clientSales/' + currentEditingClientPhone + '/' + saleKey + '/clientCity'] = newCity;
-                        }
-                    });
-                    if (window.currentEditingSaleKey && sales[window.currentEditingSaleKey]) {
-                        if (endVal) globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
-                        if (newEmail !== null) globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/email'] = newEmail;
 
-                        // Guardar emails especificos usando valores capturados del DOM
-                        if (hasHistoryEmails) {
-                            const currentSale = sales[window.currentEditingSaleKey];
-                            let itemsRaw = currentSale.items || [];
-                            let itemsArr = Array.isArray(itemsRaw) ? itemsRaw : Object.values(itemsRaw || {});
-                            const updatedItems = itemsArr.map((item, idx) => {
-                                let newItem = Object.assign({}, item);
-                                if (capturedHistoryEmails[idx]) {
-                                    newItem.specificEmails = capturedHistoryEmails[idx];
+                const selectedSale = (window.currentClientSales && window.currentEditingSaleKey) ? window.currentClientSales[window.currentEditingSaleKey] : null;
+
+                // 1. Actualizar clientSales (directos)
+                [ { data: sales1, pKey: cleanCurrPhone }, { data: sales2, pKey: '57' + cleanCurrPhone } ].forEach(cItem => {
+                    const sales = cItem.data;
+                    const pKey = cItem.pKey;
+                    if (sales) {
+                        Object.keys(sales).forEach(saleKey => {
+                            const isSpecificSale = (saleKey === window.currentEditingSaleKey || (selectedSale && saleKey === selectedSale._saleId));
+                            if (updateAllHistory || isSpecificSale) {
+                                globalUpdates['clientSales/' + pKey + '/' + saleKey + '/clientName'] = newName;
+                                globalUpdates['clientSales/' + pKey + '/' + saleKey + '/clientCity'] = newCity;
+                            }
+                            if (isSpecificSale) {
+                                if (endVal) globalUpdates['clientSales/' + pKey + '/' + saleKey + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
+                                if (newEmail !== null) globalUpdates['clientSales/' + pKey + '/' + saleKey + '/email'] = newEmail;
+
+                                if (hasHistoryEmails) {
+                                    const currentSale = sales[saleKey];
+                                    let itemsRaw = currentSale.items || [];
+                                    let itemsArr = Array.isArray(itemsRaw) ? itemsRaw : Object.values(itemsRaw || {});
+                                    const updatedItems = itemsArr.map((item, idx) => {
+                                        let newItem = Object.assign({}, item);
+                                        if (capturedHistoryEmails[idx]) {
+                                            newItem.specificEmails = capturedHistoryEmails[idx];
+                                        }
+                                        if (capturedHistoryAliases[idx] !== undefined) {
+                                            newItem.customName = capturedHistoryAliases[idx] || null;
+                                        }
+                                        return newItem;
+                                    });
+                                    globalUpdates['clientSales/' + pKey + '/' + saleKey + '/items'] = updatedItems;
                                 }
-                                if (capturedHistoryAliases[idx] !== undefined) {
-                                    newItem.customName = capturedHistoryAliases[idx] || null;
-                                }
-                                return newItem;
-                            });
-                            globalUpdates['clientSales/' + currentEditingClientPhone + '/' + window.currentEditingSaleKey + '/items'] = updatedItems;
-                            console.log('[SAVE] updatedItems:', JSON.stringify(updatedItems));
-                        }
+                            }
+                        });
                     }
-                }
+                });
+
                 if (updateAllHistory) {
-                    globalUpdates['clientProfiles/' + currentEditingClientPhone + '/name'] = newName;
+                    globalUpdates['clientProfiles/' + cleanCurrPhone + '/name'] = newName;
+                    globalUpdates['clientProfiles/57' + cleanCurrPhone + '/name'] = newName;
                 }
+
+                // 2. Actualizar sellerSales (vendedores)
                 if (allSellers) {
                     for (let sn in allSellers) {
                         for (let sid in allSellers[sn]) {
-                            if (allSellers[sn][sid].clientPhone === currentEditingClientPhone) {
-                                const isSpecificSale = (sid === window.currentEditingSaleKey || allSellers[sn][sid].date === window.currentEditingOriginalDate);
+                            const ss = allSellers[sn][sid];
+                            if (!ss) continue;
+                            const sPhone = (ss.clientPhone || '').toString().replace(/\D/g, '').replace(/^57/, '');
+                            if (sPhone === cleanCurrPhone) {
+                                const isSpecificSale = (
+                                    sid === window.currentEditingSaleKey ||
+                                    (selectedSale && (sid === selectedSale._sellerSaleKey || sid === selectedSale._saleId)) ||
+                                    (selectedSale && selectedSale.date && ss.date === selectedSale.date)
+                                );
                                 if (updateAllHistory || isSpecificSale) {
                                     globalUpdates['sellerSales/' + sn + '/' + sid + '/clientName'] = newName;
                                     globalUpdates['sellerSales/' + sn + '/' + sid + '/clientCity'] = newCity;
-                                    // FIX: También actualizar el email en sellerSales para que el vendedor lo vea reflejado
                                     if (newEmail !== null) globalUpdates['sellerSales/' + sn + '/' + sid + '/email'] = newEmail;
                                 }
                                 if (isSpecificSale) {
                                     if (endVal) globalUpdates['sellerSales/' + sn + '/' + sid + '/expirationDate'] = new Date(endVal + 'T' + endTime).getTime();
+
+                                    // Guardar emails específicos y alias en sellerSales también
+                                    if (hasHistoryEmails) {
+                                        let itemsRaw = ss.items || [];
+                                        let itemsArr = Array.isArray(itemsRaw) ? itemsRaw : Object.values(itemsRaw || {});
+                                        const updatedItems = itemsArr.map((item, idx) => {
+                                            let newItem = Object.assign({}, item);
+                                            if (capturedHistoryEmails[idx]) {
+                                                newItem.specificEmails = capturedHistoryEmails[idx];
+                                            }
+                                            if (capturedHistoryAliases[idx] !== undefined) {
+                                                newItem.customName = capturedHistoryAliases[idx] || null;
+                                            }
+                                            return newItem;
+                                        });
+                                        globalUpdates['sellerSales/' + sn + '/' + sid + '/items'] = updatedItems;
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
                 console.log('[SAVE] globalUpdates keys:', Object.keys(globalUpdates));
                 if (Object.keys(globalUpdates).length > 0) await db.ref('/').update(globalUpdates);
 
-                if (newPhoneInput && newPhoneInput !== currentEditingClientPhone && newPhoneInput.length >= 5) {
+                // Migración si se cambia el teléfono
+                if (newPhoneInput && newPhoneInput !== cleanCurrPhone && newPhoneInput.length >= 5) {
                     if (confirm('¿MIGRAR historial?')) {
                         const migData = {};
-                        if (sales) {
-                            Object.keys(sales).forEach(sk => {
-                                sales[sk].clientName = newName;
-                                sales[sk].clientCity = newCity;
-                                sales[sk].clientPhone = newPhoneInput;
-                            });
-                            migData['clientSales/' + newPhoneInput] = sales;
-                            migData['clientSales/' + currentEditingClientPhone] = null;
-                        }
-                        const pSnap = await db.ref('clientProfiles/' + currentEditingClientPhone).once('value');
-                        migData['clientProfiles/' + newPhoneInput] = pSnap.val() || { name: newName };
-                        migData['clientProfiles/' + currentEditingClientPhone] = null;
+                        [ { data: sales1, pKey: cleanCurrPhone }, { data: sales2, pKey: '57' + cleanCurrPhone } ].forEach(cItem => {
+                            const sales = cItem.data;
+                            if (sales && Object.keys(sales).length > 0) {
+                                Object.keys(sales).forEach(sk => {
+                                    sales[sk].clientName = newName;
+                                    sales[sk].clientCity = newCity;
+                                    sales[sk].clientPhone = newPhoneInput;
+                                });
+                                migData['clientSales/' + newPhoneInput] = sales;
+                                migData['clientSales/' + cItem.pKey] = null;
+                            }
+                        });
+
+                        const [pSnap1, pSnap2] = await Promise.all([
+                            db.ref('clientProfiles/' + cleanCurrPhone).once('value'),
+                            db.ref('clientProfiles/57' + cleanCurrPhone).once('value')
+                        ]);
+                        migData['clientProfiles/' + newPhoneInput] = pSnap1.val() || pSnap2.val() || { name: newName };
+                        migData['clientProfiles/' + cleanCurrPhone] = null;
+                        migData['clientProfiles/57' + cleanCurrPhone] = null;
+
                         if (allSellers) {
                             for (let sn in allSellers) {
                                 for (let sid in allSellers[sn]) {
-                                    if (allSellers[sn][sid].clientPhone === currentEditingClientPhone) {
+                                    const ss = allSellers[sn][sid];
+                                    if (!ss) continue;
+                                    const sPhone = (ss.clientPhone || '').toString().replace(/\D/g, '').replace(/^57/, '');
+                                    if (sPhone === cleanCurrPhone) {
                                         migData['sellerSales/' + sn + '/' + sid + '/clientPhone'] = newPhoneInput;
                                         migData['sellerSales/' + sn + '/' + sid + '/clientName'] = newName;
                                         migData['sellerSales/' + sn + '/' + sid + '/clientCity'] = newCity;
@@ -8526,12 +8645,19 @@
                         return;
                     }
                 }
-                if (newPin) await db.ref('clientProfiles/' + currentEditingClientPhone + '/pin').set(newPin);
-                else await db.ref('clientProfiles/' + currentEditingClientPhone + '/pin').remove();
+
+                if (newPin) {
+                    await db.ref('clientProfiles/' + cleanCurrPhone + '/pin').set(newPin);
+                } else {
+                    await db.ref('clientProfiles/' + cleanCurrPhone + '/pin').remove();
+                }
 
                 const newTicketPin = document.getElementById('edit-client-ticket-pin').value.trim();
-                if (newTicketPin) await db.ref('clientProfiles/' + currentEditingClientPhone + '/ticketPin').set(newTicketPin);
-                else await db.ref('clientProfiles/' + currentEditingClientPhone + '/ticketPin').remove();
+                if (newTicketPin) {
+                    await db.ref('clientProfiles/' + cleanCurrPhone + '/ticketPin').set(newTicketPin);
+                } else {
+                    await db.ref('clientProfiles/' + cleanCurrPhone + '/ticketPin').remove();
+                }
 
                 alert('Datos actualizados correctamente.');
                 searchClient();
