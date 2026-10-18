@@ -1602,18 +1602,18 @@ function setupEventListeners() {
 
         // 2. Botones de Hogar / Actualizaciones
         updateTabBtn('netflix_update', '🏠', 'Actualiza tu Hogar con Netflix', 2);
-        updateTabBtn('netflix_temp', '✈️', 'Acceso temporal con Netflix CEL O PC', 1);
-        updateTabBtn('disney_update', '🏰', 'Actualiza hogar con Disney', 2);
+        updateTabBtn('netflix_temp', '✈️', 'Acceso temporal con Netflix (CEL O PC)', 1);
+        updateTabBtn('disney_update', '🏰', 'Actualiza hogar con Disney+', 2);
         updateTabBtn('hbomax_update', '🟣', 'Fuera de casa HBO Max', 2);
 
         // 3. Botones de Smart TV
         updateTabBtn('netflix_tv', '📺', 'Iniciar sesión Netflix en TV', 1);
-        updateTabBtn('disney_tv', '🏰', 'Iniciar sesión Disney en TV con email', 1);
-        updateTabBtn('disney_code_tv', '🏰', 'Iniciar sesión Disney en TV con código', 1);
+        updateTabBtn('disney_tv', '🏰', 'Iniciar sesión Disney+ en TV con email', 1);
+        updateTabBtn('disney_code_tv', '🏰', 'Iniciar sesión Disney+ en TV con código', 1);
         updateTabBtn('hbomax_tv', '📺', 'Iniciar sesión HBO Max en TV', 1);
         updateTabBtn('prime_tv', '📺', 'Iniciar sesión Prime Video en TV', 1);
         updateTabBtn('crunchyroll_tv', '📺', 'Iniciar sesión Crunchyroll en TV', 1);
-        updateTabBtn('vix_tv', '📺', 'Iniciar sesión Vix en TV', 1);
+        updateTabBtn('vix_tv', '📺', 'Iniciar sesión ViX en TV', 1);
 
         // Actualizar botones de activación dentro de los paneles TV
         function updateTvActivateBtn(btnId, plat, defaultText, exhaustedText) {
@@ -1642,10 +1642,10 @@ function setupEventListeners() {
             }
         }
 
-        updateTvActivateBtn('activate-tv-btn', 'netflix_tv', 'Activar TV', 'Intento de Smart TV agotado (1/1)');
-        updateTvActivateBtn('activate-disney-code-tv-btn', 'disney_code_tv', 'Activar Disney en TV', 'Intento de Disney TV agotado (1/1)');
+        updateTvActivateBtn('activate-tv-btn', 'netflix_tv', 'Activar Netflix en TV', 'Intento de Netflix TV agotado (1/1)');
+        updateTvActivateBtn('activate-disney-code-tv-btn', 'disney_code_tv', 'Activar Disney+ en TV', 'Intento de Disney+ TV agotado (1/1)');
         updateTvActivateBtn('activate-hbo-tv-btn', 'hbomax_tv', 'Activar HBO Max en TV', 'Intento de HBO Max TV agotado (1/1)');
-        updateTvActivateBtn('activate-prime-tv-btn', 'prime_tv', 'Activar Prime en TV', 'Intento de Prime Video TV agotado (1/1)');
+        updateTvActivateBtn('activate-prime-tv-btn', 'prime_tv', 'Activar Prime Video en TV', 'Intento de Prime Video TV agotado (1/1)');
         updateTvActivateBtn('activate-crunchyroll-tv-btn', 'crunchyroll_tv', 'Activar Crunchyroll en TV', 'Intento de Crunchyroll TV agotado (1/1)');
         updateTvActivateBtn('activate-vix-tv-btn', 'vix_tv', 'Activar ViX en TV', 'Intento de ViX TV agotado (1/1)');
 
@@ -1666,7 +1666,7 @@ function setupEventListeners() {
                 platName = 'Código Netflix';
                 platIcon = 'fa-satellite-dish';
             } else if (plat === 'disney') {
-                platName = 'Código Disney';
+                platName = 'Código Disney+';
                 platIcon = 'fa-satellite-dish';
             } else if (plat === 'hbomax') {
                 platName = 'Código HBO Max';
@@ -1679,11 +1679,11 @@ function setupEventListeners() {
                 platIcon = 'fa-mobile-screen-button';
             } else if (plat === 'netflix_update') {
                 maxUses = 2;
-                platName = 'Código Actualizar Hogar';
+                platName = 'Código Actualizar Hogar Netflix';
                 platIcon = 'fa-house-chimney';
             } else if (plat === 'disney_update') {
                 maxUses = 2;
-                platName = 'Código Hogar / Fuera de casa';
+                platName = 'Código Hogar Disney+';
                 platIcon = 'fa-house-chimney-window';
             } else if (plat === 'hbomax_update') {
                 maxUses = 2;
@@ -1691,10 +1691,10 @@ function setupEventListeners() {
                 platIcon = 'fa-house-user';
             } else if (plat === 'disney_tv') {
                 maxUses = 1;
-                platName = 'Iniciar sesión Disney en TV con email';
+                platName = 'Iniciar sesión Disney+ en TV con email';
                 platIcon = 'fa-envelope';
             } else if (plat === 'netflix_temp') {
-                platName = 'Código Acceso Temporal';
+                platName = 'Código Acceso Temporal Netflix';
                 platIcon = 'fa-plane-departure';
             }
 
@@ -1708,11 +1708,11 @@ function setupEventListeners() {
                 if (plat === 'vix') {
                     dBtn.innerHTML = `<i class="fa-solid fa-mobile-screen-button"></i> Activar Celular ViX <small style="color:#2ecc71; font-weight:bold;">(Admin ∞)</small>`;
                 } else if (plat === 'disney_update') {
-                    dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar / Fuera de casa (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obtener Código Hogar Disney+ (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
                 } else if (plat === 'hbomax_update') {
-                    dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obten codigo fuera de casa Hbo Max (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obtener Código Fuera de Casa HBO Max (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
                 } else if (plat === 'disney_tv') {
-                    dBtn.innerHTML = `<i class="fa-solid fa-envelope"></i> Iniciar sesión Disney TV (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
+                    dBtn.innerHTML = `<i class="fa-solid fa-envelope"></i> Iniciar sesión Disney+ TV (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
                 } else {
                     dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName} (${rem > 0 ? rem : '0'} disp. | <small style="color:#2ecc71; font-weight:bold;">Admin ∞</small>)`;
                 }
@@ -1727,11 +1727,11 @@ function setupEventListeners() {
                 if (plat === 'vix') {
                     dBtn.innerHTML = `<i class="fa-solid fa-mobile-screen-button"></i> Activar Celular ViX`;
                 } else if (plat === 'disney_update') {
-                    dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obten codigo Hogar y/o Fuera de casa`;
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-chimney-window"></i> Obtener Código Hogar Disney+`;
                 } else if (plat === 'hbomax_update') {
-                    dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obten codigo fuera de casa Hbo Max`;
+                    dBtn.innerHTML = `<i class="fa-solid fa-house-user"></i> Obtener Código Fuera de Casa HBO Max`;
                 } else if (plat === 'disney_tv') {
-                    dBtn.innerHTML = `<i class="fa-solid fa-envelope"></i> Iniciar sesión Disney en TV con email`;
+                    dBtn.innerHTML = `<i class="fa-solid fa-envelope"></i> Iniciar sesión Disney+ en TV con email`;
                 } else {
                     dBtn.innerHTML = `<i class="fa-solid ${platIcon}"></i> Obtener ${platName}`;
                 }
