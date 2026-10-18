@@ -12056,6 +12056,51 @@
             return clean.charAt(0).toUpperCase() + clean.slice(1);
         }
 
+        const DB_MONTH_MAP = {
+            'jan': 0, 'ene': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'abr': 3,
+            'may': 4, 'jun': 5, 'jul': 6, 'aug': 7, 'ago': 7, 'sep': 8,
+            'sept': 8, 'oct': 9, 'nov': 10, 'dec': 11, 'dic': 11
+        };
+
+        function parseExcelDateStr(dateStr, isEnd = false) {
+            if (!dateStr) return null;
+            const s = String(dateStr).trim().toLowerCase().replace(/\./g, '');
+            let m = s.match(/^(\d{1,2})[-/\s]+([a-z]{3,4})/i);
+            if (m) {
+                const day = parseInt(m[1], 10);
+                const monKey = m[2].slice(0, 3).toLowerCase();
+                const month = DB_MONTH_MAP[monKey];
+                if (month !== undefined && day >= 1 && day <= 31) {
+                    const now = new Date();
+                    let year = now.getFullYear();
+                    if (isEnd) return new Date(year, month, day, 23, 59, 59, 999).getTime();
+                    return new Date(year, month, day, 12, 0, 0, 0).getTime();
+                }
+            }
+            m = s.match(/^(\d{1,2})[-/](\d{1,2})(?:[-/](\d{2,4}))?/);
+            if (m) {
+                const day = parseInt(m[1], 10);
+                const month = parseInt(m[2], 10) - 1;
+                let year = m[3] ? parseInt(m[3], 10) : new Date().getFullYear();
+                if (year < 100) year += 2000;
+                if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+                    if (isEnd) return new Date(year, month, day, 23, 59, 59, 999).getTime();
+                    return new Date(year, month, day, 12, 0, 0, 0).getTime();
+                }
+            }
+            return null;
+        }
+
+        function sameDate(t1, t2) {
+            if (!t1 || !t2) return false;
+            const d1 = new Date(Number(t1) || t1);
+            const d2 = new Date(Number(t2) || t2);
+            if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return false;
+            return d1.getDate() === d2.getDate() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getFullYear() === d2.getFullYear();
+        }
+
         window.syncDatabaseFromExcelBtn = async function (btnEl) {
             const origHtml = btnEl ? btnEl.innerHTML : '';
             if (btnEl) {
@@ -12172,6 +12217,8 @@
                         const seller = normalizeExcelSeller(rawSeller);
                         const city = headerCols.ciudadIdx !== -1 ? r[headerCols.ciudadIdx] : '';
                         const rawPinCol = headerCols.pinIdx !== -1 ? r[headerCols.pinIdx] : '';
+                        const fecha = headerCols.fechaIdx !== -1 ? r[headerCols.fechaIdx] : '';
+                        const fin = headerCols.finIdx !== -1 ? r[headerCols.finIdx] : '';
 
                         // El Nombre de Perfil es el valor de la columna 'cliente' del Excel
                         const profileName = clientName.trim();
@@ -12204,7 +12251,11 @@
                             email,
                             password,
                             profile: profileName,
-                            profilePin
+                            profilePin,
+                            fecha,
+                            fin,
+                            startMs: parseExcelDateStr(fecha, false),
+                            expMs: parseExcelDateStr(fin, true)
                         });
                     }
                 }
@@ -12238,151 +12289,158 @@
                         updates[`clientProfiles/${phone}/ticketPin`] = fourDigitPin;
                     }
 
-                    const cSalesObj = JSON.parse(JSON.stringify((window.allClientSalesMap && window.allClientSalesMap[phone]) || {}));
-                    const saleKeys = Object.keys(cSalesObj).sort((a, b) => (cSalesObj[b]?.date || 0) - (cSalesObj[a]?.date || 0));
-                    const activeSaleKeys = saleKeys.filter(k => (Number(cSalesObj[k]?.expirationDate) || 0) >= nowMs);
-                    const targetSaleKeys = activeSaleKeys.length > 0 ? activeSaleKeys : (saleKeys.length > 0 ? [saleKeys[0]] : []);
-                    const targetSet = new Set(targetSaleKeys);
+                    const sName = (firstRec.seller || '').trim();
+                    const isSellerSale = sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && sName !== 'Directo';
 
-                    const availableSlots = [];
-                    const allClientSlots = [];
+                    const baseCleanEx = phone.replace(/^57/, '');
+                    updates[`clientProfiles/${phone}/codeAttemptUsed`] = null;
+                    updates[`clientProfiles/${baseCleanEx}/codeAttemptUsed`] = null;
+                    updates[`clientProfiles/57${baseCleanEx}/codeAttemptUsed`] = null;
 
-                    for (const sKey of saleKeys) {
-                        const sale = cSalesObj[sKey];
-                        if (!sale) continue;
-                        let itemsArr = (!sale.items || (Array.isArray(sale.items) && sale.items.length === 0))
-                            ? [{ id: 'legacy_0', name: 'Pantalla Streaming', category: 'individual', specificEmails: [] }]
-                            : (Array.isArray(sale.items) ? sale.items : Object.values(sale.items));
-                        sale.items = itemsArr;
+                    let targetSales = {};
+                    let storePrefix = '';
 
-                        itemsArr.forEach((it, itemIdx) => {
-                            const count = getScreenCount(it.category, it.name);
-                            const guesses = guessPlatforms(it.name, count);
-                            const existingSpec = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
-                            const totalScreens = Math.max(count, existingSpec.length, 1);
-                            const normSpec = [];
-                            for (let sIdx = 0; sIdx < totalScreens; sIdx++) {
-                                const sp = existingSpec[sIdx] || {};
-                                normSpec.push({
-                                    platform: (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim(),
-                                    email: (sp.email || (sIdx === 0 && totalScreens === 1 ? (sale.email || '') : '')).toString().trim(),
-                                    pass: (sp.pass || (sIdx === 0 && totalScreens === 1 ? (sale.password || '') : '')).toString().trim(),
-                                    profile: (sp.profile || (sIdx === 0 && totalScreens === 1 ? (sale.profile || '') : '')).toString().trim(),
-                                    pin: (sp.pin || '').toString().trim()
-                                });
-                                const slotRef = { saleKey: sKey, sale, itemIdx, screenIdx: sIdx, specObj: normSpec[sIdx], used: false };
-                                allClientSlots.push(slotRef);
-                                if (targetSet.has(sKey)) availableSlots.push(slotRef);
+                    if (isSellerSale) {
+                        storePrefix = `sellerSales/${sName}`;
+                        const allS = (window.globalSellerSalesDataStore && window.globalSellerSalesDataStore[sName]) || {};
+                        Object.keys(allS).forEach(k => {
+                            const s = allS[k];
+                            const pClean = window.sanitizePhone ? window.sanitizePhone(s.clientPhone) : (s.clientPhone || '').replace(/\D/g, '');
+                            if (pClean === phone) {
+                                targetSales[k] = JSON.parse(JSON.stringify(s));
                             }
-                            it.specificEmails = normSpec;
                         });
+                        // Limpiar duplicado de clientSales para este cliente de vendedor
+                        updates[`clientSales/${phone}`] = null;
+                    } else {
+                        storePrefix = `clientSales/${phone}`;
+                        targetSales = JSON.parse(JSON.stringify((window.allClientSalesMap && window.allClientSalesMap[phone]) || {}));
                     }
+
+                    const existingSaleKeys = Object.keys(targetSales);
+                    const excelStartMs = phoneRecs.map(r => r.startMs).find(Boolean) || firstRec.startMs || nowMs;
+                    const excelExpMs = phoneRecs.map(r => r.expMs).find(Boolean) || firstRec.expMs || (excelStartMs + 30 * 86400000);
 
                     const platMatches = (slotPlat, sheetMeta) => {
                         const pLow = String(slotPlat || '').toLowerCase();
                         return sheetMeta.matchKeys.some(k => pLow.includes(k));
                     };
 
-                    const unmatchedRecs = [];
-                    for (const rec of phoneRecs) {
-                        let match = availableSlots.find(sl => !sl.used && platMatches(sl.specObj.platform, rec.sheetMeta) && sl.specObj.email.toLowerCase() === rec.email.toLowerCase());
-                        if (!match) match = availableSlots.find(sl => !sl.used && platMatches(sl.specObj.platform, rec.sheetMeta) && (sl.sale.clientName || '').toLowerCase().trim() === rec.clientName.toLowerCase().trim());
-                        if (!match) match = availableSlots.find(sl => !sl.used && platMatches(sl.specObj.platform, rec.sheetMeta));
+                    const matchingSaleKey = existingSaleKeys.find(k => {
+                        const s = targetSales[k];
+                        if (!s) return false;
+                        const sDate = s.date || s.fechaCompraOriginal;
+                        return sameDate(sDate, excelStartMs);
+                    });
 
-                        if (match) {
-                            match.used = true;
-                            match.specObj.email = rec.email;
-                            match.specObj.pass = rec.password;
-                            match.specObj.profile = rec.profile || match.specObj.profile || '';
-                            match.specObj.pin = rec.profilePin || match.specObj.pin || '';
-                            allClientSlots.forEach(other => {
-                                if (other !== match && platMatches(other.specObj.platform, rec.sheetMeta) && other.specObj.email.toLowerCase() === rec.email.toLowerCase()) {
-                                    other.specObj.pass = rec.password;
-                                    if (rec.profile) other.specObj.profile = rec.profile;
-                                    if (rec.profilePin) other.specObj.pin = rec.profilePin;
-                                }
-                            });
+                    if (matchingSaleKey) {
+                        // CASO 1: Coincide fecha de inicio -> Sobreescribir
+                        const targetSale = targetSales[matchingSaleKey];
+                        targetSale.expirationDate = excelExpMs;
+                        targetSale.date = excelStartMs;
+                        if (firstRec.clientName) targetSale.clientName = firstRec.clientName;
+                        if (firstRec.city) targetSale.clientCity = firstRec.city;
+                        if (sName) targetSale.sellerName = sName;
+                        targetSale.isPaid = true;
+
+                        let itemsArr = targetSale.items
+                            ? (Array.isArray(targetSale.items) ? targetSale.items : Object.values(targetSale.items))
+                            : [];
+
+                        const usedIndices = new Set();
+                        phoneRecs.forEach(rec => {
+                            let idx = itemsArr.findIndex((it, i) => !usedIndices.has(i) && platMatches(it.name, rec.sheetMeta));
+                            if (idx !== -1) {
+                                usedIndices.add(idx);
+                                const it = itemsArr[idx];
+                                it.specificEmails = [{
+                                    platform: rec.platform || it.name,
+                                    email: rec.email || '',
+                                    pass: rec.password || '',
+                                    profile: rec.profile || '',
+                                    pin: rec.profilePin || ''
+                                }];
+                            } else {
+                                const newItem = {
+                                    id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                                    name: rec.platform,
+                                    category: 'individual',
+                                    finalPrice: 0,
+                                    specificEmails: [{
+                                        platform: rec.platform,
+                                        email: rec.email || '',
+                                        pass: rec.password || '',
+                                        profile: rec.profile || '',
+                                        pin: rec.profilePin || ''
+                                    }]
+                                };
+                                itemsArr.push(newItem);
+                                usedIndices.add(itemsArr.length - 1);
+                            }
                             updatedScreensCount++;
-                        } else {
-                            unmatchedRecs.push(rec);
-                        }
-                    }
+                        });
+                        targetSale.items = itemsArr;
+                        if (firstRec.email) targetSale.email = firstRec.email;
+                        if (firstRec.password) targetSale.password = firstRec.password;
+                        if (firstRec.profile) targetSale.profile = firstRec.profile;
 
-                    if (unmatchedRecs.length > 0) {
-                        const baseCleanEx = phone.replace(/^57/, '');
-                        updates[`clientProfiles/${phone}/codeAttemptUsed`] = null;
-                        updates[`clientProfiles/${baseCleanEx}/codeAttemptUsed`] = null;
-                        updates[`clientProfiles/57${baseCleanEx}/codeAttemptUsed`] = null;
-                        if (saleKeys.length > 0) {
-                            const latestKey = saleKeys[0];
-                            const latestSale = cSalesObj[latestKey];
-                            unmatchedRecs.forEach(rec => {
-                                latestSale.items.push({
-                                    id: 'excel_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-                                    name: rec.platform,
-                                    category: 'individual',
-                                    specificEmails: [{
-                                        platform: rec.platform,
-                                        email: rec.email,
-                                        pass: rec.password,
-                                        profile: rec.profile,
-                                        pin: rec.profilePin
-                                    }]
-                                });
-                                updatedScreensCount++;
-                            });
-                        } else {
-                            const newSaleKey = 'excel_' + phone + '_' + Date.now();
-                            const newSaleObj = {
-                                clientName: firstRec.clientName,
-                                clientPhone: phone,
-                                clientCity: firstRec.city || '',
-                                date: nowMs,
-                                expirationDate: nowMs + 30 * 86400000,
-                                isPaid: true,
-                                sellerName: firstRec.seller || 'Página Web Oficial',
-                                total: 0,
-                                email: firstRec.email,
-                                password: firstRec.password,
-                                profile: firstRec.profile,
-                                items: unmatchedRecs.map((rec, idx) => ({
-                                    id: 'excel_item_' + idx + '_' + Date.now(),
-                                    name: rec.platform,
-                                    category: 'individual',
-                                    specificEmails: [{
-                                        platform: rec.platform,
-                                        email: rec.email,
-                                        pass: rec.password,
-                                        profile: rec.profile,
-                                        pin: rec.profilePin
-                                    }]
-                                }))
-                            };
-                            cSalesObj[newSaleKey] = newSaleObj;
-                            if (newSaleObj.sellerName && newSaleObj.sellerName !== 'Página Web Oficial' && newSaleObj.sellerName !== 'Admin') {
-                                updates[`sellerSales/${newSaleObj.sellerName}/${newSaleKey}`] = newSaleObj;
-                            }
-                            updatedScreensCount += unmatchedRecs.length;
-                        }
-                    }
+                        updates[`${storePrefix}/${matchingSaleKey}`] = targetSale;
 
-                    for (const sKey of Object.keys(cSalesObj)) {
-                        updates[`clientSales/${phone}/${sKey}`] = cSalesObj[sKey];
-                        const cSale = cSalesObj[sKey];
-                        const sName = cSale.sellerName;
-                        if (sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && window.globalSellerSalesDataStore && window.globalSellerSalesDataStore[sName]) {
-                            const sStore = window.globalSellerSalesDataStore[sName];
-                            let targetSid = sKey;
-                            if (!sStore[targetSid]) {
-                                targetSid = Object.keys(sStore).find(sid => {
-                                    const ss = sStore[sid];
-                                    return ss && (window.sanitizePhone ? window.sanitizePhone(ss.clientPhone) : ss.clientPhone) === phone;
-                                });
+                        // Enviar otras ventas al historial o limpiar fantasmas
+                        existingSaleKeys.forEach(otherKey => {
+                            if (otherKey === matchingSaleKey) return;
+                            const other = targetSales[otherKey];
+                            if (!other) return;
+                            if (otherKey.startsWith('excel_') && (other.total === 0 || !other.total)) {
+                                updates[`${storePrefix}/${otherKey}`] = null;
+                            } else if ((Number(other.expirationDate) || 0) >= nowMs) {
+                                other.expirationDate = Math.min(Number(other.date || 0) + 30 * 86400000, nowMs - 1000);
+                                updates[`${storePrefix}/${otherKey}`] = other;
                             }
-                            if (targetSid && sStore[targetSid]) {
-                                updates[`sellerSales/${sName}/${targetSid}/items`] = cSale.items;
+                        });
+                    } else {
+                        // CASO 2: No coincide fecha de inicio -> ventas anteriores a historial y crear registro verificado
+                        existingSaleKeys.forEach(oldKey => {
+                            const oldSale = targetSales[oldKey];
+                            if (!oldSale) return;
+                            if (oldKey.startsWith('excel_') && (oldSale.total === 0 || !oldSale.total)) {
+                                updates[`${storePrefix}/${oldKey}`] = null;
+                            } else if ((Number(oldSale.expirationDate) || 0) >= nowMs) {
+                                oldSale.expirationDate = Math.min(Number(oldSale.date || 0) + 30 * 86400000, nowMs - 1000);
+                                updates[`${storePrefix}/${oldKey}`] = oldSale;
                             }
-                        }
+                        });
+
+                        const verifiedKey = 'excel_' + phone;
+                        const newSaleObj = {
+                            clientName: firstRec.clientName,
+                            clientPhone: phone,
+                            clientCity: firstRec.city || '',
+                            date: excelStartMs,
+                            expirationDate: excelExpMs,
+                            isPaid: true,
+                            sellerName: sName || 'Página Web Oficial',
+                            total: 0,
+                            email: firstRec.email || '',
+                            password: firstRec.password || '',
+                            profile: firstRec.profile || '',
+                            items: phoneRecs.map((rec, idx) => ({
+                                id: 'excel_item_' + idx,
+                                name: rec.platform,
+                                category: 'individual',
+                                finalPrice: 0,
+                                specificEmails: [{
+                                    platform: rec.platform,
+                                    email: rec.email || '',
+                                    pass: rec.password || '',
+                                    profile: rec.profile || '',
+                                    pin: rec.profilePin || ''
+                                }]
+                            }))
+                        };
+
+                        updates[`${storePrefix}/${verifiedKey}`] = newSaleObj;
+                        updatedScreensCount += phoneRecs.length;
                     }
 
                     updatedClientsCount++;

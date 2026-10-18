@@ -98,7 +98,9 @@ const MONTH_MAP = {
 function parseExcelDateStr(dateStr, isEnd = false) {
     if (!dateStr) return null;
     const s = String(dateStr).trim().toLowerCase().replace(/\./g, '');
-    const m = s.match(/^(\d{1,2})[-/\s]+([a-z]{3,4})/i);
+
+    // Formato con texto de mes: "18-jul", "18/oct", "18 oct", "18-octubre"
+    let m = s.match(/^(\d{1,2})[-/\s]+([a-z]{3,4})/i);
     if (m) {
         const day = parseInt(m[1], 10);
         const monKey = m[2].slice(0, 3).toLowerCase();
@@ -112,7 +114,33 @@ function parseExcelDateStr(dateStr, isEnd = false) {
             return new Date(year, month, day, 12, 0, 0, 0).getTime();
         }
     }
+
+    // Formato numérico: "18/10/2026", "18-10-2026", "18/10/26", "18/10", "18-10"
+    m = s.match(/^(\d{1,2})[-/](\d{1,2})(?:[-/](\d{2,4}))?/);
+    if (m) {
+        const day = parseInt(m[1], 10);
+        const month = parseInt(m[2], 10) - 1;
+        let year = m[3] ? parseInt(m[3], 10) : new Date().getFullYear();
+        if (year < 100) year += 2000;
+        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+            if (isEnd) {
+                return new Date(year, month, day, 23, 59, 59, 999).getTime();
+            }
+            return new Date(year, month, day, 12, 0, 0, 0).getTime();
+        }
+    }
+
     return null;
+}
+
+function sameDate(t1, t2) {
+    if (!t1 || !t2) return false;
+    const d1 = new Date(Number(t1) || t1);
+    const d2 = new Date(Number(t2) || t2);
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return false;
+    return d1.getDate() === d2.getDate() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getFullYear() === d2.getFullYear();
 }
 
 function cleanComboNameForSplitting(str) {
@@ -363,15 +391,10 @@ async function syncExcelToFirebase(customBuffer = null) {
         // Si es vendedor -> sellerSales[sName]
         // Si es directo -> clientSales[phone]
         let targetStore = null;
-        let saleKeys = [];
 
         if (isSellerSale) {
             if (!sellerSales[sName]) sellerSales[sName] = {};
             targetStore = sellerSales[sName];
-            saleKeys = Object.keys(targetStore).filter(k => {
-                const s = targetStore[k];
-                return s && sanitizePhone(s.clientPhone) === phone;
-            });
             // Eliminar cualquier duplicado accidental de este cliente de vendedor en clientSales
             if (clientSales[phone]) {
                 delete clientSales[phone];
@@ -379,215 +402,166 @@ async function syncExcelToFirebase(customBuffer = null) {
         } else {
             if (!clientSales[phone]) clientSales[phone] = {};
             targetStore = clientSales[phone];
-            saleKeys = Object.keys(targetStore);
+            // Limpiar de sellerSales si existiera duplicado accidental
+            for (const s of Object.keys(sellerSales)) {
+                if (sellerSales[s]) {
+                    for (const k of Object.keys(sellerSales[s])) {
+                        if (sanitizePhone(sellerSales[s][k]?.clientPhone) === phone) {
+                            delete sellerSales[s][k];
+                        }
+                    }
+                }
+            }
         }
 
-        // Ordenar ventas de más reciente a más antigua
-        saleKeys.sort((a, b) => (targetStore[b]?.date || 0) - (targetStore[a]?.date || 0));
+        // Obtener todas las ventas existentes para este cliente en el almacén destino
+        const existingSaleKeys = Object.keys(targetStore).filter(k => {
+            const s = targetStore[k];
+            return s && sanitizePhone(s.clientPhone) === phone;
+        });
 
-        // Expandir slots priorizando ventas activas (o la más reciente si todas vencieron)
+        // Fechas provenientes del Excel para este cliente
+        const excelStartMs = phoneRecs.map(r => r.startMs).find(Boolean) || firstRec.startMs || Date.now();
+        const excelExpMs = phoneRecs.map(r => r.expMs).find(Boolean) || firstRec.expMs || (excelStartMs + 30 * 86400000);
         const nowMs = Date.now();
-        const activeSaleKeys = saleKeys.filter(k => (Number(targetStore[k]?.expirationDate) || 0) >= nowMs);
-        const targetSaleKeys = activeSaleKeys.length > 0 ? activeSaleKeys : (saleKeys.length > 0 ? [saleKeys[0]] : []);
-        const targetSaleKeySet = new Set(targetSaleKeys);
 
-        const availableSlots = [];
-        const allClientSlots = [];
+        // Buscar si existe una venta cuya fecha de inicio coincida con la del Excel
+        let matchingSaleKey = existingSaleKeys.find(k => {
+            const s = targetStore[k];
+            if (!s) return false;
+            const sDate = s.date || s.fechaCompraOriginal;
+            return sameDate(sDate, excelStartMs);
+        });
 
-        for (const sKey of saleKeys) {
-            const sale = targetStore[sKey];
-            if (!sale) continue;
+        // Resetear intento de código del cliente si se actualizan datos
+        const baseCleanEx = phone.replace(/^57/, '');
+        if (clientProfiles[phone]) delete clientProfiles[phone].codeAttemptUsed;
+        if (clientProfiles[baseCleanEx]) delete clientProfiles[baseCleanEx].codeAttemptUsed;
+        if (clientProfiles['57' + baseCleanEx]) delete clientProfiles['57' + baseCleanEx].codeAttemptUsed;
 
+        if (matchingSaleKey) {
+            // ============================================================
+            // CASO 1: LA FECHA DE INICIO COINCIDE -> SOBREESCRIBIR
+            // ============================================================
+            // "si la fecha de inicio coincide debe sobre escribir ya que la fecha de fin se modifica cuando renueva"
+            const sale = targetStore[matchingSaleKey];
+            sale.expirationDate = excelExpMs;
+            sale.date = excelStartMs;
+            if (firstRec.clientName) sale.clientName = firstRec.clientName;
+            if (firstRec.city) sale.clientCity = firstRec.city;
+            if (sName) sale.sellerName = sName;
+            sale.isPaid = true;
+
+            // Actualizar o poblar pantallas / items en la venta existente
             let itemsArr = [];
             if (!sale.items || (Array.isArray(sale.items) && sale.items.length === 0) || (typeof sale.items === 'object' && Object.keys(sale.items).length === 0)) {
-                itemsArr = [{
-                    id: 'legacy_0',
-                    name: 'Pantalla Streaming',
-                    category: 'individual',
-                    specificEmails: []
-                }];
+                itemsArr = [];
             } else {
                 itemsArr = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
             }
-            sale.items = itemsArr;
 
-            itemsArr.forEach((it, itemIdx) => {
-                const count = getScreenCount(it.category, it.name);
-                const guesses = guessPlatforms(it.name, count);
-                const existingSpec = Array.isArray(it.specificEmails)
-                    ? it.specificEmails
-                    : (it.specificEmails && typeof it.specificEmails === 'object' ? Object.values(it.specificEmails) : []);
-                const totalScreens = Math.max(count, existingSpec.length, 1);
-                const normSpec = [];
-                for (let sIdx = 0; sIdx < totalScreens; sIdx++) {
-                    const sp = existingSpec[sIdx] || {};
-                    normSpec.push({
-                        platform: (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim(),
-                        email: (sp.email || (sIdx === 0 && totalScreens === 1 ? (sale.email || '') : '')).toString().trim(),
-                        pass: (sp.pass || (sIdx === 0 && totalScreens === 1 ? (sale.password || '') : '')).toString().trim(),
-                        profile: (sp.profile || (sIdx === 0 && totalScreens === 1 ? (sale.profile || '') : '')).toString().trim(),
-                        pin: (sp.pin || '').toString().trim()
-                    });
-                    const slotRef = {
-                        saleKey: sKey,
-                        sale,
-                        itemIdx,
-                        screenIdx: sIdx,
-                        specObj: normSpec[sIdx],
-                        used: false
-                    };
-                    allClientSlots.push(slotRef);
-                    if (targetSaleKeySet.has(sKey)) {
-                        availableSlots.push(slotRef);
-                    }
-                }
-                it.specificEmails = normSpec;
-            });
-        }
-
-        const unmatchedRecs = [];
-
-        // Paso 2A: Emparejar primero por coincidencia exacta de Plataforma + Email
-        for (const rec of phoneRecs) {
-            let match = availableSlots.find(sl =>
-                !sl.used &&
-                platformMatches(sl.specObj.platform, rec.sheetMeta) &&
-                sl.specObj.email.toLowerCase() === rec.email.toLowerCase()
-            );
-
-            // Paso 2B: Emparejar por Plataforma + Nombre de cliente en la venta
-            if (!match) {
-                match = availableSlots.find(sl =>
-                    !sl.used &&
-                    platformMatches(sl.specObj.platform, rec.sheetMeta) &&
-                    (sl.sale.clientName || '').toLowerCase().trim() === rec.clientName.toLowerCase().trim()
-                );
-            }
-
-            // Paso 2C: Emparejar por Plataforma disponible en la venta activa/más reciente
-            if (!match) {
-                match = availableSlots.find(sl =>
-                    !sl.used &&
-                    platformMatches(sl.specObj.platform, rec.sheetMeta)
-                );
-            }
-
-            if (match) {
-                match.used = true;
-                match.specObj.email = rec.email;
-                match.specObj.pass = rec.password;
-                match.specObj.profile = rec.profile || match.specObj.profile || '';
-                match.specObj.pin = rec.profilePin || match.specObj.pin || '';
-                if (!match.sale.email) match.sale.email = rec.email;
-                if (!match.sale.password) match.sale.password = rec.password;
-                if (!match.sale.profile && rec.profile) match.sale.profile = rec.profile;
-
-                // Sincronizar fechas y datos actualizados desde el Excel
-                if (rec.expMs) {
-                    match.sale.expirationDate = rec.expMs;
-                }
-                if (rec.startMs) {
-                    match.sale.date = rec.startMs;
-                }
-                if (rec.city) {
-                    match.sale.clientCity = rec.city;
-                }
-                if (rec.clientName) {
-                    match.sale.clientName = rec.clientName;
-                }
-
-                // También completar en otras ventas del mismo cliente que tengan ese mismo correo
-                allClientSlots.forEach(other => {
-                    if (other !== match && platformMatches(other.specObj.platform, rec.sheetMeta) && other.specObj.email.toLowerCase() === rec.email.toLowerCase()) {
-                        other.specObj.pass = rec.password;
-                        if (rec.profile) other.specObj.profile = rec.profile;
-                        if (rec.profilePin) other.specObj.pin = rec.profilePin;
-                    }
-                });
-
-                updatedScreensCount++;
-            } else {
-                unmatchedRecs.push(rec);
-            }
-        }
-
-        // Paso 3: Si hay pantallas en el Excel para este teléfono que aún no estaban en Firebase,
-        // agregarlas a su venta activa o crear una venta nueva para el cliente
-        if (unmatchedRecs.length > 0) {
-            const baseCleanEx = phone.replace(/^57/, '');
-            if (clientProfiles[phone]) delete clientProfiles[phone].codeAttemptUsed;
-            if (clientProfiles[baseCleanEx]) delete clientProfiles[baseCleanEx].codeAttemptUsed;
-            if (clientProfiles['57' + baseCleanEx]) delete clientProfiles['57' + baseCleanEx].codeAttemptUsed;
-
-            if (saleKeys.length > 0) {
-                // Añadir como pantallas adicionales en la venta más reciente del cliente
-                const latestSaleKey = saleKeys[0];
-                const latestSale = targetStore[latestSaleKey];
-                if (!Array.isArray(latestSale.items)) {
-                    latestSale.items = Object.values(latestSale.items || {});
-                }
-                for (const rec of unmatchedRecs) {
-                    if (rec.expMs && (!latestSale.expirationDate || rec.expMs > latestSale.expirationDate)) {
-                        latestSale.expirationDate = rec.expMs;
-                    }
-                    if (rec.startMs && (!latestSale.date || rec.startMs > latestSale.date)) {
-                        latestSale.date = rec.startMs;
-                    }
-                    if (rec.city && !latestSale.clientCity) latestSale.clientCity = rec.city;
-                    if (rec.clientName) latestSale.clientName = rec.clientName;
-                    latestSale.items.push({
-                        id: 'excel_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            const usedItemIndices = new Set();
+            for (const rec of phoneRecs) {
+                let itemIdx = itemsArr.findIndex((it, idx) => !usedItemIndices.has(idx) && platformMatches(it.name, rec.sheetMeta));
+                if (itemIdx === -1) {
+                    const newItem = {
+                        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                         name: rec.platform,
                         category: 'individual',
+                        finalPrice: 0,
                         specificEmails: [{
                             platform: rec.platform,
-                            email: rec.email,
-                            pass: rec.password,
-                            profile: rec.profile,
-                            pin: rec.profilePin
+                            email: rec.email || '',
+                            pass: rec.password || '',
+                            profile: rec.profile || '',
+                            pin: rec.profilePin || ''
                         }]
-                    });
-                    updatedScreensCount++;
+                    };
+                    itemsArr.push(newItem);
+                    usedItemIndices.add(itemsArr.length - 1);
+                } else {
+                    usedItemIndices.add(itemIdx);
+                    const it = itemsArr[itemIdx];
+                    it.specificEmails = [{
+                        platform: rec.platform || it.name,
+                        email: rec.email || '',
+                        pass: rec.password || '',
+                        profile: rec.profile || '',
+                        pin: rec.profilePin || ''
+                    }];
                 }
-            } else {
-                // Crear nueva venta para este cliente desde el Excel
-                const newSaleKey = 'excel_' + phone + '_' + Date.now();
-                const startMs = firstRec.startMs || Date.now();
-                const expMs = firstRec.expMs || (startMs + 30 * 86400000);
-                const newItems = unmatchedRecs.map((rec, idx) => ({
-                    id: 'excel_item_' + idx + '_' + Date.now(),
-                    name: rec.platform,
-                    category: 'individual',
-                    finalPrice: 0,
-                    specificEmails: [{
-                        platform: rec.platform,
-                        email: rec.email,
-                        pass: rec.password,
-                        profile: rec.profile,
-                        pin: rec.profilePin
-                    }]
-                }));
-
-                const newSaleObj = {
-                    clientName: firstRec.clientName,
-                    clientPhone: phone,
-                    clientCity: firstRec.city || '',
-                    date: startMs,
-                    expirationDate: expMs,
-                    isPaid: true,
-                    sellerName: firstRec.seller || 'Página Web Oficial',
-                    total: 0,
-                    email: firstRec.email,
-                    password: firstRec.password,
-                    profile: firstRec.profile,
-                    items: newItems
-                };
-
-                targetStore[newSaleKey] = newSaleObj;
-
-                createdSalesCount++;
-                updatedScreensCount += unmatchedRecs.length;
+                updatedScreensCount++;
             }
+            sale.items = itemsArr;
+
+            // Credenciales principales de la venta
+            if (firstRec.email) sale.email = firstRec.email;
+            if (firstRec.password) sale.password = firstRec.password;
+            if (firstRec.profile) sale.profile = firstRec.profile;
+
+            // "para que solo exista un registro y ese registro debe ser verificado del excel para que no alla mas duplicados"
+            // Cualquier otra venta para este cliente:
+            // Si es un duplicado técnico de excel_ previo con total 0 -> borrar
+            // Si es otra venta real anterior -> pasarla al historial expirándola (expirationDate en el pasado)
+            for (const otherKey of existingSaleKeys) {
+                if (otherKey === matchingSaleKey) continue;
+                const otherSale = targetStore[otherKey];
+                if (!otherSale) continue;
+                if (otherKey.startsWith('excel_') && (otherSale.total === 0 || !otherSale.total)) {
+                    delete targetStore[otherKey];
+                } else if ((Number(otherSale.expirationDate) || 0) >= nowMs) {
+                    otherSale.expirationDate = Math.min(Number(otherSale.date || 0) + 30 * 86400000, nowMs - 1000);
+                }
+            }
+
+        } else {
+            // ============================================================
+            // CASO 2: LA FECHA DE INICIO NO COINCIDE
+            // ============================================================
+            // "pero si la fecha de inicio no coincide significa que esa cuenta se va al historial para que solo exista un registro y ese registro debe ser verificado del excel para que no alla mas duplicados"
+            for (const oldKey of existingSaleKeys) {
+                const oldSale = targetStore[oldKey];
+                if (!oldSale) continue;
+                if (oldKey.startsWith('excel_') && (oldSale.total === 0 || !oldSale.total)) {
+                    delete targetStore[oldKey];
+                } else if ((Number(oldSale.expirationDate) || 0) >= nowMs) {
+                    oldSale.expirationDate = Math.min(Number(oldSale.date || 0) + 30 * 86400000, nowMs - 1000);
+                }
+            }
+
+            // Crear el ÚNICO registro verificado del Excel con clave estable
+            const verifiedSaleKey = 'excel_' + phone;
+            const newItems = phoneRecs.map((rec, idx) => ({
+                id: 'excel_item_' + idx,
+                name: rec.platform,
+                category: 'individual',
+                finalPrice: 0,
+                specificEmails: [{
+                    platform: rec.platform,
+                    email: rec.email || '',
+                    pass: rec.password || '',
+                    profile: rec.profile || '',
+                    pin: rec.profilePin || ''
+                }]
+            }));
+
+            targetStore[verifiedSaleKey] = {
+                clientName: firstRec.clientName,
+                clientPhone: phone,
+                clientCity: firstRec.city || '',
+                date: excelStartMs,
+                expirationDate: excelExpMs,
+                isPaid: true,
+                sellerName: sName || 'Página Web Oficial',
+                total: 0,
+                email: firstRec.email || '',
+                password: firstRec.password || '',
+                profile: firstRec.profile || '',
+                items: newItems
+            };
+
+            createdSalesCount++;
+            updatedScreensCount += phoneRecs.length;
         }
 
         updatedClientsCount++;
