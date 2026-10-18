@@ -5315,12 +5315,11 @@ function renderSaleItem(sale, isExpired, container) {
                     ? it.specificEmails
                     : (it.specificEmails && typeof it.specificEmails === 'object' ? Object.values(it.specificEmails) : []);
                 specs.forEach(sc => {
-                    if (sc && (sc.email || sc.pass || sc.profile || sc.pin)) {
+                    if (sc && (sc.email || sc.profile || sc.pin)) {
                         credBlocks.push(`
                             <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(46, 204, 113, 0.3); border-radius:8px; padding:8px 10px; font-size:0.8rem; line-height:1.45;">
                                 <div style="color:#2ecc71; font-weight:bold; margin-bottom:3px;"><i class="fa-solid fa-tv"></i> ${sc.platform || it.name || 'Pantalla'}</div>
                                 ${sc.email ? `<div style="color:#ddd;">📧 <b>Correo:</b> <span style="color:#00d2d3; user-select:all;">${sc.email}</span></div>` : ''}
-                                ${sc.pass ? `<div style="color:#ddd;">🔒 <b>Clave:</b> <span style="color:#fff; user-select:all;">${sc.pass}</span></div>` : ''}
                                 ${(sc.profile || sc.pin) ? `<div style="color:#ddd;">👤 <b>Perfil:</b> ${sc.profile || 'Asignado'} ${sc.pin ? `| 🔢 <b>PIN:</b> <span style="color:#f1c40f; font-weight:bold;">${sc.pin}</span>` : ''}</div>` : ''}
                             </div>
                         `);
