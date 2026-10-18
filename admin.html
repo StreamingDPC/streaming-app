@@ -9000,7 +9000,8 @@
         const KNOWN_PLATFORM_PATTERNS = [
             { key: 'Netflix Privada', regex: /\b(netflix\s*privad[ao]?|nopv|npv)\b/i },
             { key: 'Netflix', regex: /\b(netflix)\b/i },
-            { key: 'Disney', regex: /\b(disney\+?|disneyplus)\b/i },
+            { key: 'Disney Privada', regex: /\b((?:disney|dixney)\s*privad[ao]?|dopv|dpv)\b/i },
+            { key: 'Disney', regex: /\b(disney\+?|disneyplus|dixney)\b/i },
             { key: 'HBO Max', regex: /\b(hbo\s*max|hbomax|max\b)/i },
             { key: 'Prime Video', regex: /\b(prime\s*video|primevideo|prime|amazon)\b/i },
             { key: 'Paramount', regex: /\b(paramount\+?|paramountplus)\b/i },
@@ -9038,6 +9039,9 @@
         function cleanPlatformName(str) {
             if (!str) return '';
             return str
+                .replace(/Dixney\s*Privad[ao]?/gi, 'Disney Privada')
+                .replace(/Disney\s*Privad[ao]?/gi, 'Disney Privada')
+                .replace(/Dixney/gi, 'Disney')
                 .replace(/Disney\+/gi, 'Disney')
                 .replace(/Paramount\+/gi, 'Paramount')
                 .replace(/Apple TV\+/gi, 'Apple TV')

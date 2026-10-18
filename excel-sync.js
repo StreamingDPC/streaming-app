@@ -21,7 +21,7 @@ const FIREBASE_DB_URL = process.env.FIREBASE_DB_URL || 'https://streamingdpc-7e7
 
 const SHEET_MAP = [
     { key: 'NO', platform: 'Netflix', matchKeys: ['netflix'] },
-    { key: 'DO', platform: 'Disney', matchKeys: ['disney'] },
+    { key: 'DO', platform: 'Disney', matchKeys: ['disney', 'dixney'] },
     { key: 'MO', platform: 'Max (HBO)', matchKeys: ['max', 'hbo'] },
     { key: 'PO', platform: 'Prime Video', matchKeys: ['prime', 'amazon'] },
     { key: 'PA', platform: 'Paramount', matchKeys: ['paramount'] },
@@ -32,6 +32,37 @@ const SHEET_MAP = [
     { key: 'Sp', platform: 'Spotify', matchKeys: ['spotify'] },
     { key: 'Youtube', platform: 'YouTube Premium', matchKeys: ['youtube'] }
 ];
+
+const PLATFORM_PRICE_CATALOG = {
+    'Netflix Privada': { id: 1772292868921, clientPrice: 17000, sellerPrice: 14000 },
+    'Netflix':         { id: 1772292903394, clientPrice: 16000, sellerPrice: 13000 },
+    'Disney Privada':  { id: 1776951379850, clientPrice: 37000, sellerPrice: 34000 },
+    'Dixney Privada':  { id: 1776951379850, clientPrice: 37000, sellerPrice: 34000 },
+    'Disney':          { id: 1772292389962, clientPrice: 13000, sellerPrice: 10000 },
+    'Max (HBO)':       { id: 1772292225208, clientPrice: 13000, sellerPrice: 10000 },
+    'Hbo Max':         { id: 1772292225208, clientPrice: 13000, sellerPrice: 10000 },
+    'Prime Video':     { id: 1772292697799, clientPrice: 9000,  sellerPrice: 6000 },
+    'Paramount':       { id: 1772292119510, clientPrice: 15000, sellerPrice: 12000 },
+    'Crunchyroll':     { id: 1772290973062, clientPrice: 12000, sellerPrice: 9000 },
+    'Vix':             { id: 1772291405684, clientPrice: 9000,  sellerPrice: 6000 },
+    'IPTV':            { id: 1772292007621, clientPrice: 18000, sellerPrice: 15000 },
+    'Apple TV':        { id: 1772290096450, clientPrice: 18000, sellerPrice: 15000 },
+    'Spotify':         { id: 1789841775000, clientPrice: 15000, sellerPrice: 12000 },
+    'YouTube Premium': { id: 1790000941995, clientPrice: 17000, sellerPrice: 14000 },
+    'YouTube':         { id: 1790000941995, clientPrice: 17000, sellerPrice: 14000 }
+};
+
+function getPlatformPriceInfo(platName, isSeller) {
+    const clean = cleanPlatformName(platName);
+    const entry = PLATFORM_PRICE_CATALOG[clean];
+    if (entry) {
+        return {
+            id: entry.id,
+            price: isSeller ? entry.sellerPrice : entry.clientPrice
+        };
+    }
+    return { id: 'item_' + Date.now(), price: 0 };
+}
 
 const KNOWN_SELLERS_MAP = {
     'maac': 'Página Web Oficial',
@@ -146,7 +177,8 @@ function sameDate(t1, t2) {
 const KNOWN_PLATFORM_PATTERNS = [
     { key: 'Netflix Privada', regex: /\b(netflix\s*privad[ao]?|nopv|npv)\b/i },
     { key: 'Netflix', regex: /\b(netflix)\b/i },
-    { key: 'Disney', regex: /\b(disney\+?|disneyplus)\b/i },
+    { key: 'Disney Privada', regex: /\b((?:disney|dixney)\s*privad[ao]?|dopv|dpv)\b/i },
+    { key: 'Disney', regex: /\b(disney\+?|disneyplus|dixney)\b/i },
     { key: 'Max (HBO)', regex: /\b(hbo\s*max|hbomax|max\b)/i },
     { key: 'Prime Video', regex: /\b(prime\s*video|primevideo|prime|amazon)\b/i },
     { key: 'Paramount', regex: /\b(paramount\+?|paramountplus)\b/i },
@@ -184,6 +216,9 @@ function extractPlatformsFromName(name) {
 function cleanPlatformName(str) {
     if (!str) return '';
     return str
+        .replace(/Dixney\s*Privad[ao]?/gi, 'Disney Privada')
+        .replace(/Disney\s*Privad[ao]?/gi, 'Disney Privada')
+        .replace(/Dixney/gi, 'Disney')
         .replace(/Disney\+/gi, 'Disney')
         .replace(/Paramount\+/gi, 'Paramount')
         .replace(/Apple TV\+/gi, 'Apple TV')
@@ -372,11 +407,16 @@ function parseWorkbookFromBuffer(buffer) {
                 }
             }
 
-            // Determinar si es Netflix Privada (Nopv / Miembro Extra / cuenta propia)
+            // Determinar si es Netflix Privada (líneas 5 y 6 / Nopv) o Disney Privada (línea 7 / Dopv)
             let recordPlatform = cleanPlatformName(platform);
+            const slotNumber = parseInt(r[0], 10);
             if (sheetMeta.key === 'NO') {
-                if (/nopv|npv|privad/i.test(pantallasCode) || rawPinCol.includes('@')) {
+                if (slotNumber === 5 || slotNumber === 6 || /nopv|npv|privad/i.test(pantallasCode) || rawPinCol.includes('@')) {
                     recordPlatform = 'Netflix Privada';
+                }
+            } else if (sheetMeta.key === 'DO') {
+                if (slotNumber === 7 || /dopv|dpv|privad/i.test(pantallasCode) || rawPinCol.includes('@')) {
+                    recordPlatform = 'Disney Privada';
                 }
             }
 
@@ -460,7 +500,7 @@ async function syncExcelToFirebase(customBuffer = null) {
 
         // 2. Determinar si esta cartera de ventas pertenece a un vendedor o es venta directa
         const sName = (firstRec.seller || '').trim();
-        const isSellerSale = sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && sName !== 'Directo';
+        const isSellerSale = Boolean(sName && sName !== 'Página Web Oficial' && sName !== 'Admin' && sName !== 'Directo');
 
         // Buscar ventas existentes del cliente en su contenedor respectivo:
         // Si es vendedor -> sellerSales[sName]
@@ -495,26 +535,40 @@ async function syncExcelToFirebase(customBuffer = null) {
             return s && sanitizePhone(s.clientPhone) === phone;
         });
 
-        // Fechas provenientes del Excel para este cliente
+        // Fechas provenientes del Excel para este cliente (usar la fecha de vencimiento más reciente entre sus pantallas activas)
         const excelStartMs = phoneRecs.map(r => r.startMs).find(Boolean) || firstRec.startMs || Date.now();
-        const excelExpMs = phoneRecs.map(r => r.expMs).find(Boolean) || firstRec.expMs || (excelStartMs + 30 * 86400000);
+        const maxExpMs = Math.max(0, ...phoneRecs.map(r => Number(r.expMs) || 0));
+        const excelExpMs = maxExpMs > 0 ? maxExpMs : (firstRec.expMs || (excelStartMs + 30 * 86400000));
         const nowMs = Date.now();
 
+        // Ordenar siempre de la venta más reciente a la más antigua (por fechaCompraOriginal y clave push de Firebase)
+        const sortByRecent = (keys) => [...keys].sort((a, b) => {
+            if (!a.startsWith('excel_') && !b.startsWith('excel_')) {
+                return b.localeCompare(a);
+            }
+            const sa = targetStore[a] || {};
+            const sb = targetStore[b] || {};
+            const da = Number(sa.fechaCompraOriginal || sa.date || 0);
+            const db = Number(sb.fechaCompraOriginal || sb.date || 0);
+            return db - da;
+        });
+
         // Dar prioridad SIEMPRE a ventas reales manuales (no 'excel_') sobre placeholders técnicos
-        const manualSaleKeys = existingSaleKeys.filter(k => !k.startsWith('excel_'));
-        const searchPools = manualSaleKeys.length > 0 ? [manualSaleKeys, existingSaleKeys] : [existingSaleKeys];
+        const manualSaleKeys = sortByRecent(existingSaleKeys.filter(k => !k.startsWith('excel_')));
+        const sortedAllKeys = sortByRecent(existingSaleKeys);
+        const searchPools = manualSaleKeys.length > 0 ? [manualSaleKeys, sortedAllKeys] : [sortedAllKeys];
 
         let matchingSaleKey = null;
         const excelEmails = phoneRecs.map(r => (r.email || '').trim().toLowerCase()).filter(Boolean);
 
         for (const pool of searchPools) {
-            // 1. Buscar coincidencia por correo de cuenta de la venta
+            // 1. Buscar coincidencia por correo de cuenta (en orden de la más reciente a la más antigua)
             matchingSaleKey = pool.find(k => {
                 const s = targetStore[k];
                 if (!s) return false;
-                const sEmails = [s.email, ...(Array.isArray(s.items) ? s.items : Object.values(s.items || {})).map(it => {
-                    const sp = (it.specificEmails && it.specificEmails[0]) || {};
-                    return it.email || sp.email;
+                const sEmails = [s.email, ...(Array.isArray(s.items) ? s.items : Object.values(s.items || {})).flatMap(it => {
+                    const specs = Array.isArray(it?.specificEmails) ? it.specificEmails : Object.values(it?.specificEmails || {});
+                    return [it?.email, ...specs.map(sp => sp?.email)];
                 })].filter(Boolean).map(e => String(e).trim().toLowerCase());
 
                 return excelEmails.some(ee => sEmails.includes(ee));
@@ -530,13 +584,9 @@ async function syncExcelToFirebase(customBuffer = null) {
             });
             if (matchingSaleKey) break;
 
-            // 3. Si el cliente tiene exactamente UNA venta activa en este pool
-            const activePoolSales = pool.filter(k => {
-                const s = targetStore[k];
-                return s && (Number(s.expirationDate) || 0) >= nowMs - (30 * 86400000);
-            });
-            if (activePoolSales.length === 1) {
-                matchingSaleKey = activePoolSales[0];
+            // 3. Tomar la venta más reciente del cliente en este pool
+            if (pool.length >= 1) {
+                matchingSaleKey = pool[0];
                 break;
             }
         }
@@ -569,8 +619,26 @@ async function syncExcelToFirebase(customBuffer = null) {
                 itemsArr = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
             }
 
+            // Normalizar nombres antiguos (ej. Dixney Privada -> Disney Privada) y limpiar pantallas vacías
+            itemsArr.forEach(it => {
+                if (it && it.name) {
+                    it.name = cleanPlatformName(it.name);
+                }
+                if (it && Array.isArray(it.specificEmails)) {
+                    const scCount = getScreenCount(it.category, it.name);
+                    if (scCount === 1 && it.specificEmails.length > 1) {
+                        const valid = it.specificEmails.filter(sp => sp && (sp.email || sp.pass || sp.profile));
+                        it.specificEmails = valid.length > 0 ? [valid[0]] : [it.specificEmails[0]];
+                    }
+                    it.specificEmails.forEach(sp => {
+                        if (sp && sp.platform) sp.platform = cleanPlatformName(sp.platform);
+                    });
+                }
+            });
+
             for (const rec of phoneRecs) {
                 let assigned = false;
+                const pInfo = getPlatformPriceInfo(rec.platform, isSellerSale);
 
                 // 1. Buscar en items existentes: si el item es combo o individual que coincida con rec.sheetMeta
                 for (let it of itemsArr) {
@@ -600,18 +668,28 @@ async function syncExcelToFirebase(customBuffer = null) {
                         const sp = it.specificEmails[sIdx];
                         const spPlat = sp.platform || guesses[sIdx] || it.name;
                         if (platformMatches(spPlat, rec.sheetMeta)) {
-                            // Preservar 'Netflix Privada' si la pantalla o el registro es privada en la pestaña NO
-                            if (rec.sheetMeta.key === 'NO') {
-                                if (/privad/i.test(spPlat) || /privad/i.test(rec.platform) || /nopv|npv/i.test(rec.pantallasCode)) {
-                                    sp.platform = 'Netflix Privada';
-                                    if (it.name.toLowerCase() === 'netflix') {
-                                        it.name = 'Netflix Privada';
-                                    }
-                                } else {
-                                    sp.platform = cleanPlatformName(rec.platform);
+                            if (rec.sheetMeta.key === 'NO' && (rec.platform === 'Netflix Privada' || /privad/i.test(spPlat) || /nopv|npv/i.test(rec.pantallasCode))) {
+                                sp.platform = 'Netflix Privada';
+                                if (screenCount === 1) {
+                                    it.name = 'Netflix Privada';
+                                    it.id = pInfo.id;
+                                    it.finalPrice = pInfo.price;
+                                }
+                            } else if (rec.sheetMeta.key === 'DO' && (rec.platform === 'Disney Privada' || /privad/i.test(spPlat) || /dopv|dpv/i.test(rec.pantallasCode))) {
+                                sp.platform = 'Disney Privada';
+                                if (screenCount === 1) {
+                                    it.name = 'Disney Privada';
+                                    it.id = pInfo.id;
+                                    it.finalPrice = pInfo.price;
                                 }
                             } else {
                                 sp.platform = cleanPlatformName(rec.platform);
+                                if (screenCount === 1) {
+                                    it.name = cleanPlatformName(rec.platform);
+                                    if (!it.finalPrice || it.finalPrice === 0) {
+                                        it.finalPrice = pInfo.price;
+                                    }
+                                }
                             }
                             sp.email = rec.email || sp.email || '';
                             sp.pass = rec.password || sp.pass || '';
@@ -637,10 +715,10 @@ async function syncExcelToFirebase(customBuffer = null) {
 
                     if (!alreadyExists) {
                         const newItem = {
-                            id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                            id: pInfo.id || ('item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
                             name: cleanPlatformName(rec.platform),
                             category: 'individual',
-                            finalPrice: 0,
+                            finalPrice: pInfo.price,
                             specificEmails: [{
                                 platform: cleanPlatformName(rec.platform),
                                 email: rec.email || '',
@@ -654,7 +732,55 @@ async function syncExcelToFirebase(customBuffer = null) {
                 }
                 updatedScreensCount++;
             }
-            sale.items = itemsArr;
+
+            // Deduplicar items que tengan exactamente el mismo correo de cuenta en la misma familia de plataforma
+            // (incluyendo pantallas ya contenidas dentro de un combo)
+            const dedupedItems = [];
+            const seenAccountKeys = new Set();
+            const getFamKey = (platStr) => {
+                if (/netflix/i.test(platStr)) return 'netflix';
+                if (/disney|dixney/i.test(platStr)) return 'disney';
+                if (/max|hbo/i.test(platStr)) return 'max';
+                if (/prime|amazon/i.test(platStr)) return 'prime';
+                if (/paramount/i.test(platStr)) return 'paramount';
+                if (/crunchy/i.test(platStr)) return 'crunchy';
+                if (/vix/i.test(platStr)) return 'vix';
+                return (platStr || '').toLowerCase().trim();
+            };
+
+            for (const it of itemsArr) {
+                if (!it) continue;
+                const scCount = getScreenCount(it.category, it.name);
+                const specs = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
+                if (scCount > 1) {
+                    specs.forEach(sp => {
+                        const em = (sp?.email || '').trim().toLowerCase();
+                        if (em) seenAccountKeys.add(`${getFamKey(sp?.platform || it.name)}_${em}`);
+                    });
+                    dedupedItems.push(it);
+                } else {
+                    const sp = specs[0] || {};
+                    const emailKey = (sp.email || it.email || '').trim().toLowerCase();
+                    const sig = `${getFamKey(sp.platform || it.name)}_${emailKey}`;
+                    if (emailKey && seenAccountKeys.has(sig)) continue;
+                    if (emailKey) seenAccountKeys.add(sig);
+                    dedupedItems.push(it);
+                }
+            }
+            sale.items = dedupedItems;
+
+            // Asegurar que el total de la venta esté correctamente registrado según precios de cliente/vendedor
+            const sumFinalPrices = dedupedItems.reduce((acc, it) => acc + (Number(it.finalPrice) || 0), 0);
+            if (
+                !sale.total ||
+                sale.total === 0 ||
+                (dedupedItems.length === 1 && (dedupedItems[0].name === 'Netflix Privada' || dedupedItems[0].name === 'Disney Privada')) ||
+                (dedupedItems.length > 1 && dedupedItems.every(it => getScreenCount(it.category, it.name) === 1) && sale.total < sumFinalPrices - 5000)
+            ) {
+                if (sumFinalPrices > 0) {
+                    sale.total = sumFinalPrices;
+                }
+            }
 
             // Credenciales principales de la venta
             if (firstRec.email) sale.email = firstRec.email;
@@ -678,34 +804,37 @@ async function syncExcelToFirebase(customBuffer = null) {
 
         } else {
             // ============================================================
-            // CASO 2: LA FECHA DE INICIO NO COINCIDE
+            // CASO 2: NO EXISTE VENTA PREVIA -> CREAR REGISTRO CON PRECIO OFICIAL
             // ============================================================
-            // "pero si la fecha de inicio no coincide significa que esa cuenta se va al historial para que solo exista un registro y ese registro debe ser verificado del excel para que no alla mas duplicados"
             for (const oldKey of existingSaleKeys) {
                 const oldSale = targetStore[oldKey];
                 if (!oldSale) continue;
-                if (oldKey.startsWith('excel_') && (oldSale.total === 0 || !oldSale.total)) {
+                if (oldKey.startsWith('excel_')) {
                     delete targetStore[oldKey];
                 } else if ((Number(oldSale.expirationDate) || 0) >= nowMs) {
                     oldSale.expirationDate = Math.min(Number(oldSale.date || 0) + 30 * 86400000, nowMs - 1000);
                 }
             }
 
-            // Crear el ÚNICO registro verificado del Excel con clave estable
+            // Crear el ÚNICO registro verificado del Excel con clave estable y su valor real
             const verifiedSaleKey = 'excel_' + phone;
-            const newItems = phoneRecs.map((rec, idx) => ({
-                id: 'excel_item_' + idx,
-                name: cleanPlatformName(rec.platform),
-                category: 'individual',
-                finalPrice: 0,
-                specificEmails: [{
-                    platform: cleanPlatformName(rec.platform),
-                    email: rec.email || '',
-                    pass: rec.password || '',
-                    profile: rec.profile || '',
-                    pin: rec.profilePin || ''
-                }]
-            }));
+            const newItems = phoneRecs.map((rec, idx) => {
+                const pInfo = getPlatformPriceInfo(rec.platform, isSellerSale);
+                return {
+                    id: pInfo.id || ('excel_item_' + idx),
+                    name: cleanPlatformName(rec.platform),
+                    category: 'individual',
+                    finalPrice: pInfo.price,
+                    specificEmails: [{
+                        platform: cleanPlatformName(rec.platform),
+                        email: rec.email || '',
+                        pass: rec.password || '',
+                        profile: rec.profile || '',
+                        pin: rec.profilePin || ''
+                    }]
+                };
+            });
+            const calculatedTotal = newItems.reduce((acc, it) => acc + (Number(it.finalPrice) || 0), 0);
 
             targetStore[verifiedSaleKey] = {
                 clientName: firstRec.clientName,
@@ -715,7 +844,7 @@ async function syncExcelToFirebase(customBuffer = null) {
                 expirationDate: excelExpMs,
                 isPaid: true,
                 sellerName: sName || 'Página Web Oficial',
-                total: 0,
+                total: calculatedTotal,
                 email: firstRec.email || '',
                 password: firstRec.password || '',
                 profile: firstRec.profile || '',
@@ -830,6 +959,8 @@ if (require.main === module) {
 
 module.exports = {
     EXCEL_FILE_PATH,
+    PLATFORM_PRICE_CATALOG,
+    getPlatformPriceInfo,
     parseWorkbookFromBuffer,
     syncExcelToFirebase,
     startExcelWatcher,
