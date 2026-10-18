@@ -8911,13 +8911,41 @@
             const elem = document.getElementById('auto-reminder-ui');
             if (elem) elem.style.display = 'none';
         }
+        function cleanComboNameForSplitting(str) {
+            if (!str) return '';
+            return str
+                .replace(/disney\s*\+/gi, 'DisneyPlus')
+                .replace(/paramount\s*\+/gi, 'ParamountPlus')
+                .replace(/apple\s*tv\s*\+/gi, 'AppleTvPlus')
+                .replace(/vix\s*\+/gi, 'VixPlus')
+                .replace(/discovery\s*\+/gi, 'DiscoveryPlus')
+                .replace(/amc\s*\+/gi, 'AmcPlus')
+                .replace(/canva\s*\+/gi, 'CanvaPlus');
+        }
+
+        function restoreBrandPluses(str) {
+            if (!str) return '';
+            return str
+                .replace(/DisneyPlus/gi, 'Disney+')
+                .replace(/ParamountPlus/gi, 'Paramount+')
+                .replace(/AppleTvPlus/gi, 'Apple TV+')
+                .replace(/VixPlus/gi, 'Vix+')
+                .replace(/DiscoveryPlus/gi, 'Discovery+')
+                .replace(/AmcPlus/gi, 'Amc+')
+                .replace(/CanvaPlus/gi, 'Canva+');
+        }
+
         function guessPlatforms(productName, screenCount) {
             if (!productName) return [];
             let clean = productName.replace(/^(combo\s+\d+|trío|dúo|triple|cuádruple|combo)\s*[:\-]\s*/i, '');
-            let parts = clean.split(/\s*[\+\-\|]\s*/).map(s => s.trim()).filter(s => s);
+            clean = cleanComboNameForSplitting(clean);
+            let parts = clean.split(/\s*[\+\-\|]\s*|\s+y\s+/i)
+                .map(s => s.trim())
+                .filter(s => s)
+                .map(restoreBrandPluses);
             let result = [];
             for (let i = 0; i < screenCount; i++) {
-                result.push(parts[i] || productName);
+                result.push(parts[i] || restoreBrandPluses(clean) || productName);
             }
             return result;
         }
@@ -8932,7 +8960,7 @@
             if (c.includes('combo4') || c.includes('combos4') || (c.includes('combo') && c.includes('4')) || n.includes('combo 4')) return 4;
             if (c.includes('combo5') || c.includes('combos5') || (c.includes('combo') && c.includes('5')) || n.includes('combo 5')) return 5;
 
-            // Detección genérica para promociones
+            // Detección genérica para promociones o combos
             if (c.includes('promo') || c.includes('combo')) {
                 if (n.includes('5')) return 5;
                 if (n.includes('4')) return 4;
@@ -8942,6 +8970,7 @@
                 if (n.includes('trio')) return 3;
 
                 let clean = n.replace(/^(combo\s+\d+|trío|dúo|triple|cuádruple|combo|promo\s*\w*)\s*[:\-]\s*/i, '');
+                clean = cleanComboNameForSplitting(clean);
                 let parts = clean.split(/\s*[\+\-\|]\s*|\s+y\s+/).map(s => s.trim()).filter(s => s.length > 2);
                 if (parts.length > 1) return parts.length;
             }
@@ -10980,10 +11009,17 @@
                             ? it.specificEmails
                             : (it.specificEmails && typeof it.specificEmails === 'object' ? Object.values(it.specificEmails) : []);
 
-                        const totalScreens = Math.max(screenCount, existingSpec.length, 1);
+                        // Si es producto de 1 pantalla (ej: individual o Disney+) pero tenía pantallas fantasma vacías, filtrarlas
+                        let validExistingSpec = existingSpec;
+                        if (screenCount === 1 && existingSpec.length > 1) {
+                            const withData = existingSpec.filter(sp => sp && ((sp.email || '').trim() || (sp.pass || '').trim()));
+                            validExistingSpec = withData.length > 0 ? withData : [existingSpec[0]];
+                        }
+
+                        const totalScreens = Math.max(screenCount, validExistingSpec.length, 1);
                         const screens = [];
                         for (let sIdx = 0; sIdx < totalScreens; sIdx++) {
-                            const sp = existingSpec[sIdx] || {};
+                            const sp = validExistingSpec[sIdx] || {};
                             const plat = (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim();
                             const email = (sp.email || (sIdx === 0 && totalScreens === 1 ? (s.email || '') : '')).toString().trim();
                             const pass = (sp.pass || (sIdx === 0 && totalScreens === 1 ? (s.password || '') : '')).toString().trim();

@@ -115,23 +115,55 @@ function parseExcelDateStr(dateStr, isEnd = false) {
     return null;
 }
 
+function cleanComboNameForSplitting(str) {
+    if (!str) return '';
+    return str
+        .replace(/disney\s*\+/gi, 'DisneyPlus')
+        .replace(/paramount\s*\+/gi, 'ParamountPlus')
+        .replace(/apple\s*tv\s*\+/gi, 'AppleTvPlus')
+        .replace(/vix\s*\+/gi, 'VixPlus')
+        .replace(/discovery\s*\+/gi, 'DiscoveryPlus')
+        .replace(/amc\s*\+/gi, 'AmcPlus')
+        .replace(/canva\s*\+/gi, 'CanvaPlus');
+}
+
+function restoreBrandPluses(str) {
+    if (!str) return '';
+    return str
+        .replace(/DisneyPlus/gi, 'Disney+')
+        .replace(/ParamountPlus/gi, 'Paramount+')
+        .replace(/AppleTvPlus/gi, 'Apple TV+')
+        .replace(/VixPlus/gi, 'Vix+')
+        .replace(/DiscoveryPlus/gi, 'Discovery+')
+        .replace(/AmcPlus/gi, 'Amc+')
+        .replace(/CanvaPlus/gi, 'Canva+');
+}
+
 function getScreenCount(category, name) {
     const cat = (category || '').toLowerCase();
     const n = (name || '').toLowerCase();
     if (cat === 'combos2' || n.includes('2 pantallas') || n.includes('dúo') || n.includes('duo')) return 2;
     if (cat === 'combos3' || n.includes('3 pantallas') || n.includes('trío') || n.includes('trio')) return 3;
     if (cat === 'combos4' || n.includes('4 pantallas') || n.includes('cuádruple') || n.includes('cuadruple')) return 4;
-    const plusMatches = (name || '').match(/\+/g);
+    if (cat === 'combos5' || n.includes('5 pantallas')) return 5;
+
+    // Proteger nombres de marcas con '+' para no confundirlos con separadores de combo
+    const clean = cleanComboNameForSplitting(name);
+    const plusMatches = clean.match(/\+/g);
     if (plusMatches && plusMatches.length >= 1) return plusMatches.length + 1;
     return 1;
 }
 
 function guessPlatforms(productName, count) {
     if (!productName) return Array(count).fill('Streaming');
-    const parts = productName.split('+').map(s => s.replace(/\(.*?\)/g, '').trim()).filter(Boolean);
+    const clean = cleanComboNameForSplitting(productName);
+    const parts = clean.split(/\s*[\+\-\|]\s*|\s+y\s+/i)
+        .map(s => s.replace(/\(.*?\)/g, '').trim())
+        .filter(Boolean)
+        .map(restoreBrandPluses);
     const result = [];
     for (let i = 0; i < count; i++) {
-        result.push(parts[i] || parts[0] || productName);
+        result.push(parts[i] || parts[0] || restoreBrandPluses(clean));
     }
     return result;
 }
