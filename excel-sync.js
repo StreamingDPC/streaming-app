@@ -143,6 +143,33 @@ function sameDate(t1, t2) {
            d1.getFullYear() === d2.getFullYear();
 }
 
+const KNOWN_PLATFORM_PATTERNS = [
+    { key: 'Netflix', regex: /\b(netflix)\b/i },
+    { key: 'Disney', regex: /\b(disney\+?|disneyplus)\b/i },
+    { key: 'Max (HBO)', regex: /\b(hbo\s*max|hbomax|max\b)/i },
+    { key: 'Prime Video', regex: /\b(prime\s*video|primevideo|prime|amazon)\b/i },
+    { key: 'Paramount', regex: /\b(paramount\+?|paramountplus)\b/i },
+    { key: 'Vix', regex: /\b(vix\+?|vixplus)\b/i },
+    { key: 'Crunchyroll', regex: /\b(crunchyroll|crunchy)\b/i },
+    { key: 'IPTV', regex: /\b(iptv|magis|flujo|tele)\b/i },
+    { key: 'Apple TV', regex: /\b(apple\s*tv\+?|appletvplus|apple)\b/i },
+    { key: 'Spotify', regex: /\b(spotify)\b/i },
+    { key: 'YouTube', regex: /\b(youtube|yt)\b/i }
+];
+
+function extractPlatformsFromName(name) {
+    if (!name) return [];
+    const matches = [];
+    for (const p of KNOWN_PLATFORM_PATTERNS) {
+        const match = name.match(p.regex);
+        if (match) {
+            matches.push({ platform: p.key, index: match.index });
+        }
+    }
+    matches.sort((a, b) => a.index - b.index);
+    return matches.map(m => m.platform);
+}
+
 function cleanPlatformName(str) {
     if (!str) return '';
     return str
@@ -182,30 +209,45 @@ function restoreBrandPluses(str) {
 }
 
 function getScreenCount(category, name) {
-    const cat = (category || '').toLowerCase();
-    const n = (name || '').toLowerCase();
-    if (cat === 'combos2' || n.includes('2 pantallas') || n.includes('dúo') || n.includes('duo')) return 2;
-    if (cat === 'combos3' || n.includes('3 pantallas') || n.includes('trío') || n.includes('trio')) return 3;
-    if (cat === 'combos4' || n.includes('4 pantallas') || n.includes('cuádruple') || n.includes('cuadruple')) return 4;
-    if (cat === 'combos5' || n.includes('5 pantallas')) return 5;
+    const cat = (category || '').toLowerCase().trim();
+    const n = (name || '').toLowerCase().trim();
+    const detected = extractPlatformsFromName(name);
+    if (detected.length > 1) return detected.length;
 
-    // Proteger nombres de marcas con '+' para no confundirlos con separadores de combo
+    if (cat.includes('combo2') || cat.includes('combos2') || (cat.includes('combo') && cat.includes('2')) || n.includes('duo') || n.includes('combo 2')) return 2;
+    if (cat.includes('combo3') || cat.includes('combos3') || (cat.includes('combo') && cat.includes('3')) || n.includes('trio') || n.includes('triple') || n.includes('combo 3')) return 3;
+    if (cat.includes('combo4') || cat.includes('combos4') || (cat.includes('combo') && cat.includes('4')) || n.includes('combo 4')) return 4;
+    if (cat.includes('combo5') || cat.includes('combos5') || (cat.includes('combo') && cat.includes('5')) || n.includes('combo 5')) return 5;
+    if (cat.includes('promo') || cat.includes('combo')) {
+        if (n.includes('5')) return 5;
+        if (n.includes('4')) return 4;
+        if (n.includes('3')) return 3;
+        if (n.includes('2')) return 2;
+    }
     const clean = cleanComboNameForSplitting(name);
-    const plusMatches = clean.match(/\+/g);
+    const plusMatches = clean.match(/[\+\-\|]|\s+y\s+/gi);
     if (plusMatches && plusMatches.length >= 1) return plusMatches.length + 1;
     return 1;
 }
 
 function guessPlatforms(productName, count) {
     if (!productName) return Array(count).fill('Streaming');
+    const detected = extractPlatformsFromName(productName);
+    if (detected.length > 0) {
+        const result = [];
+        for (let i = 0; i < count; i++) {
+            result.push(detected[i] || (detected.length === 1 ? detected[0] : 'Streaming'));
+        }
+        return result;
+    }
     const clean = cleanComboNameForSplitting(productName);
     const parts = clean.split(/\s*[\+\-\|]\s*|\s+y\s+/i)
         .map(s => s.replace(/\(.*?\)/g, '').trim())
         .filter(Boolean)
-        .map(restoreBrandPluses);
+        .map(cleanPlatformName);
     const result = [];
     for (let i = 0; i < count; i++) {
-        result.push(parts[i] || parts[0] || restoreBrandPluses(clean));
+        result.push(parts[i] || parts[0] || cleanPlatformName(clean));
     }
     return result;
 }
@@ -474,10 +516,51 @@ async function syncExcelToFirebase(customBuffer = null) {
                 itemsArr = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
             }
 
-            const usedItemIndices = new Set();
             for (const rec of phoneRecs) {
-                let itemIdx = itemsArr.findIndex((it, idx) => !usedItemIndices.has(idx) && platformMatches(it.name, rec.sheetMeta));
-                if (itemIdx === -1) {
+                let assigned = false;
+
+                // 1. Buscar en items existentes: si el item es combo o individual que coincida con rec.sheetMeta
+                for (let it of itemsArr) {
+                    const screenCount = getScreenCount(it.category, it.name);
+                    const guesses = guessPlatforms(it.name, screenCount);
+
+                    if (!Array.isArray(it.specificEmails)) {
+                        it.specificEmails = it.specificEmails && typeof it.specificEmails === 'object'
+                            ? Object.values(it.specificEmails)
+                            : [];
+                    }
+
+                    // Asegurar que specificEmails tenga suficientes pantallas si es un combo
+                    while (it.specificEmails.length < screenCount) {
+                        const sIdx = it.specificEmails.length;
+                        it.specificEmails.push({
+                            platform: cleanPlatformName(guesses[sIdx] || it.name),
+                            email: '',
+                            pass: '',
+                            profile: '',
+                            pin: ''
+                        });
+                    }
+
+                    // Buscar pantalla que coincida con rec.sheetMeta
+                    for (let sIdx = 0; sIdx < it.specificEmails.length; sIdx++) {
+                        const sp = it.specificEmails[sIdx];
+                        const spPlat = sp.platform || guesses[sIdx] || it.name;
+                        if (platformMatches(spPlat, rec.sheetMeta)) {
+                            sp.platform = cleanPlatformName(rec.platform);
+                            sp.email = rec.email || sp.email || '';
+                            sp.pass = rec.password || sp.pass || '';
+                            sp.profile = rec.profile || sp.profile || '';
+                            sp.pin = rec.profilePin || sp.pin || '';
+                            assigned = true;
+                            break;
+                        }
+                    }
+                    if (assigned) break;
+                }
+
+                // 2. Si no encajó en ninguna pantalla existente, agregar como nuevo item
+                if (!assigned) {
                     const newItem = {
                         id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                         name: cleanPlatformName(rec.platform),
@@ -492,17 +575,6 @@ async function syncExcelToFirebase(customBuffer = null) {
                         }]
                     };
                     itemsArr.push(newItem);
-                    usedItemIndices.add(itemsArr.length - 1);
-                } else {
-                    usedItemIndices.add(itemIdx);
-                    const it = itemsArr[itemIdx];
-                    it.specificEmails = [{
-                        platform: cleanPlatformName(rec.platform || it.name),
-                        email: rec.email || '',
-                        pass: rec.password || '',
-                        profile: rec.profile || '',
-                        pin: rec.profilePin || ''
-                    }];
                 }
                 updatedScreensCount++;
             }
@@ -684,5 +756,10 @@ module.exports = {
     EXCEL_FILE_PATH,
     parseWorkbookFromBuffer,
     syncExcelToFirebase,
-    startExcelWatcher
+    startExcelWatcher,
+    getScreenCount,
+    guessPlatforms,
+    cleanPlatformName,
+    extractPlatformsFromName,
+    platformMatches
 };

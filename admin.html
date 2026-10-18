@@ -8971,6 +8971,33 @@
             const elem = document.getElementById('auto-reminder-ui');
             if (elem) elem.style.display = 'none';
         }
+        const KNOWN_PLATFORM_PATTERNS = [
+            { key: 'Netflix', regex: /\b(netflix)\b/i },
+            { key: 'Disney', regex: /\b(disney\+?|disneyplus)\b/i },
+            { key: 'HBO Max', regex: /\b(hbo\s*max|hbomax|max\b)/i },
+            { key: 'Prime Video', regex: /\b(prime\s*video|primevideo|prime|amazon)\b/i },
+            { key: 'Paramount', regex: /\b(paramount\+?|paramountplus)\b/i },
+            { key: 'Vix', regex: /\b(vix\+?|vixplus)\b/i },
+            { key: 'Crunchyroll', regex: /\b(crunchyroll|crunchy)\b/i },
+            { key: 'IPTV', regex: /\b(iptv|magis|flujo|tele)\b/i },
+            { key: 'Apple TV', regex: /\b(apple\s*tv\+?|appletvplus|apple)\b/i },
+            { key: 'Spotify', regex: /\b(spotify)\b/i },
+            { key: 'YouTube', regex: /\b(youtube|yt)\b/i }
+        ];
+
+        function extractPlatformsFromName(name) {
+            if (!name) return [];
+            const matches = [];
+            for (const p of KNOWN_PLATFORM_PATTERNS) {
+                const match = name.match(p.regex);
+                if (match) {
+                    matches.push({ platform: p.key, index: match.index });
+                }
+            }
+            matches.sort((a, b) => a.index - b.index);
+            return matches.map(m => m.platform);
+        }
+
         function cleanPlatformName(str) {
             if (!str) return '';
             return str
@@ -9011,6 +9038,14 @@
 
         function guessPlatforms(productName, screenCount) {
             if (!productName) return [];
+            const detected = extractPlatformsFromName(productName);
+            if (detected.length > 0) {
+                let result = [];
+                for (let i = 0; i < screenCount; i++) {
+                    result.push(detected[i] || (detected.length === 1 ? detected[0] : 'Streaming'));
+                }
+                return result;
+            }
             let clean = productName.replace(/^(combo\s+\d+|trío|dúo|triple|cuádruple|combo)\s*[:\-]\s*/i, '');
             clean = cleanComboNameForSplitting(clean);
             let parts = clean.split(/\s*[\+\-\|]\s*|\s+y\s+/i)
@@ -9028,13 +9063,17 @@
             const c = (cat || '').toLowerCase().trim();
             const n = (name || '').toLowerCase().trim();
 
-            // Categoría exacta o nombre
+            // 1. Extraer por plataformas detectadas en el nombre (ej: "Netflix Disney", "Hbo Max Vix")
+            const detected = extractPlatformsFromName(name);
+            if (detected.length > 1) return detected.length;
+
+            // 2. Categoría exacta o nombre
             if (c.includes('combo2') || c.includes('combos2') || (c.includes('combo') && c.includes('2')) || n.includes('duo') || n.includes('combo 2')) return 2;
             if (c.includes('combo3') || c.includes('combos3') || (c.includes('combo') && c.includes('3')) || n.includes('trio') || n.includes('triple') || n.includes('combo 3')) return 3;
             if (c.includes('combo4') || c.includes('combos4') || (c.includes('combo') && c.includes('4')) || n.includes('combo 4')) return 4;
             if (c.includes('combo5') || c.includes('combos5') || (c.includes('combo') && c.includes('5')) || n.includes('combo 5')) return 5;
 
-            // Detección genérica para promociones o combos
+            // 3. Detección genérica para promociones o combos
             if (c.includes('promo') || c.includes('combo')) {
                 if (n.includes('5')) return 5;
                 if (n.includes('4')) return 4;
@@ -11095,7 +11134,16 @@
                         for (let sIdx = 0; sIdx < totalScreens; sIdx++) {
                             const sp = validExistingSpec[sIdx] || {};
                             const rawPlat = (sp.platform || guesses[sIdx] || it.name || 'Streaming').toString().trim();
-                            const plat = cleanPlatformName(rawPlat);
+                            let plat = cleanPlatformName(rawPlat);
+
+                            // ¡CRUCIAL! Si la plataforma guardada es un combo pegado (ej: "Netflix Disney", "Netflix Hbo Max", "Hbo Max Vix")
+                            // O si plat coincide con el nombre compuesto del combo:
+                            const detectedInPlat = extractPlatformsFromName(plat);
+                            if (detectedInPlat.length > 1 || (totalScreens > 1 && plat.toLowerCase() === (it.name || '').toLowerCase())) {
+                                plat = guesses[sIdx] || (detectedInPlat[sIdx] || detectedInPlat[0] || plat);
+                            }
+                            plat = cleanPlatformName(plat);
+
                             const email = (sp.email || (sIdx === 0 && totalScreens === 1 ? (s.email || '') : '')).toString().trim();
                             const pass = (sp.pass || (sIdx === 0 && totalScreens === 1 ? (s.password || '') : '')).toString().trim();
                             const profile = (sp.profile || (sIdx === 0 && totalScreens === 1 ? (s.profile || '') : '')).toString().trim();
@@ -11105,7 +11153,7 @@
                             screens.push({
                                 itemIdx,
                                 screenIdx: sIdx,
-                                productName: cleanPlatformName(it.name || 'Pantalla'),
+                                productName: cleanPlatformName(plat || it.name || 'Pantalla'),
                                 customName: it.customName || '',
                                 platform: plat,
                                 email,
