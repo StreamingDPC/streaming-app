@@ -107,288 +107,127 @@ async function clearBotUrl() {
     } catch (e) { /* silencioso */ }
 }
 
-// ── Función reutilizable: buscar contraseña de Netflix en Firebase ─────────
+// ── Función unificada: buscar contraseña por plataforma (Excel + Firebase Activas) ──
+async function findPlatformPassword(targetEmail, platformKeywords, excelSheetKey, logTag = 'BOT') {
+    const email = (targetEmail || '').toLowerCase().trim();
+    if (!email) return null;
+
+    const matchesPlat = (str) => {
+        const low = (str || '').toLowerCase().trim();
+        return platformKeywords.some(k => low.includes(k));
+    };
+
+    // 1. Buscar primero en el Excel en vivo (fuente de verdad exacta por hoja)
+    try {
+        const fs = require('fs');
+        const { EXCEL_FILE_PATH, parseWorkbookFromBuffer } = require('./excel-sync');
+        if (EXCEL_FILE_PATH && fs.existsSync(EXCEL_FILE_PATH)) {
+            const recs = parseWorkbookFromBuffer(fs.readFileSync(EXCEL_FILE_PATH));
+            const matchRec = recs.find(r =>
+                r.sheetMeta && r.sheetMeta.key === excelSheetKey &&
+                (r.email || '').toLowerCase().trim() === email &&
+                r.password && r.password.trim() !== ''
+            );
+            if (matchRec) {
+                console.log(`[${logTag}] ✅ Pass encontrado en Excel hoja ${excelSheetKey} (${matchRec.clientName})`);
+                return matchRec.password.trim();
+            }
+        }
+    } catch (e) {
+        console.warn(`[${logTag}] Excel lookup warn:`, e.message);
+    }
+
+    // 2. Buscar en Firebase (clientSales y sellerSales), priorizando ventas ACTIVAS y más recientes
+    try {
+        const [csResp, ssResp] = await Promise.all([
+            axios.get(`${FIREBASE_DB_URL}/clientSales.json`).catch(() => ({ data: null })),
+            axios.get(`${FIREBASE_DB_URL}/sellerSales.json`).catch(() => ({ data: null }))
+        ]);
+
+        const allSales = [];
+        const csData = csResp.data || {};
+        for (const phone of Object.keys(csData)) {
+            const salesArr = Array.isArray(csData[phone]) ? csData[phone] : Object.values(csData[phone] || {});
+            for (const sale of salesArr) {
+                if (sale && typeof sale === 'object') {
+                    allSales.push({ source: `clientSales (${phone})`, sale });
+                }
+            }
+        }
+
+        const ssData = ssResp.data || {};
+        for (const seller of Object.keys(ssData)) {
+            const salesArr = Array.isArray(ssData[seller]) ? ssData[seller] : Object.values(ssData[seller] || {});
+            for (const sale of salesArr) {
+                if (sale && typeof sale === 'object') {
+                    allSales.push({ source: `sellerSales (${seller})`, sale });
+                }
+            }
+        }
+
+        const now = Date.now();
+        // Ordenar: activas primero, luego por fecha de vencimiento descendente (más recientes primero)
+        allSales.sort((a, b) => {
+            const expA = Number(a.sale.expirationDate) || 0;
+            const expB = Number(b.sale.expirationDate) || 0;
+            const actA = expA >= now ? 1 : 0;
+            const actB = expB >= now ? 1 : 0;
+            if (actA !== actB) return actB - actA;
+            return expB - expA;
+        });
+
+        for (const { source, sale } of allSales) {
+            if (!sale?.items) continue;
+            const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
+            for (const item of items) {
+                if (!item) continue;
+                const itemName = (item.name || '').toLowerCase();
+                const isTargetItem = matchesPlat(itemName);
+
+                if (item.specificEmails) {
+                    const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
+                    for (const s of screens) {
+                        if (!s || (s.email || '').toLowerCase().trim() !== email || !s.pass) continue;
+                        // Si la pantalla tiene plataforma asignada, DEBE coincidir con la plataforma buscada
+                        // (evita tomar la contraseña de Netflix cuando el correo se repite en un combo con Prime Video)
+                        const hasExplicitPlat = Boolean(s.platform && String(s.platform).trim() !== '');
+                        const isMatch = hasExplicitPlat ? matchesPlat(s.platform) : (screens.length === 1 && isTargetItem);
+                        if (isMatch) {
+                            console.log(`[${logTag}] ✅ Pass encontrado en ${source}`);
+                            return s.pass.trim();
+                        }
+                    }
+                }
+
+                if (isTargetItem && (!item.specificEmails || Object.keys(item.specificEmails).length <= 1)) {
+                    if ((item.email || '').toLowerCase().trim() === email && item.pass) {
+                        console.log(`[${logTag}] ✅ Pass encontrado en item de ${source}`);
+                        return item.pass.trim();
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn(`[${logTag}] Firebase lookup error:`, e.message);
+    }
+
+    return null;
+}
+
 async function findNetflixPassword(targetEmail) {
-    const email = targetEmail.toLowerCase().trim();
-
-    // 1. Buscar en clientSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/clientSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const phone of Object.keys(data)) {
-                const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
-                for (const sale of salesArr) {
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        if (!item?.specificEmails) continue;
-                        const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                        for (const s of screens) {
-                            if (s?.email?.toLowerCase().trim() === email &&
-                                s?.platform?.toLowerCase().includes('netflix') && s?.pass) {
-                                console.log(`[BOT] ✅ Pass encontrado en clientSales (${phone})`);
-                                return s.pass.trim();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT] clientSales error:', e.message); }
-
-    // 2. Buscar en sellerSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/sellerSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const seller of Object.keys(data)) {
-                const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
-                for (const sale of salesArr) {
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        if (!item?.specificEmails) continue;
-                        const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                        for (const s of screens) {
-                            if (s?.email?.toLowerCase().trim() === email &&
-                                s?.platform?.toLowerCase().includes('netflix') && s?.pass) {
-                                console.log(`[BOT] ✅ Pass encontrado en sellerSales (${seller})`);
-                                return s.pass.trim();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT] sellerSales error:', e.message); }
-
-    return null;
+    return findPlatformPassword(targetEmail, ['netflix'], 'NO', 'BOT');
 }
 
-// ── Función reutilizable: buscar contraseña de Prime Video en Firebase ─────
 async function findPrimePassword(targetEmail) {
-    const email = targetEmail.toLowerCase().trim();
-
-    // 1. Buscar en clientSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/clientSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const phone of Object.keys(data)) {
-                const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
-                for (const sale of salesArr) {
-                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        const itemName = (item.name || '').toLowerCase();
-                        const isPrimeItem = itemName.includes('prime') || itemName.includes('amazon');
-                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
-                            console.log(`[BOT-PRIME] ✅ Pass encontrado en item de clientSales (${phone})`);
-                            return item.pass.trim();
-                        }
-                        if (item?.specificEmails) {
-                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                            for (const s of screens) {
-                                const isPrime = (s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'))) || isPrimeItem;
-                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isPrime || !s?.platform)) {
-                                    console.log(`[BOT-PRIME] ✅ Pass encontrado en clientSales (${phone})`);
-                                    return s.pass.trim();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT-PRIME] clientSales error:', e.message); }
-
-    // 2. Buscar en sellerSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/sellerSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const seller of Object.keys(data)) {
-                const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
-                for (const sale of salesArr) {
-                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        const itemName = (item.name || '').toLowerCase();
-                        const isPrimeItem = itemName.includes('prime') || itemName.includes('amazon');
-                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
-                            console.log(`[BOT-PRIME] ✅ Pass encontrado en item de sellerSales (${seller})`);
-                            return item.pass.trim();
-                        }
-                        if (item?.specificEmails) {
-                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                            for (const s of screens) {
-                                const isPrime = (s?.platform && (s.platform.toLowerCase().includes('prime') || s.platform.toLowerCase().includes('amazon'))) || isPrimeItem;
-                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isPrime || !s?.platform)) {
-                                    console.log(`[BOT-PRIME] ✅ Pass encontrado en sellerSales (${seller})`);
-                                    return s.pass.trim();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT-PRIME] sellerSales error:', e.message); }
-
-    return null;
+    return findPlatformPassword(targetEmail, ['prime', 'amazon'], 'PO', 'BOT-PRIME');
 }
 
-// ── Función reutilizable: buscar contraseña de Crunchyroll en Firebase ─────
 async function findCrunchyrollPassword(targetEmail) {
-    const email = targetEmail.toLowerCase().trim();
-
-    // 1. Buscar en clientSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/clientSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const phone of Object.keys(data)) {
-                const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
-                for (const sale of salesArr) {
-                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        const itemName = (item.name || '').toLowerCase();
-                        const isCrunchyItem = itemName.includes('crunch') || itemName.includes('roll');
-                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
-                            console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en item de clientSales (${phone})`);
-                            return item.pass.trim();
-                        }
-                        if (item?.specificEmails) {
-                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                            for (const s of screens) {
-                                const isCrunchy = (s?.platform && (s.platform.toLowerCase().includes('crunch') || s.platform.toLowerCase().includes('roll'))) || isCrunchyItem;
-                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isCrunchy || !s?.platform)) {
-                                    console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en clientSales (${phone})`);
-                                    return s.pass.trim();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT-CRUNCHY] clientSales error:', e.message); }
-
-    // 2. Buscar en sellerSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/sellerSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const seller of Object.keys(data)) {
-                const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
-                for (const sale of salesArr) {
-                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        const itemName = (item.name || '').toLowerCase();
-                        const isCrunchyItem = itemName.includes('crunch') || itemName.includes('roll');
-                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
-                            console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en item de sellerSales (${seller})`);
-                            return item.pass.trim();
-                        }
-                        if (item?.specificEmails) {
-                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                            for (const s of screens) {
-                                const isCrunchy = (s?.platform && (s.platform.toLowerCase().includes('crunch') || s.platform.toLowerCase().includes('roll'))) || isCrunchyItem;
-                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isCrunchy || !s?.platform)) {
-                                    console.log(`[BOT-CRUNCHY] ✅ Pass encontrado en sellerSales (${seller})`);
-                                    return s.pass.trim();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT-CRUNCHY] sellerSales error:', e.message); }
-
-    return null;
+    return findPlatformPassword(targetEmail, ['crunch', 'roll'], 'CR', 'BOT-CRUNCHY');
 }
 
-// ── Función reutilizable: buscar contraseña de ViX en Firebase ───────────────
 async function findVixPassword(targetEmail) {
-    const email = targetEmail.toLowerCase().trim();
-
-    // 1. Buscar en clientSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/clientSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const phone of Object.keys(data)) {
-                const salesArr = Array.isArray(data[phone]) ? data[phone] : Object.values(data[phone]);
-                for (const sale of salesArr) {
-                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        const itemName = (item.name || '').toLowerCase();
-                        const isVixItem = itemName.includes('vix');
-                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
-                            console.log(`[BOT-VIX] ✅ Pass encontrado en item de clientSales (${phone})`);
-                            return item.pass.trim();
-                        }
-                        if (item?.specificEmails) {
-                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                            for (const s of screens) {
-                                const isVix = (s?.platform && s.platform.toLowerCase().includes('vix')) || isVixItem;
-                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isVix || !s?.platform)) {
-                                    console.log(`[BOT-VIX] ✅ Pass encontrado en clientSales (${phone})`);
-                                    return s.pass.trim();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT-VIX] clientSales error:', e.message); }
-
-    // 2. Buscar en sellerSales
-    try {
-        const resp = await axios.get(`${FIREBASE_DB_URL}/sellerSales.json`);
-        const data = resp.data;
-        if (data) {
-            for (const seller of Object.keys(data)) {
-                const salesArr = Array.isArray(data[seller]) ? data[seller] : Object.values(data[seller]);
-                for (const sale of salesArr) {
-                    if (sale?.email?.toLowerCase().trim() === email && sale?.pass) return sale.pass.trim();
-                    if (!sale?.items) continue;
-                    const items = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
-                    for (const item of items) {
-                        const itemName = (item.name || '').toLowerCase();
-                        const isVixItem = itemName.includes('vix');
-                        if (item?.email?.toLowerCase().trim() === email && item?.pass) {
-                            console.log(`[BOT-VIX] ✅ Pass encontrado en item de sellerSales (${seller})`);
-                            return item.pass.trim();
-                        }
-                        if (item?.specificEmails) {
-                            const screens = Array.isArray(item.specificEmails) ? item.specificEmails : Object.values(item.specificEmails);
-                            for (const s of screens) {
-                                const isVix = (s?.platform && s.platform.toLowerCase().includes('vix')) || isVixItem;
-                                if (s?.email?.toLowerCase().trim() === email && s?.pass && (isVix || !s?.platform)) {
-                                    console.log(`[BOT-VIX] ✅ Pass encontrado en sellerSales (${seller})`);
-                                    return s.pass.trim();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { console.warn('[BOT-VIX] sellerSales error:', e.message); }
-
-    return null;
+    return findPlatformPassword(targetEmail, ['vix'], 'VX', 'BOT-VIX');
 }
 
 // ── Cola de Activación Concurrente ─────────────────────────────────────────
@@ -1568,10 +1407,10 @@ async function doActivatePrimeTv(email, tvCode) {
         const page = pages[0] || await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
 
-        // 2. Navegar a https://www.primevideo.com/mytv
+        // 2. Navegar a https://www.primevideo.com/mytv (esperar redirección completa a amazon.com/ap/signin)
         console.log('[BOT-PRIME] 🌐 Navegando a https://www.primevideo.com/mytv...');
-        await page.goto('https://www.primevideo.com/mytv', { waitUntil: 'domcontentloaded', timeout: 35000 });
-        await sleep(3000);
+        await page.goto('https://www.primevideo.com/mytv', { waitUntil: 'networkidle2', timeout: 35000 }).catch(() => {});
+        await sleep(1500);
 
         // Aceptar cookies / consent modal si aparece
         try {
@@ -1585,62 +1424,88 @@ async function doActivatePrimeTv(email, tvCode) {
             });
         } catch (e) { }
 
-        // 3. Paso de Email (si no ha iniciado sesión)
-        let emailInput = await page.$('#ap_email, input[type="email"], input[name="email"]');
+        // 3. Paso de Email (si no ha iniciado sesión: esperar #ap_email visible)
+        let emailInput = await page.waitForSelector('#ap_email, #ap_email_login, input[type="email"]', { visible: true, timeout: 8000 }).catch(() => null);
         if (emailInput) {
             console.log(`[BOT-PRIME] ✉️ Ingresando correo electrónico: ${email}`);
-            await emailInput.click({ clickCount: 3 });
-            await page.keyboard.press('Backspace');
-            await emailInput.type(email, { delay: 40 });
+            await page.evaluate(() => {
+                const el = document.querySelector('#ap_email, #ap_email_login, input[type="email"]');
+                if (el) { el.focus(); el.value = ''; }
+            });
+            await emailInput.type(email, { delay: 35 });
             await sleep(500);
 
-            // Clic en Continuar
-            console.log('[BOT-PRIME] ➡️ Clic en Continuar...');
-            const contBtn = await page.$('#continue, input#continue, button#continue, input[type="submit"]');
-            if (contBtn) {
-                await contBtn.click();
-            } else {
-                await page.keyboard.press('Enter');
+            // Verificar si #ap_password ya está visible en la misma pantalla (login de 1 paso) o si debemos pulsar Continuar (login de 2 pasos)
+            const passVisibleAlready = await page.evaluate(() => {
+                const p = document.querySelector('#ap_password');
+                return Boolean(p && p.offsetParent !== null);
+            });
+
+            if (!passVisibleAlready) {
+                console.log('[BOT-PRIME] ➡️ Clic en Continuar...');
+                const contBtn = await page.$('input#continue, button#continue, #continue');
+                if (contBtn) {
+                    await Promise.all([
+                        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}),
+                        contBtn.click()
+                    ]);
+                } else {
+                    await page.keyboard.press('Enter');
+                }
+                await sleep(2000);
             }
-            await sleep(3000);
         }
 
-        // 4. Paso de Contraseña
-        let passInput = await page.$('#ap_password, input[type="password"], input[name="password"]');
+        // 4. Paso de Contraseña (esperar específicamente #ap_password VISIBLE, ignorando #ap-credential-autofill-hint oculto)
+        let passInput = await page.waitForSelector('#ap_password', { visible: true, timeout: 10000 }).catch(() => null);
         if (passInput) {
             console.log('[BOT-PRIME] 🔑 Ingresando contraseña...');
-            await passInput.click({ clickCount: 3 });
-            await page.keyboard.press('Backspace');
-            await passInput.type(primePass, { delay: 40 });
+            await page.evaluate(() => {
+                const el = document.querySelector('#ap_password');
+                if (el) { el.focus(); el.value = ''; }
+            });
+            await passInput.type(primePass, { delay: 35 });
             await sleep(500);
 
             // Clic en Iniciar sesión
             console.log('[BOT-PRIME] 🚀 Clic en Iniciar sesión...');
-            const signBtn = await page.$('#signInSubmit, input#signInSubmit, button#signInSubmit, input[type="submit"]');
+            const signBtn = await page.$('#signInSubmit, input#signInSubmit, button#signInSubmit');
             if (signBtn) {
-                await signBtn.click();
+                await Promise.all([
+                    page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
+                    signBtn.click()
+                ]);
             } else {
                 await page.keyboard.press('Enter');
             }
-            await sleep(5000);
+            await sleep(3500);
         }
 
-        // 5. Verificar si hay verificación en dos pasos (OTP) o alerta de seguridad
-        const check2fa = await page.evaluate(() => {
+        // 5. Verificar si hubo error de contraseña, CAPTCHA o verificación en dos pasos (OTP)
+        const loginCheck = await page.evaluate(() => {
             const txt = (document.body.innerText || '').toLowerCase();
-            if (txt.includes('verificación en dos pasos') || txt.includes('two-step verification') || txt.includes('introduce el código') || txt.includes('enter otp')) {
-                return true;
+            const errBox = document.querySelector('#auth-error-message-box, #auth-warning-message-box, .a-alert-error');
+            const errText = errBox ? (errBox.innerText || '').trim() : '';
+            if (txt.includes('contraseña no es correcta') || txt.includes('password is incorrect') || txt.includes('no encontramos ninguna cuenta')) {
+                return { type: 'auth_error', detail: errText || 'La contraseña o correo de Prime Video fue rechazado por Amazon.' };
             }
-            return false;
+            if (txt.includes('verificación en dos pasos') || txt.includes('two-step verification') || txt.includes('introduce el código') || txt.includes('enter otp') || txt.includes('código de seguridad') || txt.includes('aprobar la notificación')) {
+                return { type: '2fa', detail: 'Amazon solicitó verificación en dos pasos (OTP) o aprobación de seguridad.' };
+            }
+            if (document.querySelector('#auth-captcha-image') || txt.includes('introduce los caracteres que veas') || txt.includes('enter the characters you see') || txt.includes('resuelve este acertijo')) {
+                return { type: 'captcha', detail: 'Amazon solicitó resolver un CAPTCHA de seguridad.' };
+            }
+            return null;
         });
 
-        if (check2fa) {
+        if (loginCheck) {
+            console.warn(`[BOT-PRIME] ⚠️ Bloqueo en login (${loginCheck.type}): ${loginCheck.detail}`);
             const ss = await page.screenshot({ encoding: 'base64' });
             await browser.disconnect();
             if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
             return {
                 success: false,
-                error: 'Amazon solicitó verificación en dos pasos (OTP). Solicita autorización temporal.',
+                error: loginCheck.detail,
                 screenshot: `data:image/png;base64,${ss}`
             };
         }
@@ -1648,10 +1513,11 @@ async function doActivatePrimeTv(email, tvCode) {
         // 6. Esperar la pantalla de registro de dispositivo (/mytv o /ontv/code)
         console.log('[BOT-PRIME] 📺 Esperando formulario de registro de TV...');
         let codeInputReady = false;
+        const codeSelector = '#av-cbl-code, input[name="code"], input[placeholder*="HQ2W4Z"], input[placeholder*="código"], input[placeholder*="code"], input[type="text"]:not(#ap_email):not(#ap_email_login):not([name="email"])';
         for (let wait = 0; wait < 15; wait++) {
             const curUrl = page.url();
-            if (curUrl.includes('/mytv') || curUrl.includes('/ontv/code') || curUrl.includes('code')) {
-                const inp = await page.$('#av-cbl-code, input[name="code"], input[placeholder*="HQ2W4Z"], input[type="text"]');
+            if (!curUrl.includes('/ap/signin')) {
+                const inp = await page.$(codeSelector);
                 if (inp) {
                     codeInputReady = true;
                     break;
@@ -1661,7 +1527,7 @@ async function doActivatePrimeTv(email, tvCode) {
         }
 
         if (!codeInputReady) {
-            if (!page.url().includes('code')) {
+            if (!page.url().includes('code') && !page.url().includes('/ap/signin')) {
                 console.log('[BOT-PRIME] 🔄 Redirigiendo a https://www.primevideo.com/mytv...');
                 await page.goto('https://www.primevideo.com/mytv', { waitUntil: 'domcontentloaded', timeout: 30000 });
                 await sleep(3500);
@@ -1672,15 +1538,16 @@ async function doActivatePrimeTv(email, tvCode) {
         const cleanTvCode = tvCode.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
         console.log(`[BOT-PRIME] 🔢 Ingresando código de registro: ${cleanTvCode}`);
 
-        const inputFound = await page.evaluate((codeToType) => {
-            const inp = document.querySelector('#av-cbl-code, input[name="code"], input[placeholder*="HQ2W4Z"], input[type="text"]');
+        const inputFound = await page.evaluate((sel) => {
+            if (window.location.href.includes('/ap/signin')) return false;
+            const inp = document.querySelector(sel);
             if (inp) {
                 inp.focus();
                 inp.value = '';
                 return true;
             }
             return false;
-        }, cleanTvCode);
+        }, codeSelector);
 
         if (!inputFound) {
             const ss = await page.screenshot({ encoding: 'base64' });
