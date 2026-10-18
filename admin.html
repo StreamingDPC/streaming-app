@@ -6963,20 +6963,7 @@
                                     <i class="fa-solid fa-comment-dots"></i> RESPUESTAS
                                 </button>
                                 ` : ''}
-                                ${(() => {
-                                // Botón Activar TV: solo si hay pantalla Netflix en la venta
-                                const saleItems = Array.isArray(sale.items) ? sale.items : Object.values(sale.items || {});
-                                const nfEmails = [];
-                                saleItems.forEach(it => {
-                                    const screens = Array.isArray(it && it.specificEmails) ? it.specificEmails : Object.values((it && it.specificEmails) || {});
-                                    screens.forEach(sc => { if (sc && sc.platform && sc.platform.toLowerCase().includes('netflix') && sc.email) nfEmails.push(sc.email); });
-                                });
-                                if (!nfEmails.length) return '';
-                                const emailEncoded = encodeURIComponent(nfEmails[0]);
-                                const safeClientPhone = sale.clientPhone || '';
-                                const safeClientName = encodeURIComponent(sale.client || sale.clientName || 'Cliente');
-                                return `<button onclick="openAdminActivateTvModal('${emailEncoded}', '${safeClientPhone}', '${safeClientName}')" style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #e50914; background:rgba(229,9,20,0.1); color:#e50914; font-size:0.8rem;" title="Activar Netflix TV para este cliente"><i class='fa-solid fa-tv'></i> Activar TV</button>`;
-                            })()}
+
                                 <button onclick="deleteSellerSale('${safeSeller}', '${sale.id}')" 
                                     style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;" title="Eliminar Registro (Prueba/Error)">
                                     <i class="fa-solid fa-trash"></i>
@@ -7664,22 +7651,7 @@
                         <i class="fa-solid fa-comment-dots"></i> RESPUESTAS
                     </button>
                     ` : ''}
-                    ${(() => {
-                        const saleItems = Array.isArray(sale.items) ? sale.items : Object.values(sale.items || {});
-                        const nfEmails = [];
-                        saleItems.forEach(it => {
-                            const screens = Array.isArray(it && it.specificEmails) ? it.specificEmails : Object.values((it && it.specificEmails) || {});
-                            screens.forEach(sc => { if (sc && sc.platform && sc.platform.toLowerCase().includes('netflix') && sc.email) nfEmails.push(sc.email); });
-                        });
-                        if (!nfEmails.length && sale.email && (itemsStr || '').toLowerCase().includes('netflix')) {
-                            nfEmails.push(sale.email);
-                        }
-                        if (!nfEmails.length) return '';
-                        const emailEncoded = encodeURIComponent(nfEmails[0]);
-                        const safeCName = encodeURIComponent(clientObj.name || 'Cliente');
-                        const safeCPhone = clientObj.phone || '';
-                        return `<button onclick="openAdminActivateTvModal('${emailEncoded}', '${safeCPhone}', '${safeCName}')" style="flex:1; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #e50914; background:rgba(229,9,20,0.1); color:#e50914; font-size:0.8rem; min-width:100px;" title="Activar Netflix TV para este cliente"><i class='fa-solid fa-tv'></i> Activar TV</button>`;
-                    })()}
+
                     <button onclick="deleteClientSale('${clientObj.phone}', '${sale.id}')" 
                         style="padding:0.6rem 0.6rem; border-radius:8px; cursor:pointer; font-weight:bold; border:1px solid #ff4d4d; background: transparent; color:#ff4d4d; font-size:0.8rem;">
                         <i class="fa-solid fa-trash"></i>
