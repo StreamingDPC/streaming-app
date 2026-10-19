@@ -2436,6 +2436,7 @@ app.post('/api/activate-vix', async (req, res) => {
 // ── ENDPOINT: Sincronizar Excel de clientes con Firebase ──────────────────
 app.post('/api/sync-excel', async (req, res) => {
     try {
+        try { delete require.cache[require.resolve('./excel-sync')]; } catch (_) {}
         const { syncExcelToFirebase } = require('./excel-sync');
         const result = await syncExcelToFirebase();
         return res.json(result);
