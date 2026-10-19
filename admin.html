@@ -12416,10 +12416,36 @@
                     return alert('⚠️ No se encontraron filas válidas en las pestañas (NO, DO, MO, PO, PA, C, V, I, Apple, Sp, Youtube).');
                 }
 
-                const byPhone = {};
+                function normalizeClientNameKey(n) {
+                    if (!n) return '';
+                    return String(n).toLowerCase()
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                        .replace(/^[0-9]+[\s\.\-_]*/, '')
+                        .replace(/[\s\.\-_]*[0-9]+$/, '')
+                        .replace(/[^a-z0-9]/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                }
+
+                function clientNamesMatch(n1, n2) {
+                    const k1 = normalizeClientNameKey(n1);
+                    const k2 = normalizeClientNameKey(n2);
+                    if (!k1 || !k2) return true;
+                    if (k1 === k2) return true;
+                    const words1 = k1.split(' ').filter(Boolean);
+                    const words2 = k2.split(' ').filter(Boolean);
+                    if (words1.length > 0 && words2.length > 0 && words1[0] === words2[0] && (k1.includes(k2) || k2.includes(k1))) {
+                        return true;
+                    }
+                    return false;
+                }
+
+                const clientGroups = {};
                 excelRecords.forEach(r => {
-                    if (!byPhone[r.phone]) byPhone[r.phone] = [];
-                    byPhone[r.phone].push(r);
+                    const normName = normalizeClientNameKey(r.clientName);
+                    const groupKey = r.phone + '__' + (normName || 'cliente');
+                    if (!clientGroups[groupKey]) clientGroups[groupKey] = [];
+                    clientGroups[groupKey].push(r);
                 });
 
                 const updates = {};
@@ -12427,9 +12453,12 @@
                 let updatedScreensCount = 0;
                 const nowMs = Date.now();
 
-                for (const phone of Object.keys(byPhone)) {
-                    const phoneRecs = byPhone[phone];
+                for (const groupKey of Object.keys(clientGroups)) {
+                    const phoneRecs = clientGroups[groupKey];
                     const firstRec = phoneRecs[0];
+                    const phone = firstRec.phone;
+                    const groupClientName = (firstRec.clientName || '').trim();
+                    const slugName = normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente';
                     const existingProf = (window.allClientProfiles && window.allClientProfiles[phone]) || {};
 
                     if (!existingProf.name || existingProf.name === 'Cliente' || existingProf.name === 'Sin Nombre') {
@@ -12458,15 +12487,26 @@
                         Object.keys(allS).forEach(k => {
                             const s = allS[k];
                             const pClean = window.sanitizePhone ? window.sanitizePhone(s.clientPhone) : (s.clientPhone || '').replace(/\D/g, '');
-                            if (pClean === phone) {
+                            if (pClean === phone && clientNamesMatch(s.clientName, groupClientName)) {
                                 targetSales[k] = JSON.parse(JSON.stringify(s));
                             }
                         });
-                        // Limpiar duplicado de clientSales para este cliente de vendedor
-                        updates[`clientSales/${phone}`] = null;
+                        // Limpiar duplicado de clientSales para este cliente específico
+                        if (window.allClientSalesMap && window.allClientSalesMap[phone]) {
+                            Object.keys(window.allClientSalesMap[phone]).forEach(ck => {
+                                if (clientNamesMatch(window.allClientSalesMap[phone][ck]?.clientName, groupClientName)) {
+                                    updates[`clientSales/${phone}/${ck}`] = null;
+                                }
+                            });
+                        }
                     } else {
                         storePrefix = `clientSales/${phone}`;
-                        targetSales = JSON.parse(JSON.stringify((window.allClientSalesMap && window.allClientSalesMap[phone]) || {}));
+                        const rawCS = (window.allClientSalesMap && window.allClientSalesMap[phone]) || {};
+                        Object.keys(rawCS).forEach(k => {
+                            if (clientNamesMatch(rawCS[k]?.clientName, groupClientName)) {
+                                targetSales[k] = JSON.parse(JSON.stringify(rawCS[k]));
+                            }
+                        });
                     }
 
                     const existingSaleKeys = Object.keys(targetSales);
@@ -12567,7 +12607,7 @@
                             }
                         });
 
-                        const verifiedKey = 'excel_' + phone;
+                        const verifiedKey = 'excel_' + phone + '_' + slugName;
                         const newSaleObj = {
                             clientName: firstRec.clientName,
                             clientPhone: phone,

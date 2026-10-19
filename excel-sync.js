@@ -111,6 +111,30 @@ function normalizeSellerName(rawSeller) {
     return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
+function normalizeClientNameKey(n) {
+    if (!n) return '';
+    return String(n).toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/^[0-9]+[\s\.\-_]*/, '') // quita prefijo numérico de pantalla '1 ', '2 '
+        .replace(/[\s\.\-_]*[0-9]+$/, '') // quita sufijo numérico ' 2', ' 3'
+        .replace(/[^a-z0-9]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function clientNamesMatch(n1, n2) {
+    const k1 = normalizeClientNameKey(n1);
+    const k2 = normalizeClientNameKey(n2);
+    if (!k1 || !k2) return true;
+    if (k1 === k2) return true;
+    const words1 = k1.split(' ').filter(Boolean);
+    const words2 = k2.split(' ').filter(Boolean);
+    if (words1.length > 0 && words2.length > 0 && words1[0] === words2[0] && (k1.includes(k2) || k2.includes(k1))) {
+        return true;
+    }
+    return false;
+}
+
 const MONTH_MAP = {
     'jan': 0, 'ene': 0,
     'feb': 1,
@@ -472,20 +496,27 @@ async function syncExcelToFirebase(customBuffer = null) {
     const clientProfiles = cpResp.data || {};
     const sellerSales = ssResp.data || {};
 
-    // Agrupar pantallas del Excel por teléfono del cliente
-    const byPhone = {};
+    // Agrupar pantallas del Excel por (teléfono + cliente normalizado)
+    // para que clientes distintos que comparten el mismo número celular (ej: revendedores o familiares)
+    // conserven sus ventas independientes y nunca se sobreescriban ni se eliminen de la base de datos.
+    const clientGroups = {};
     for (const rec of excelRecords) {
-        if (!byPhone[rec.phone]) byPhone[rec.phone] = [];
-        byPhone[rec.phone].push(rec);
+        const normName = normalizeClientNameKey(rec.clientName);
+        const groupKey = rec.phone + '__' + (normName || 'cliente');
+        if (!clientGroups[groupKey]) clientGroups[groupKey] = [];
+        clientGroups[groupKey].push(rec);
     }
 
     let updatedClientsCount = 0;
     let updatedScreensCount = 0;
     let createdSalesCount = 0;
 
-    for (const phone of Object.keys(byPhone)) {
-        const phoneRecs = byPhone[phone];
+    for (const groupKey of Object.keys(clientGroups)) {
+        const phoneRecs = clientGroups[groupKey];
         const firstRec = phoneRecs[0];
+        const phone = firstRec.phone;
+        const groupClientName = (firstRec.clientName || '').trim();
+        const slugName = normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente';
 
         // 1. Asegurar clientProfiles/{phone} (Nombre y PIN de Cuenta de 4 dígitos)
         if (!clientProfiles[phone]) clientProfiles[phone] = {};
@@ -510,18 +541,25 @@ async function syncExcelToFirebase(customBuffer = null) {
         if (isSellerSale) {
             if (!sellerSales[sName]) sellerSales[sName] = {};
             targetStore = sellerSales[sName];
-            // Eliminar cualquier duplicado accidental de este cliente de vendedor en clientSales
+            // Eliminar cualquier duplicado accidental de este cliente específico en clientSales
             if (clientSales[phone]) {
-                delete clientSales[phone];
+                for (const k of Object.keys(clientSales[phone])) {
+                    if (clientNamesMatch(clientSales[phone][k]?.clientName, groupClientName)) {
+                        delete clientSales[phone][k];
+                    }
+                }
+                if (Object.keys(clientSales[phone]).length === 0) {
+                    delete clientSales[phone];
+                }
             }
         } else {
             if (!clientSales[phone]) clientSales[phone] = {};
             targetStore = clientSales[phone];
-            // Limpiar de sellerSales si existiera duplicado accidental
+            // Limpiar de sellerSales si existiera duplicado accidental de este cliente específico
             for (const s of Object.keys(sellerSales)) {
                 if (sellerSales[s]) {
                     for (const k of Object.keys(sellerSales[s])) {
-                        if (sanitizePhone(sellerSales[s][k]?.clientPhone) === phone) {
+                        if (sanitizePhone(sellerSales[s][k]?.clientPhone) === phone && clientNamesMatch(sellerSales[s][k]?.clientName, groupClientName)) {
                             delete sellerSales[s][k];
                         }
                     }
@@ -529,10 +567,12 @@ async function syncExcelToFirebase(customBuffer = null) {
             }
         }
 
-        // Obtener todas las ventas existentes para este cliente en el almacén destino
+        // Obtener todas las ventas existentes para ESTE cliente específico en el almacén destino
         const existingSaleKeys = Object.keys(targetStore).filter(k => {
             const s = targetStore[k];
-            return s && sanitizePhone(s.clientPhone) === phone;
+            if (!s) return false;
+            if (sanitizePhone(s.clientPhone) !== phone) return false;
+            return clientNamesMatch(s.clientName, groupClientName);
         });
 
         // Fechas provenientes del Excel para este cliente (todas las fechas de inicio y fin deben coincidir con el Excel)
@@ -597,7 +637,9 @@ async function syncExcelToFirebase(customBuffer = null) {
             [phone, baseCleanEx, '57' + baseCleanEx].forEach(pKey => {
                 if (clientProfiles[pKey]) {
                     delete clientProfiles[pKey].codeAttemptUsed;
-                    delete clientProfiles[pKey].clientAttempts;
+                    if (clientProfiles[pKey].clientAttempts) {
+                        delete clientProfiles[pKey].clientAttempts[slugName];
+                    }
                 }
             });
         };
@@ -629,6 +671,20 @@ async function syncExcelToFirebase(customBuffer = null) {
             } else {
                 itemsArr = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
             }
+
+            // Retirar pantallas que pertenezcan explícitamente a otro cliente en Excel (si fueron mezcladas por sincronizaciones anteriores)
+            const otherClientsEmails = new Set(excelRecords.filter(r => !clientNamesMatch(r.clientName, groupClientName)).map(r => (r.email || '').trim().toLowerCase()).filter(Boolean));
+            itemsArr = itemsArr.filter(it => {
+                if (!it) return false;
+                const specs = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
+                const allEmails = [it.email, ...specs.map(sp => sp?.email)].filter(Boolean).map(e => String(e).trim().toLowerCase());
+                const belongsToOther = allEmails.some(e => otherClientsEmails.has(e));
+                const belongsToThis = phoneRecs.some(r => allEmails.includes((r.email || '').trim().toLowerCase()));
+                if (belongsToOther && !belongsToThis) {
+                    return false;
+                }
+                return true;
+            });
 
             // Normalizar nombres antiguos (ej. Dixney Privada -> Disney Privada) y limpiar pantallas vacías
             itemsArr.forEach(it => {
@@ -828,8 +884,8 @@ async function syncExcelToFirebase(customBuffer = null) {
                 }
             }
 
-            // Crear el ÚNICO registro verificado del Excel con clave estable y su valor real
-            const verifiedSaleKey = 'excel_' + phone;
+            // Crear el registro verificado del Excel con clave estable y única para este cliente
+            const verifiedSaleKey = 'excel_' + phone + '_' + slugName;
             const newItems = phoneRecs.map((rec, idx) => {
                 const pInfo = getPlatformPriceInfo(rec.platform, isSellerSale);
                 return {
