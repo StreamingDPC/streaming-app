@@ -305,6 +305,33 @@
             color: #111;
         }
 
+        .mkt-pill-limit-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #d1d5db;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .mkt-pill-limit-btn:hover {
+            background: rgba(0, 210, 211, 0.22);
+            border-color: #00d2d3;
+            color: #00d2d3;
+        }
+
+        .mkt-pill-limit-btn.active {
+            background: #00d2d3;
+            border-color: #00d2d3;
+            color: #000;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(0, 210, 211, 0.4);
+        }
+
         .mkt-photo-thumb {
             position: relative;
             width: 70px;
@@ -1284,13 +1311,31 @@
                             Envía promociones personalizadas a clientes activos o inactivos con protección inteligente anti-bloqueo.
                         </p>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <div id="mkt-daily-counter-badge" style="background:rgba(0, 210, 211, 0.1); border:1px solid #00d2d3; border-radius:10px; padding:6px 14px; font-size:0.85rem; color:#00d2d3; font-weight:bold;">
-                            <i class="fa-solid fa-shield-halved"></i> Envíos hoy: <span id="mkt-sent-today-count">0</span> / <span id="mkt-sent-today-limit">40</span>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <div id="mkt-daily-counter-badge" style="background:rgba(0, 210, 211, 0.1); border:1px solid #00d2d3; border-radius:10px; padding:6px 14px; font-size:0.85rem; color:#00d2d3; font-weight:bold;">
+                                <i class="fa-solid fa-shield-halved"></i> Envíos hoy: <span id="mkt-sent-today-count">0</span> / <span id="mkt-sent-today-limit">40</span>
+                            </div>
+                            <button type="button" class="btn-icon" onclick="resetDailyMktCounter()" title="Reiniciar contador de hoy a 0" style="width:auto; padding:6px 10px; font-size:0.8rem; border-radius:8px;">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button type="button" onclick="promptMktCustomDailyLimit()" style="background:linear-gradient(135deg, rgba(0,210,211,0.22), rgba(0,210,211,0.08)); border:1px solid #00d2d3; color:#00d2d3; border-radius:8px; padding:6px 12px; font-size:0.82rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;" title="Cambiar la cantidad máxima de envíos de hoy">
+                                <i class="fa-solid fa-pen-to-square"></i> Cambiar Límite
+                            </button>
                         </div>
-                        <button type="button" class="btn-icon" onclick="resetDailyMktCounter()" title="Reiniciar contador de hoy" style="width:auto; padding:6px 10px; font-size:0.8rem; border-radius:8px;">
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </button>
+                        <!-- Fila editable inferior con botones de selección rápida -->
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:0.8rem; color:#a0a0a0;">
+                            <span><i class="fa-solid fa-sliders"></i> Límite hoy:</span>
+                            <input type="number" id="mkt-daily-limit-header" value="40" min="5" max="5000" step="5"
+                                onchange="onMktDailyLimitChanged(this.value)"
+                                style="width:72px; text-align:center; padding:3px 6px; border-radius:6px; background:rgba(0,0,0,0.8); border:1px solid #00d2d3; color:#00d2d3; font-weight:bold; font-size:0.88rem; outline:none;"
+                                title="Escribe aquí directamente el número de envíos que deseas permitir hoy y presiona Enter">
+                            <button type="button" onclick="setQuickMktDailyLimit(40)" class="mkt-pill-limit-btn" data-limit="40">40</button>
+                            <button type="button" onclick="setQuickMktDailyLimit(80)" class="mkt-pill-limit-btn" data-limit="80">80</button>
+                            <button type="button" onclick="setQuickMktDailyLimit(150)" class="mkt-pill-limit-btn" data-limit="150">150</button>
+                            <button type="button" onclick="setQuickMktDailyLimit(300)" class="mkt-pill-limit-btn" data-limit="300">300</button>
+                            <button type="button" onclick="setQuickMktDailyLimit(500)" class="mkt-pill-limit-btn" data-limit="500">500</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1497,7 +1542,7 @@
                             <label style="font-weight:bold; font-size:0.85rem; color:#00d2d3; display:block; margin-bottom:6px;">
                                 <i class="fa-solid fa-gauge-high"></i> Límite Permitido por Día:
                             </label>
-                            <input type="number" id="mkt-daily-limit" value="40" min="5" max="300" onchange="updateMktDailyLimitDisplay()" style="width:100%; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); border:1px solid var(--glass-border); color:white; font-size:1rem; font-weight:bold;">
+                            <input type="number" id="mkt-daily-limit" value="40" min="5" max="5000" onchange="onMktDailyLimitChanged(this.value)" style="width:100%; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,0.6); border:1px solid var(--glass-border); color:white; font-size:1rem; font-weight:bold;">
                             <div style="font-size:0.75rem; color:#f39c12; margin-top:8px;">
                                 ⚠️ <em>Recomendado: 30 a 50 envíos al día para evitar reportes de spam en Meta.</em>
                             </div>
@@ -10070,11 +10115,28 @@
             const countEl = document.getElementById('mkt-sent-today-count');
             const limitEl = document.getElementById('mkt-sent-today-limit');
             const inputLimit = document.getElementById('mkt-daily-limit');
-            const limit = inputLimit ? parseInt(inputLimit.value) || 40 : 40;
+            const inputHeader = document.getElementById('mkt-daily-limit-header');
+            
+            let limit = 40;
+            if (inputHeader && inputHeader.value) limit = parseInt(inputHeader.value) || 40;
+            else if (inputLimit && inputLimit.value) limit = parseInt(inputLimit.value) || 40;
+
             const sentToday = getSentTodayCount();
 
             if (countEl) countEl.innerText = sentToday;
             if (limitEl) limitEl.innerText = limit;
+            if (inputLimit && parseInt(inputLimit.value) !== limit) inputLimit.value = limit;
+            if (inputHeader && parseInt(inputHeader.value) !== limit) inputHeader.value = limit;
+
+            // Actualizar estilo visual activo de botones rápidos
+            document.querySelectorAll('.mkt-pill-limit-btn').forEach(btn => {
+                const btnVal = parseInt(btn.getAttribute('data-limit'));
+                if (btnVal === limit) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
 
             const badge = document.getElementById('mkt-daily-counter-badge');
             if (badge) {
@@ -10086,6 +10148,52 @@
                     badge.style.background = 'rgba(0, 210, 211, 0.1)';
                     badge.style.borderColor = '#00d2d3';
                     badge.style.color = '#00d2d3';
+                }
+            }
+        };
+
+        window.onMktDailyLimitChanged = function (newVal, silent = false) {
+            let limit = parseInt(newVal);
+            if (isNaN(limit) || limit < 1) limit = 40;
+
+            const inputLimit = document.getElementById('mkt-daily-limit');
+            const inputHeader = document.getElementById('mkt-daily-limit-header');
+            if (inputLimit) inputLimit.value = limit;
+            if (inputHeader) inputHeader.value = limit;
+
+            updateMktDailyLimitDisplay();
+
+            // Persistir inmediatamente en localStorage
+            try {
+                const localRaw = localStorage.getItem('streaming_dpc_mkt_config');
+                let conf = localRaw ? JSON.parse(localRaw) : {};
+                conf.dailyLimit = limit;
+                localStorage.setItem('streaming_dpc_mkt_config', JSON.stringify(conf));
+            } catch (e) {}
+
+            // Persistir inmediatamente en Firebase
+            if (typeof db !== 'undefined' && db.ref) {
+                db.ref('storeConfig/marketingSettings/dailyLimit').set(limit).catch(() => {});
+            }
+
+            if (!silent && typeof showDbToast === 'function') {
+                showDbToast(`🎯 Límite diario ajustado a ${limit} envíos.`);
+            }
+        };
+
+        window.setQuickMktDailyLimit = function (limit) {
+            onMktDailyLimitChanged(limit);
+        };
+
+        window.promptMktCustomDailyLimit = function () {
+            const current = parseInt(document.getElementById('mkt-daily-limit-header')?.value) || 40;
+            const input = prompt(`Ingresa la cantidad máxima de envíos que deseas permitir hoy (ej: 80, 100, 250, 500):`, current);
+            if (input !== null) {
+                const num = parseInt(input.trim());
+                if (!isNaN(num) && num > 0) {
+                    onMktDailyLimitChanged(num);
+                } else {
+                    alert('Por favor ingresa un número válido mayor a 0.');
                 }
             }
         };
@@ -10719,8 +10827,10 @@
                 if (s.randomJitter !== undefined && document.getElementById('mkt-random-jitter')) {
                     document.getElementById('mkt-random-jitter').checked = s.randomJitter;
                 }
-                if (s.dailyLimit && document.getElementById('mkt-daily-limit')) {
-                    document.getElementById('mkt-daily-limit').value = s.dailyLimit;
+                if (s.dailyLimit) {
+                    if (document.getElementById('mkt-daily-limit')) document.getElementById('mkt-daily-limit').value = s.dailyLimit;
+                    if (document.getElementById('mkt-daily-limit-header')) document.getElementById('mkt-daily-limit-header').value = s.dailyLimit;
+                    updateMktDailyLimitDisplay();
                 }
                 if (Array.isArray(s.photoUrls)) {
                     _mktState.photos = [...s.photoUrls];
