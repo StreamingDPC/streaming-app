@@ -7207,9 +7207,9 @@
                 try {
                     const cleanPhone = clientPhone.replace(/\D/g, '');
                     const updates = {};
-                    if (sourceType === 'seller' && sourceName && saleId) {
+                    if (sourceType === 'seller' && sourceName && saleId && saleId !== 'undefined') {
                         updates[`sellerSales/${sourceName}/${saleId}/adminRenewedAt`] = nowRenewTS;
-                    } else if (cleanPhone && saleId) {
+                    } else if (cleanPhone && saleId && saleId !== 'undefined') {
                         updates[`clientSales/${cleanPhone}/${saleId}/adminRenewedAt`] = nowRenewTS;
                     }
                     if (Object.keys(updates).length > 0) {
@@ -12443,8 +12443,9 @@
                 const clientGroups = {};
                 excelRecords.forEach(r => {
                     const normName = normalizeClientNameKey(r.clientName);
+                    const startKey = r.startMs ? new Date(r.startMs).toISOString().split('T')[0] : (r.fecha || 'nostart');
                     const expKey = r.expMs ? new Date(r.expMs).toISOString().split('T')[0] : (r.fin || 'nodate');
-                    const groupKey = r.phone + '__' + (normName || 'cliente') + '__' + expKey;
+                    const groupKey = r.phone + '__' + (normName || 'cliente') + '__' + startKey + '__' + expKey;
                     if (!clientGroups[groupKey]) clientGroups[groupKey] = [];
                     clientGroups[groupKey].push(r);
                 });
@@ -12460,8 +12461,9 @@
                     const firstRec = phoneRecs[0];
                     const phone = firstRec.phone;
                     const groupClientName = (firstRec.clientName || '').trim();
+                    const startKey = firstRec.startMs ? new Date(firstRec.startMs).toISOString().split('T')[0] : (firstRec.fecha || 'nostart');
                     const expKey = firstRec.expMs ? new Date(firstRec.expMs).toISOString().split('T')[0] : (firstRec.fin || 'nodate');
-                    const slugName = (normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente') + '_' + (expKey.replace(/[^a-zA-Z0-9]/g, ''));
+                    const slugName = (normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente') + '_' + (startKey.replace(/[^a-zA-Z0-9]/g, '')) + '_' + (expKey.replace(/[^a-zA-Z0-9]/g, ''));
                     const existingProf = (window.allClientProfiles && window.allClientProfiles[phone]) || {};
 
                     if (!existingProf.name || existingProf.name === 'Cliente' || existingProf.name === 'Sin Nombre') {
@@ -12533,6 +12535,11 @@
                             .filter(r => (window.sanitizePhone ? window.sanitizePhone(r.phone) : (r.phone || '').replace(/\D/g, '')) === phone && clientNamesMatch(r.clientName, groupClientName))
                             .map(r => (r.email || '').trim().toLowerCase())
                             .filter(Boolean)
+                    );
+                    const otherExcelRecsForClient = excelRecords.filter(r => 
+                        (window.sanitizePhone ? window.sanitizePhone(r.phone) : (r.phone || '').replace(/\D/g, '')) === phone && 
+                        clientNamesMatch(r.clientName, groupClientName) && 
+                        !phoneRecs.includes(r)
                     );
 
                     const getSaleEmails = (s) => {
@@ -12626,14 +12633,25 @@
                             ? (Array.isArray(targetSale.items) ? targetSale.items : Object.values(targetSale.items))
                             : [];
 
-                        // Retirar pantallas que pertenezcan a otros registros del Excel
+                        // Retirar pantallas que pertenezcan a otros registros del Excel (de otros clientes o de compras con fechas diferentes del mismo cliente)
                         itemsArr = itemsArr.filter(it => {
                             if (!it) return false;
+                            const itPlat = it.name || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].platform) || '';
                             const specs = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
                             const allEmails = [it.email, ...specs.map(sp => sp?.email)].filter(Boolean).map(e => String(e).trim().toLowerCase());
-                            const belongsToOther = allEmails.some(e => allOtherExcelEmails.has(e));
-                            const belongsToThis = phoneRecs.some(r => allEmails.includes((r.email || '').trim().toLowerCase()));
-                            if (belongsToOther && !belongsToThis) return false;
+
+                            const belongsToOtherEmail = allEmails.some(e => allOtherExcelEmails.has(e));
+                            const belongsToThisEmail = phoneRecs.some(r => allEmails.includes((r.email || '').trim().toLowerCase()));
+                            if (belongsToOtherEmail && !belongsToThisEmail) return false;
+
+                            const belongsToOtherPurchase = otherExcelRecsForClient.some(otherRec => 
+                                platMatches(itPlat, otherRec.sheetMeta) || specs.some(sp => platMatches(sp?.platform, otherRec.sheetMeta))
+                            );
+                            const belongsToThisPurchase = phoneRecs.some(rec => 
+                                platMatches(itPlat, rec.sheetMeta) || specs.some(sp => platMatches(sp?.platform, rec.sheetMeta))
+                            );
+                            if (belongsToOtherPurchase && !belongsToThisPurchase) return false;
+
                             return true;
                         });
 

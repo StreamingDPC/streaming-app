@@ -496,14 +496,14 @@ async function syncExcelToFirebase(customBuffer = null) {
     const clientProfiles = cpResp.data || {};
     const sellerSales = ssResp.data || {};
 
-    // Agrupar pantallas del Excel por (teléfono + cliente normalizado + fecha de fin)
-    // para que compras distintas con fechas de vencimiento diferentes (ej: Amparo Medina con Disney hoy y Netflix en noviembre)
-    // mantengan sus tarjetas de venta y fechas exactas por separado y no se mezclen ni se cancelen.
+    // Agrupar pantallas del Excel por (teléfono + cliente normalizado + fecha de inicio + fecha de fin)
+    // para que cuando sea el mismo cliente pero fechas diferentes las pantallas queden divididas individualmente y no en combo.
     const clientGroups = {};
     for (const rec of excelRecords) {
         const normName = normalizeClientNameKey(rec.clientName);
+        const startKey = rec.startMs ? new Date(rec.startMs).toISOString().split('T')[0] : (rec.fecha || 'nostart');
         const expKey = rec.expMs ? new Date(rec.expMs).toISOString().split('T')[0] : (rec.fin || 'nodate');
-        const groupKey = rec.phone + '__' + (normName || 'cliente') + '__' + expKey;
+        const groupKey = rec.phone + '__' + (normName || 'cliente') + '__' + startKey + '__' + expKey;
         if (!clientGroups[groupKey]) clientGroups[groupKey] = [];
         clientGroups[groupKey].push(rec);
     }
@@ -518,8 +518,9 @@ async function syncExcelToFirebase(customBuffer = null) {
         const firstRec = phoneRecs[0];
         const phone = firstRec.phone;
         const groupClientName = (firstRec.clientName || '').trim();
+        const startKey = firstRec.startMs ? new Date(firstRec.startMs).toISOString().split('T')[0] : (firstRec.fecha || 'nostart');
         const expKey = firstRec.expMs ? new Date(firstRec.expMs).toISOString().split('T')[0] : (firstRec.fin || 'nodate');
-        const slugName = (normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente') + '_' + (expKey.replace(/[^a-zA-Z0-9]/g, ''));
+        const slugName = (normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente') + '_' + (startKey.replace(/[^a-zA-Z0-9]/g, '')) + '_' + (expKey.replace(/[^a-zA-Z0-9]/g, ''));
 
         // 1. Asegurar clientProfiles/{phone} (Nombre y PIN de Cuenta de 4 dígitos)
         if (!clientProfiles[phone]) clientProfiles[phone] = {};
@@ -615,6 +616,11 @@ async function syncExcelToFirebase(customBuffer = null) {
                 .filter(r => sanitizePhone(r.phone) === phone && clientNamesMatch(r.clientName, groupClientName))
                 .map(r => (r.email || '').trim().toLowerCase())
                 .filter(Boolean)
+        );
+        const otherExcelRecsForClient = excelRecords.filter(r => 
+            sanitizePhone(r.phone) === phone && 
+            clientNamesMatch(r.clientName, groupClientName) && 
+            !phoneRecs.includes(r)
         );
 
         const getSaleEmails = (s) => {
@@ -749,16 +755,31 @@ async function syncExcelToFirebase(customBuffer = null) {
                 itemsArr = Array.isArray(sale.items) ? sale.items : Object.values(sale.items);
             }
 
-            // Retirar pantallas que pertenezcan a otros registros del Excel (ej. de otros grupos de este mismo cliente o de otros clientes)
+            // Retirar pantallas que pertenezcan a otros registros del Excel (de otros clientes o de compras con fechas diferentes del mismo cliente)
             itemsArr = itemsArr.filter(it => {
                 if (!it) return false;
+                const itPlat = it.name || (it.specificEmails && it.specificEmails[0] && it.specificEmails[0].platform) || '';
                 const specs = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
                 const allEmails = [it.email, ...specs.map(sp => sp?.email)].filter(Boolean).map(e => String(e).trim().toLowerCase());
-                const belongsToOther = allEmails.some(e => allOtherExcelEmails.has(e));
-                const belongsToThis = phoneRecs.some(r => allEmails.includes((r.email || '').trim().toLowerCase()));
-                if (belongsToOther && !belongsToThis) {
+
+                // 1. Si algún correo del item pertenece explícitamente a otro registro del Excel y no a este grupo
+                const belongsToOtherEmail = allEmails.some(e => allOtherExcelEmails.has(e));
+                const belongsToThisEmail = phoneRecs.some(r => allEmails.includes((r.email || '').trim().toLowerCase()));
+                if (belongsToOtherEmail && !belongsToThisEmail) {
                     return false;
                 }
+
+                // 2. Si la plataforma pertenece a otra compra activa con fecha diferente de este mismo cliente y no a este grupo
+                const belongsToOtherPurchase = otherExcelRecsForClient.some(otherRec => 
+                    platformMatches(itPlat, otherRec.sheetMeta) || specs.some(sp => platformMatches(sp?.platform, otherRec.sheetMeta))
+                );
+                const belongsToThisPurchase = phoneRecs.some(rec => 
+                    platformMatches(itPlat, rec.sheetMeta) || specs.some(sp => platformMatches(sp?.platform, rec.sheetMeta))
+                );
+                if (belongsToOtherPurchase && !belongsToThisPurchase) {
+                    return false;
+                }
+
                 return true;
             });
 
