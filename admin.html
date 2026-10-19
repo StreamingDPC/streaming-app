@@ -1353,7 +1353,7 @@
                         </div>
                     </div>
 
-                    <!-- Filtro de Origen (Separar Clientes Directos vs Vendedores) -->
+                    <!-- Filtro de Origen (Separar Clientes Directos vs Vendedores vs Red de Vendedores) -->
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem; background:rgba(0,0,0,0.3); border:1px solid rgba(0, 210, 211, 0.3); border-radius:12px; padding:10px 14px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <label style="color:#00d2d3; font-weight:bold; font-size:0.9rem; margin:0; display:flex; align-items:center; gap:6px;">
@@ -1363,9 +1363,10 @@
                                 <option value="direct" selected>🏢 Solo Clientes Directos (Página Web / Admin) [Recomendado]</option>
                                 <option value="all">👥 Todos (Directos + Clientes de Vendedores)</option>
                                 <option value="seller">👔 Solo Clientes de Vendedores</option>
+                                <option value="sellers_only">💼 Solo a Vendedores (Red de Vendedores Registrados)</option>
                             </select>
                         </div>
-                        <div style="color:#aaa; font-size:0.78rem;">
+                        <div id="mkt-origin-filter-hint" style="color:#aaa; font-size:0.78rem;">
                             🔒 <em>Por defecto se excluyen clientes de vendedores para no invadir su cartera privada.</em>
                         </div>
                     </div>
@@ -1374,24 +1375,24 @@
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:1rem;">
                         <div class="mkt-seg-card active" id="mkt-seg-active" onclick="setMarketingSegment('active')">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="color:#4cd137;"><i class="fa-solid fa-circle-check"></i> Pantallas Activas</strong>
+                                <strong id="mkt-lbl-active" style="color:#4cd137;"><i class="fa-solid fa-circle-check"></i> Pantallas Activas</strong>
                                 <span class="mkt-badge" id="mkt-count-active" style="background:#4cd137; color:#111;">0</span>
                             </div>
-                            <p style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Clientes con servicios vigentes hoy. Ideal para combos, renovaciones anticipadas y más meses.</p>
+                            <p id="mkt-sub-active" style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Clientes con servicios vigentes hoy. Ideal para combos, renovaciones anticipadas y más meses.</p>
                         </div>
                         <div class="mkt-seg-card" id="mkt-seg-inactive" onclick="setMarketingSegment('inactive')">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="color:#ff6b6b;"><i class="fa-solid fa-circle-pause"></i> Sin Compras / Inactivos</strong>
+                                <strong id="mkt-lbl-inactive" style="color:#ff6b6b;"><i class="fa-solid fa-circle-pause"></i> Sin Compras / Inactivos</strong>
                                 <span class="mkt-badge" id="mkt-count-inactive" style="background:#ff6b6b; color:#fff;">0</span>
                             </div>
-                            <p style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Cuentas vencidas o usuarios registrados que no han comprado. Ideal para ofertas de rescate.</p>
+                            <p id="mkt-sub-inactive" style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Cuentas vencidas o usuarios registrados que no han comprado. Ideal para ofertas de rescate.</p>
                         </div>
                         <div class="mkt-seg-card" id="mkt-seg-all" onclick="setMarketingSegment('all')">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="color:#2ab7ca;"><i class="fa-solid fa-users"></i> Todos los Clientes</strong>
+                                <strong id="mkt-lbl-all" style="color:#2ab7ca;"><i class="fa-solid fa-users"></i> Todos los Clientes</strong>
                                 <span class="mkt-badge" id="mkt-count-all" style="background:#2ab7ca; color:#111;">0</span>
                             </div>
-                            <p style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Base completa de clientes registrados en el sistema.</p>
+                            <p id="mkt-sub-all" style="font-size:0.75rem; color:#aaa; margin:6px 0 0 0;">Base completa de clientes registrados en el sistema.</p>
                         </div>
                     </div>
 
@@ -1465,6 +1466,7 @@
                             <!-- Chips para insertar variables y botón copiar -->
                             <div style="display:flex; gap:6px; flex-wrap:wrap;">
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{cliente}')">+ {cliente}</button>
+                                <button type="button" class="mkt-chip" onclick="insertMktVar('{vendedor}')">+ {vendedor}</button>
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{pantallas}')">+ {pantallas}</button>
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{telefono}')">+ {telefono}</button>
                                 <button type="button" class="mkt-chip" onclick="insertMktVar('{Hola|Buenas|Hola qué tal}')" title="Variación aleatoria de saludos">+ Spintax {Hola|Buenas}</button>
@@ -10205,9 +10207,110 @@
             return !sn || sn === 'página web oficial' || sn === 'pagina web oficial' || sn === 'admin' || sn === 'oficial' || sn === 'directo';
         }
 
-        // Obtiene la audiencia filtrada según el origen seleccionado (Directos vs Vendedores vs Todos)
+        // Obtiene los vendedores registrados directamente para comunicación interna/difusión
+        function getSellersAudience() {
+            try {
+                const sellersRaw = (storeConfig && storeConfig.sellers) 
+                    || (window.storeConfig && window.storeConfig.sellers) 
+                    || (window.lastFirebaseData && window.lastFirebaseData.storeConfig && window.lastFirebaseData.storeConfig.sellers) 
+                    || [];
+                const sellersArr = Array.isArray(sellersRaw) ? sellersRaw : Object.values(sellersRaw || {});
+
+                const sellerSalesData = window.globalSellerSalesDataStore || globalSellerSalesDataStore || (window.lastFirebaseData && window.lastFirebaseData.sellerSales) || {};
+                const now = Date.now();
+                const list = [];
+                const seenPhones = new Set();
+
+                sellersArr.forEach(s => {
+                    if (!s || !s.name) return;
+                    const sNameTrim = (s.name || '').trim();
+                    const sNameLower = sNameTrim.toLowerCase();
+                    if (!sNameLower || sNameLower === 'página web oficial' || sNameLower === 'pagina web oficial' || sNameLower === 'admin' || sNameLower === 'administrador') {
+                        return;
+                    }
+
+                    let p = (s.whatsapp || s.phone || '').toString().replace(/\D/g, '');
+                    if (!p) return;
+                    if (p.length === 10 && p.startsWith('3')) p = '57' + p;
+                    if (seenPhones.has(p)) return;
+                    seenPhones.add(p);
+
+                    // Contar ventas del vendedor en el sistema
+                    const salesMap = sellerSalesData[sNameTrim] || sellerSalesData[s.name] || {};
+                    const salesArr = Array.isArray(salesMap) ? salesMap : Object.values(salesMap);
+
+                    let activeCount = 0;
+                    let expiredCount = 0;
+                    salesArr.forEach(sale => {
+                        if (!sale || sale.isPaid === false) return;
+                        const exp = Number(sale.expirationDate) || 0;
+                        if (exp > now) activeCount++;
+                        else if (exp > 0) expiredCount++;
+                    });
+
+                    let status = 'prospect';
+                    if (activeCount > 0) {
+                        status = 'active';
+                    } else if (salesArr.length > 0) {
+                        status = 'inactive';
+                    }
+
+                    list.push({
+                        phone: p,
+                        name: sNameTrim,
+                        sales: salesArr,
+                        salesCount: salesArr.length,
+                        activeCount: activeCount,
+                        expiredCount: expiredCount,
+                        status: status,
+                        platforms: ['Vendedor Registrado', activeCount > 0 ? `${activeCount} ventas activas` : 'Red de Vendedores'],
+                        isSellerClient: false,
+                        isSellerSelf: true,
+                        sellerName: sNameTrim,
+                        role: 'Vendedor Registrado'
+                    });
+                });
+
+                list.sort((a, b) => a.name.localeCompare(b.name));
+                return list;
+            } catch (err) {
+                console.error("Error computing sellers audience:", err);
+                return [];
+            }
+        }
+
+        // Actualiza los títulos y descripciones de las tarjetas según si es clientes o solo vendedores
+        function updateMarketingSegmentLabels(originFilter) {
+            const lblActive = document.getElementById('mkt-lbl-active');
+            const subActive = document.getElementById('mkt-sub-active');
+            const lblInactive = document.getElementById('mkt-lbl-inactive');
+            const subInactive = document.getElementById('mkt-sub-inactive');
+            const lblAll = document.getElementById('mkt-lbl-all');
+            const subAll = document.getElementById('mkt-sub-all');
+
+            if (originFilter === 'sellers_only') {
+                if (lblActive) lblActive.innerHTML = '<i class="fa-solid fa-user-check"></i> Vendedores Activos';
+                if (subActive) subActive.innerText = 'Vendedores con ventas o servicios vigentes registrados hoy.';
+                if (lblInactive) lblInactive.innerHTML = '<i class="fa-solid fa-user-clock"></i> Vendedores Sin Ventas';
+                if (subInactive) subInactive.innerText = 'Vendedores sin ventas activas o registrados recientemente.';
+                if (lblAll) lblAll.innerHTML = '<i class="fa-solid fa-users-gear"></i> Todos los Vendedores';
+                if (subAll) subAll.innerText = 'Red completa de todos los vendedores registrados en el sistema.';
+            } else {
+                if (lblActive) lblActive.innerHTML = '<i class="fa-solid fa-circle-check"></i> Pantallas Activas';
+                if (subActive) subActive.innerText = 'Clientes con servicios vigentes hoy. Ideal para combos, renovaciones anticipadas y más meses.';
+                if (lblInactive) lblInactive.innerHTML = '<i class="fa-solid fa-circle-pause"></i> Sin Compras / Inactivos';
+                if (subInactive) subInactive.innerText = 'Cuentas vencidas o usuarios registrados que no han comprado. Ideal para ofertas de rescate.';
+                if (lblAll) lblAll.innerHTML = '<i class="fa-solid fa-users"></i> Todos los Clientes';
+                if (subAll) subAll.innerText = 'Base completa de clientes registrados en el sistema.';
+            }
+        }
+
+        // Obtiene la audiencia filtrada según el origen seleccionado (Directos vs Vendedores vs Todos vs Solo Vendedores)
         window.getAudienceFilteredByOrigin = function () {
             const originFilter = document.getElementById('mkt-origin-filter')?.value || 'direct';
+            if (originFilter === 'sellers_only') {
+                return getSellersAudience();
+            }
             const all = _mktState.allAudience || [];
             if (originFilter === 'direct') {
                 return all.filter(c => !c.isSellerClient);
@@ -10219,7 +10322,21 @@
 
         // Evento al cambiar el selector de origen de clientes
         window.onMarketingOriginFilterChange = function () {
-            setMarketingSegment(_mktState.currentSegment || 'active', false);
+            const originFilter = document.getElementById('mkt-origin-filter')?.value || 'direct';
+            const hint = document.getElementById('mkt-origin-filter-hint');
+            if (hint) {
+                if (originFilter === 'sellers_only') {
+                    hint.innerHTML = '💼 <em>Enviando comunicados, promociones o avisos directamente a tu red de vendedores registrados.</em>';
+                } else if (originFilter === 'seller') {
+                    hint.innerHTML = '👔 <em>Enviando únicamente a clientes atendidos por vendedores.</em>';
+                } else if (originFilter === 'all') {
+                    hint.innerHTML = '👥 <em>Enviando a toda la base combinada (clientes directos + clientes de vendedores).</em>';
+                } else {
+                    hint.innerHTML = '🔒 <em>Por defecto se excluyen clientes de vendedores para no invadir su cartera privada.</em>';
+                }
+            }
+            const targetSeg = (originFilter === 'sellers_only') ? 'all' : (_mktState.currentSegment || 'active');
+            setMarketingSegment(targetSeg, false);
         };
 
         // Recopila todos los clientes segmentados por estado y clasifica su origen (Directo vs Vendedor)
@@ -10393,6 +10510,10 @@
         window.setMarketingSegment = function (segment, keepSelection) {
             _mktState.currentSegment = segment;
 
+            // Actualizar etiquetas visuales de tarjetas según origen (Clientes vs Vendedores)
+            const originFilter = document.getElementById('mkt-origin-filter')?.value || 'direct';
+            updateMarketingSegmentLabels(originFilter);
+
             // Siempre recargar la audiencia fresca
             _mktState.allAudience = getMarketingAudience();
 
@@ -10492,7 +10613,7 @@
             if (btnCountEl) btnCountEl.innerText = _mktState.selectedPhones.size;
 
             if (filtered.length === 0) {
-                listDiv.innerHTML = '<p style="color:#777; font-size:0.85rem; text-align:center; padding:1.5rem;">No se encontraron clientes para este segmento o filtro de origen.</p>';
+                listDiv.innerHTML = '<p style="color:#777; font-size:0.85rem; text-align:center; padding:1.5rem;">No se encontraron destinatarios para este segmento o filtro de origen.</p>';
                 return;
             }
 
@@ -10525,14 +10646,24 @@
                 }
 
                 let originBadge = '';
-                if (c.isSellerClient) {
+                if (c.isSellerSelf) {
+                    originBadge = `<span style="font-size:0.75rem; color:#c48dfc; background:rgba(196,141,252,0.15); border:1px solid rgba(196,141,252,0.3); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-user-tie"></i> Vendedor Registrado</span>`;
+                } else if (c.isSellerClient) {
                     originBadge = `<span style="font-size:0.75rem; color:#f39c12; background:rgba(243,156,18,0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-user-tie"></i> Vendedor: ${c.sellerName}</span>`;
                 } else {
                     originBadge = `<span style="font-size:0.75rem; color:#00d2d3; background:rgba(0,210,211,0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-globe"></i> Directo Tienda</span>`;
                 }
 
                 let statusBadge = '';
-                if (c.status === 'active') {
+                if (c.isSellerSelf) {
+                    if (c.status === 'active') {
+                        statusBadge = `<span style="font-size:0.75rem; color:#4cd137; background:rgba(76, 209, 55, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-chart-line"></i> ${c.activeCount} ventas activas</span>`;
+                    } else if (c.salesCount > 0) {
+                        statusBadge = `<span style="font-size:0.75rem; color:#ff6b6b; background:rgba(255, 107, 107, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-clock-rotate-left"></i> Sin ventas activas (${c.salesCount} hist.)</span>`;
+                    } else {
+                        statusBadge = `<span style="font-size:0.75rem; color:#2ab7ca; background:rgba(42, 183, 202, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-user-plus"></i> Nuevo (0 ventas)</span>`;
+                    }
+                } else if (c.status === 'active') {
                     const platStr = c.platforms.length > 0 ? c.platforms.slice(0, 2).join(', ') : 'Servicio activo';
                     statusBadge = `<span style="font-size:0.75rem; color:#4cd137; background:rgba(76, 209, 55, 0.12); padding:2px 8px; border-radius:10px; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> Activo: ${platStr}</span>`;
                 } else if (c.status === 'inactive') {
@@ -11010,9 +11141,9 @@
             let textWithSpintax = parseSpintax(rawText);
 
             let personalizedText = textWithSpintax
-                .replace(/\{cliente\}|\{nombre\}/gi, target.name || 'Cliente')
+                .replace(/\{cliente\}|\{nombre\}|\{vendedor\}/gi, target.name || (target.isSellerSelf ? 'Vendedor' : 'Cliente'))
                 .replace(/\{telefono\}|\{celular\}/gi, target.phone || '')
-                .replace(/\{pantallas\}|\{pantalla\}/gi, (target.platforms && target.platforms.length > 0) ? target.platforms.join(', ') : 'pantallas de streaming');
+                .replace(/\{pantallas\}|\{pantalla\}/gi, (target.platforms && target.platforms.length > 0) ? target.platforms.join(', ') : (target.isSellerSelf ? 'panel de ventas' : 'pantallas de streaming'));
 
             // Si es directo y tiene fotos, agregar los enlaces directos
             if (mode === 'direct' && _mktState.photos.length > 0) {
