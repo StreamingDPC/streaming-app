@@ -7080,10 +7080,23 @@
         }
 
         function deleteSellerSale(sellerName, saleId) {
+            const decSeller = safeDecode(decodeURIComponent(sellerName || ''));
+            if (!saleId || saleId === 'undefined' || saleId === 'null') {
+                alert('Error: No se encontró el identificador (ID) de la venta a eliminar.');
+                return;
+            }
             if (confirm('¿Estás seguro de que quieres eliminar este registro? (Útil si fue una prueba o error)')) {
-                db.ref(`sellerSales/${sellerName}/${saleId}`).remove().then(() => {
+                db.ref(`sellerSales/${decSeller}/${saleId}`).remove().then(() => {
+                    if (window.globalSellerSalesDataStore && window.globalSellerSalesDataStore[decSeller]) {
+                        delete window.globalSellerSalesDataStore[decSeller][saleId];
+                    }
                     alert('Registro eliminado de las ventas del vendedor.');
                     fetchSellerSalesStats();
+                    if (typeof renderGlobalHistory === 'function') renderGlobalHistory();
+                    if (typeof buildMasterDatabaseRecords === 'function') buildMasterDatabaseRecords();
+                }).catch(err => {
+                    console.error("Error al eliminar venta vendedor:", err);
+                    alert('Error al eliminar registro: ' + err.message);
                 });
             }
         }
@@ -7096,13 +7109,21 @@
                 let updates = {};
                 checkboxes.forEach(cb => {
                     const [seller, id] = cb.value.split('|');
-                    updates[`sellerSales/${seller}/${id}`] = null;
+                    if (id && id !== 'undefined' && id !== 'null') {
+                        const decSeller = safeDecode(decodeURIComponent(seller || ''));
+                        updates[`sellerSales/${decSeller}/${id}`] = null;
+                        if (window.globalSellerSalesDataStore && window.globalSellerSalesDataStore[decSeller]) {
+                            delete window.globalSellerSalesDataStore[decSeller][id];
+                        }
+                    }
                 });
 
                 try {
                     await db.ref().update(updates);
                     alert(`Registros eliminados correctamente (${checkboxes.length}).`);
                     fetchSellerSalesStats();
+                    if (typeof renderGlobalHistory === 'function') renderGlobalHistory();
+                    if (typeof buildMasterDatabaseRecords === 'function') buildMasterDatabaseRecords();
                 } catch (err) {
                     alert('Hubo un error al eliminar los registros.');
                     console.error(err);
@@ -7817,13 +7838,22 @@
             const _clientMap = window.allClientSalesMap || {};
             Object.keys(_clientMap).forEach(phone => {
                 const sales = _clientMap[phone] || {};
-                const salesArray = Array.isArray(sales) ? sales : Object.values(sales);
-                salesArray.forEach(sale => {
-                    if (!sale) return;
-                    if (Date.now() > sale.expirationDate) {
-                        allExpired.push({ ...sale, _sourceType: 'direct', _clientObj: { phone, name: sale.clientName } });
-                    }
-                });
+                if (Array.isArray(sales)) {
+                    sales.forEach((sale, idx) => {
+                        if (!sale) return;
+                        if (Date.now() > sale.expirationDate) {
+                            allExpired.push({ ...sale, id: sale.id || String(idx), _sourceType: 'direct', _clientObj: { phone, name: sale.clientName } });
+                        }
+                    });
+                } else {
+                    Object.keys(sales).forEach(key => {
+                        const sale = sales[key];
+                        if (!sale) return;
+                        if (Date.now() > sale.expirationDate) {
+                            allExpired.push({ ...sale, id: sale.id || key, _sourceType: 'direct', _clientObj: { phone, name: sale.clientName } });
+                        }
+                    });
+                }
             });
 
             // Coleccionar Ventas Vendedores (usar window.* por scope)
@@ -7994,7 +8024,9 @@
                 // Clientes directos (Global): Excluir ventas/clientes exclusivos de vendedores
                 const clientsData = phones.map(phone => {
                     const sales = allClientSalesMap[phone] || {};
-                    const salesArray = Array.isArray(sales) ? sales : Object.values(sales);
+                    const salesArray = Array.isArray(sales)
+                        ? sales.map((s, idx) => ({ ...s, id: s.id || String(idx) }))
+                        : Object.keys(sales).map(k => ({ ...sales[k], id: sales[k].id || k }));
 
                     // Filtrar solo ventas directas (sin vendedor externo)
                     const directSales = salesArray.filter(s => {
@@ -8115,11 +8147,28 @@
         }
 
         async function deleteClientSale(phone, saleId) {
+            if (!phone) {
+                alert('No se especificó el teléfono del cliente.');
+                return;
+            }
+            if (!saleId || saleId === 'undefined' || saleId === 'null') {
+                alert('Error: No se encontró el identificador (ID) de la venta a eliminar.');
+                return;
+            }
             if (!confirm('¿Estás seguro de que quieres eliminar este registro de compra? (Útil si fue una prueba o error)')) return;
             
             const cleanPhone = (phone || '').toString().trim();
+            const baseClean = cleanPhone.replace(/\D/g, '').replace(/^57/, '');
+            const p57 = '57' + baseClean;
+
             const updates = {};
             updates[`clientSales/${cleanPhone}/${saleId}`] = null;
+            if (baseClean && baseClean !== cleanPhone) {
+                updates[`clientSales/${baseClean}/${saleId}`] = null;
+            }
+            if (p57 && p57 !== cleanPhone) {
+                updates[`clientSales/${p57}/${saleId}`] = null;
+            }
 
             try {
                 // Si la venta también fue registrada bajo un vendedor (sellerSales), sincronizar y eliminarla
@@ -8128,16 +8177,30 @@
                 for (const [sellerName, sales] of Object.entries(allSellers)) {
                     if (!sales) continue;
                     for (const [sId, s] of Object.entries(sales)) {
-                        if (sId === saleId || (s && s.clientPhone && s.clientPhone.toString().trim() === cleanPhone && (s.id === saleId || s.date === saleId))) {
+                        const sPhone = s && s.clientPhone ? s.clientPhone.toString().replace(/\D/g, '').replace(/^57/, '') : '';
+                        if (sId === saleId || ((sPhone === cleanPhone || sPhone === baseClean) && (s.id === saleId || s.date === saleId))) {
                             updates[`sellerSales/${sellerName}/${sId}`] = null;
                         }
                     }
                 }
 
                 await db.ref().update(updates);
+
+                // Actualizar inmediatamente en memoria local para que la UI responda de inmediato
+                [cleanPhone, baseClean, p57].forEach(p => {
+                    if (window.allClientSalesMap && window.allClientSalesMap[p]) {
+                        delete window.allClientSalesMap[p][saleId];
+                    }
+                    if (typeof allClientSalesMap !== 'undefined' && allClientSalesMap && allClientSalesMap[p]) {
+                        delete allClientSalesMap[p][saleId];
+                    }
+                });
+
                 alert('Registro eliminado del historial del cliente exitosamente.');
                 fetchClientSalesHistory();
+                if (typeof renderGlobalHistory === 'function') renderGlobalHistory();
                 if (typeof fetchSellerSalesStats === 'function') fetchSellerSalesStats();
+                if (typeof buildMasterDatabaseRecords === 'function') buildMasterDatabaseRecords();
             } catch (err) {
                 console.error("Error al eliminar venta:", err);
                 alert('Error al eliminar registro: ' + err.message);
@@ -8188,13 +8251,33 @@
                 let updates = {};
                 checkboxes.forEach(cb => {
                     const [phone, id] = cb.value.split('|');
-                    updates[`clientSales/${phone}/${id}`] = null;
+                    if (id && id !== 'undefined' && id !== 'null') {
+                        const cleanPhone = (phone || '').toString().trim();
+                        const baseClean = cleanPhone.replace(/\D/g, '').replace(/^57/, '');
+                        const p57 = '57' + baseClean;
+
+                        updates[`clientSales/${cleanPhone}/${id}`] = null;
+                        if (baseClean && baseClean !== cleanPhone) updates[`clientSales/${baseClean}/${id}`] = null;
+                        if (p57 && p57 !== cleanPhone) updates[`clientSales/${p57}/${id}`] = null;
+
+                        [cleanPhone, baseClean, p57].forEach(p => {
+                            if (window.allClientSalesMap && window.allClientSalesMap[p]) {
+                                delete window.allClientSalesMap[p][id];
+                            }
+                            if (typeof allClientSalesMap !== 'undefined' && allClientSalesMap && allClientSalesMap[p]) {
+                                delete allClientSalesMap[p][id];
+                            }
+                        });
+                    }
                 });
 
                 try {
                     await db.ref().update(updates);
                     alert(`Registros eliminados correctamente (${checkboxes.length}).`);
                     fetchClientSalesHistory();
+                    if (typeof renderGlobalHistory === 'function') renderGlobalHistory();
+                    if (typeof fetchSellerSalesStats === 'function') fetchSellerSalesStats();
+                    if (typeof buildMasterDatabaseRecords === 'function') buildMasterDatabaseRecords();
                 } catch (err) {
                     alert('Hubo un error al eliminar los registros.');
                     console.error(err);
