@@ -981,6 +981,7 @@ function setupEventListeners() {
         document.getElementById('seller-username').value = '';
         document.getElementById('seller-password').value = '';
         sellerModal.style.display = 'block';
+        setTimeout(() => document.getElementById('seller-username')?.focus(), 100);
     });
 
     if (openClientBtn) {
@@ -994,6 +995,7 @@ function setupEventListeners() {
                 document.getElementById('client-login-phone').value = '';
                 clientLoginPin.value = '';
                 clientLoginModal.style.display = 'block';
+                setTimeout(() => document.getElementById('client-login-phone')?.focus(), 100);
             }
         });
     }
@@ -1100,11 +1102,22 @@ function setupEventListeners() {
 
                 clientLoginStep1.style.display = 'none';
                 clientLoginStep2.style.display = 'block';
+                setTimeout(() => clientLoginPin?.focus(), 100);
             } catch (err) {
                 alert('Error al validar tu número');
                 console.error(err);
             }
         });
+
+        const clientPhoneInput = document.getElementById('client-login-phone');
+        if (clientPhoneInput) {
+            clientPhoneInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    btnClientNext.click();
+                }
+            });
+        }
     }
 
     if (backToStep1Btn) {
@@ -1173,6 +1186,15 @@ function setupEventListeners() {
                 });
             }
         });
+
+        if (clientLoginPin) {
+            clientLoginPin.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    loginClientBtn.click();
+                }
+            });
+        }
     }
 
     const changeClientPinBtn = document.getElementById('change-client-pin-btn');
@@ -1252,6 +1274,31 @@ function setupEventListeners() {
             alert('❌ Nombre o contraseña incorrectos.');
         }
     });
+
+    const sellerUsernameInput = document.getElementById('seller-username');
+    const sellerPasswordInput = document.getElementById('seller-password');
+
+    if (sellerUsernameInput) {
+        sellerUsernameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!sellerPasswordInput?.value.trim()) {
+                    sellerPasswordInput?.focus();
+                } else {
+                    loginSellerBtn?.click();
+                }
+            }
+        });
+    }
+
+    if (sellerPasswordInput) {
+        sellerPasswordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                loginSellerBtn?.click();
+            }
+        });
+    }
 
     const recurrentClientCheck = document.getElementById('recurrent-client');
     const newClientForm = document.getElementById('new-client-form');
@@ -4264,6 +4311,27 @@ function setupEventListeners() {
             }
         });
     }
+
+    // ── Soporte para Enter en todos los campos de activación de TV ──
+    [
+        { inputId: 'tv-code-input', btnId: 'activate-tv-btn' },
+        { inputId: 'disney-code-tv-code-input', btnId: 'activate-disney-code-tv-btn' },
+        { inputId: 'hbo-tv-code-input', btnId: 'activate-hbo-tv-btn' },
+        { inputId: 'prime-tv-code-input', btnId: 'activate-prime-tv-btn' },
+        { inputId: 'crunchyroll-tv-code-input', btnId: 'activate-crunchyroll-tv-btn' },
+        { inputId: 'vix-tv-code-input', btnId: 'activate-vix-tv-btn' }
+    ].forEach(({ inputId, btnId }) => {
+        const inp = document.getElementById(inputId);
+        const btn = document.getElementById(btnId);
+        if (inp && btn) {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    btn.click();
+                }
+            });
+        }
+    });
 
     // Checkout
     checkoutBtn.addEventListener('click', async () => {

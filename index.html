@@ -1182,23 +1182,23 @@
                     Ingresa tus credenciales de vendedor para acceder a los precios mayoristas.
                 </p>
 
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Usuario / Nombre:</label>
-                    <input type="text" id="seller-username" class="input-modern" placeholder="Ej: carlos123">
-                </div>
+                <form id="seller-login-form" onsubmit="event.preventDefault(); document.getElementById('login-seller-btn').click();">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Usuario / Nombre:</label>
+                        <input type="text" id="seller-username" class="input-modern" placeholder="Ej: carlos123" autocomplete="username">
+                    </div>
 
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Contraseña:</label>
-                    <form onsubmit="return false;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Contraseña:</label>
                         <input type="password" id="seller-password" class="input-modern" placeholder="••••••••"
                             autocomplete="current-password">
-                    </form>
-                </div>
+                    </div>
 
-                <button id="login-seller-btn" class="checkout-btn"
-                    style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">
-                    <i class="fa-solid fa-right-to-bracket"></i> Ingresar
-                </button>
+                    <button type="submit" id="login-seller-btn" class="checkout-btn"
+                        style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">
+                        <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -1391,15 +1391,17 @@
                     <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
                         Ingresa tu número de celular para ver tu historial de pantallas y fechas de vencimiento.
                     </p>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Número de
-                            Celular:</label>
-                        <input type="text" id="client-login-phone" class="input-modern" placeholder="Ej: 3001234567">
-                    </div>
-                    <button id="btn-client-next" class="checkout-btn"
-                        style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
-                        Siguiente <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+                    <form id="client-login-phone-form" onsubmit="event.preventDefault(); document.getElementById('btn-client-next').click();">
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Número de
+                                Celular:</label>
+                            <input type="text" id="client-login-phone" class="input-modern" placeholder="Ej: 3001234567" autocomplete="tel">
+                        </div>
+                        <button type="submit" id="btn-client-next" class="checkout-btn"
+                            style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                            Siguiente <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
                 </div>
 
                 <div id="client-login-step2" style="display: none;">
@@ -1407,17 +1409,17 @@
                         style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
                         Ingresa tu PIN de seguridad (4 dígitos).
                     </p>
-                    <div style="margin-bottom: 1.5rem;">
-                        <form onsubmit="return false;">
+                    <form id="client-login-pin-form" onsubmit="event.preventDefault(); document.getElementById('login-client-btn').click();">
+                        <div style="margin-bottom: 1.5rem;">
                             <input type="password" id="client-login-pin" class="input-modern" placeholder="****"
                                 maxlength="4" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;"
                                 autocomplete="current-password">
-                        </form>
-                    </div>
-                    <button id="login-client-btn" class="checkout-btn"
-                        style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-bottom: 1rem;">
-                        <i class="fa-solid fa-right-to-bracket"></i> Entrar
-                    </button>
+                        </div>
+                        <button type="submit" id="login-client-btn" class="checkout-btn"
+                            style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-bottom: 1rem;">
+                            <i class="fa-solid fa-right-to-bracket"></i> Entrar
+                        </button>
+                    </form>
                     <button id="forgot-pin-btn"
                         style="width: 100%; background: none; border: none; color: #a0a0a0; text-decoration: underline; cursor: pointer;">
                         Olvidé mi PIN
