@@ -1417,9 +1417,21 @@
 
                 <!-- 2. ESTRATEGIA ANTI-BLOQUEO & REDACTOR DE MENSAJE -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
-                    <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:white; display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-shield-virus" style="color:#00d2d3;"></i> 2. Estrategia Anti-Bloqueo de WhatsApp
-                    </h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+                        <h3 style="margin:0; font-size:1.1rem; color:white; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-shield-virus" style="color:#00d2d3;"></i> 2. Estrategia Anti-Bloqueo de WhatsApp
+                        </h3>
+                        <!-- Selector de Plantilla a Editar (Clientes vs Vendedores) -->
+                        <div style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); padding:4px 8px; border-radius:12px;">
+                            <span style="font-size:0.78rem; color:#aaa;"><i class="fa-solid fa-file-lines"></i> Plantilla:</span>
+                            <button type="button" id="mkt-tab-tpl-clients" onclick="switchMarketingTemplate('clients', true)" style="background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; border-radius:8px; padding:4px 10px; font-size:0.8rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;" title="Editar y guardar mensaje para clientes directos">
+                                <i class="fa-solid fa-users"></i> Clientes Directos
+                            </button>
+                            <button type="button" id="mkt-tab-tpl-sellers" onclick="switchMarketingTemplate('sellers', true)" style="background:transparent; border:1px solid transparent; color:#aaa; border-radius:8px; padding:4px 10px; font-size:0.8rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;" title="Editar y guardar mensaje para tu red de vendedores">
+                                <i class="fa-solid fa-user-tie"></i> Red de Vendedores
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- Selector de Modo de Envío -->
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; margin-bottom:1.2rem;">
@@ -1448,12 +1460,12 @@
 
                     <!-- Mensaje de Gancho (Visible si interactive) -->
                     <div id="mkt-hook-container" style="margin-bottom:1rem; background:rgba(0, 210, 211, 0.05); border:1px solid rgba(0, 210, 211, 0.3); border-radius:12px; padding:12px;">
-                        <label style="color:#00d2d3; font-weight:bold; font-size:0.9rem; display:block; margin-bottom:6px;">
+                        <label id="mkt-hook-text-label" style="color:#00d2d3; font-weight:bold; font-size:0.9rem; display:block; margin-bottom:6px;">
                             <i class="fa-solid fa-hand-holding-hand"></i> Mensaje de Apertura / Gancho (Lo primero que recibe el cliente):
                         </label>
                         <textarea id="mkt-hook-text" rows="2" style="width:100%; border-radius:8px; padding:10px; background:rgba(0,0,0,0.6); color:white; border:1px solid rgba(0, 210, 211, 0.4); font-size:0.9rem;" placeholder="Ej: ¡Hola {cliente}! 👋 Tenemos una promo exclusiva hoy en pantallas de streaming 🎬. ¿Te gustaría conocerla? Responde 'SÍ' o '1' para enviarte los detalles y fotos 👇"></textarea>
-                        <div style="font-size:0.75rem; color:#aaa; margin-top:4px;">
-                            💡 <em>Al responder el cliente voluntariamente, WhatsApp registra consentimiento mutuo y no clasifica el chat como spam.</em>
+                        <div id="mkt-hook-tip" style="font-size:0.75rem; color:#aaa; margin-top:4px;">
+                            💡 <em>Al responder el contacto voluntariamente, WhatsApp registra consentimiento mutuo y no clasifica el chat como spam.</em>
                         </div>
                     </div>
 
@@ -1557,10 +1569,10 @@
                     <!-- Botón Principal -->
                     <div id="mkt-launch-bar" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                         <button id="btn-mkt-start" type="button" class="save-btn" onclick="startMarketingCampaign()" style="flex:2; min-width:260px; margin:0; height:54px; font-size:1.1rem; font-weight:bold; background:linear-gradient(135deg, #00d2d3, #2e86de); color:white; border-radius:12px; box-shadow:0 4px 20px rgba(0, 210, 211, 0.4); display:flex; align-items:center; justify-content:center; gap:10px;">
-                            <i class="fa-solid fa-paper-plane"></i> INICIAR CAMPAÑA (<span id="mkt-btn-count">0</span> CLIENTES)
+                            <i class="fa-solid fa-paper-plane"></i> INICIAR CAMPAÑA (<span id="mkt-btn-count">0</span> <span id="mkt-btn-dest-label">CLIENTES</span>)
                         </button>
                         <button type="button" class="save-btn" onclick="saveMarketingSettings()" style="flex:1; min-width:180px; margin:0; height:54px; background:rgba(255,255,255,0.08); border:1px solid var(--glass-border); color:white; border-radius:12px; font-size:0.9rem;">
-                            <i class="fa-solid fa-floppy-disk"></i> Guardar Plantilla
+                            <i class="fa-solid fa-floppy-disk"></i> <span id="mkt-save-btn-label">Guardar Plantilla</span>
                         </button>
                     </div>
 
@@ -10011,8 +10023,29 @@
         // ═══════════════════════════════════════════════════════════════
         // 📢 SISTEMA DE MARKETING & DIFUSIÓN WHATSAPP CON ANTI-BLOQUEO
         // ═══════════════════════════════════════════════════════════════
+        const defaultClientsTemplate = {
+            mode: "interactive",
+            hookText: "¡Hola *{cliente}!* 👋 Tenemos un beneficio y *Promoción exclusiva para ti del 15 al 18 Oct* en pantallas de streaming 🎬. ¿Te gustaría conocerla? Responde *'Promo'* para enviarte los detalles y fotos 👇",
+            promoText: "¡Hola *{cliente}!* 🎉 Mira estas súper promociones para tus pantallas favoritas:\n\n🔥 Netflix 1 Pantalla: $16.000 (¡Promo 3 Meses x $42.000!)\n🎬 Max Premium 4K: $12.000\n🍿 Disney+ Premium: $14.000\n\n📌 Cuentas originales y estables con garantía total.\n¿Cuál deseas disfrutar hoy?",
+            photoUrls: [],
+            rawPhotoUrlsText: ""
+        };
+
+        const defaultSellersTemplate = {
+            mode: "interactive",
+            hookText: "¡Hola *{vendedor}!* 👋 Tenemos un comunicado y novedades importantes sobre cuentas y promociones para tu panel de ventas 💼. ¿Deseas revisarlo? Responde *'SÍ'* o *'1'* 👇",
+            promoText: "¡Hola *{vendedor}!* 💼 Novedades y promociones activas para tu red de clientes:\n\n🔥 Recuerda registrar tus ventas en el panel y solicitar tus pines a tiempo.\n⚡ Cuentas con entrega inmediata y garantía total.\n\n¿Tienes alguna duda o solicitud pendiente hoy?",
+            photoUrls: [],
+            rawPhotoUrlsText: ""
+        };
+
         window._mktState = {
             currentSegment: 'active', // 'active' | 'inactive' | 'all'
+            activeTemplateKey: 'clients', // 'clients' | 'sellers'
+            templates: {
+                clients: null,
+                sellers: null
+            },
             allAudience: [],
             selectedPhones: new Set(),
             photos: [],
@@ -10027,13 +10060,150 @@
             sentCountSession: 0
         };
 
+        // Cambia la plantilla activa en pantalla ('clients' vs 'sellers') y guarda borrador previo si se indica
+        window.switchMarketingTemplate = function (targetKey, savePrevious = true) {
+            if (!targetKey) targetKey = 'clients';
+            const prevKey = _mktState.activeTemplateKey || 'clients';
+
+            // 1. Guardar borrador actual del usuario antes de cambiar
+            if (savePrevious && prevKey && prevKey !== targetKey) {
+                if (typeof syncMktPhotoUrls === 'function') syncMktPhotoUrls();
+                const curMode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
+                const curHook = document.getElementById('mkt-hook-text')?.value || '';
+                const curPromo = document.getElementById('mkt-promo-text')?.value || '';
+                const curRawPhotos = document.getElementById('mkt-photo-urls-input')?.value || '';
+
+                if (!_mktState.templates) _mktState.templates = {};
+                _mktState.templates[prevKey] = {
+                    mode: curMode,
+                    hookText: curHook,
+                    promoText: curPromo,
+                    photoUrls: _mktState.photos ? [..._mktState.photos] : [],
+                    rawPhotoUrlsText: curRawPhotos
+                };
+            }
+
+            _mktState.activeTemplateKey = targetKey;
+
+            // 2. Obtener datos de la plantilla objetivo
+            const tpl = (_mktState.templates && _mktState.templates[targetKey]) || (targetKey === 'sellers' ? defaultSellersTemplate : defaultClientsTemplate);
+
+            // 3. Volcar en los campos de edición
+            if (document.getElementById('mkt-hook-text')) {
+                document.getElementById('mkt-hook-text').value = tpl.hookText || '';
+            }
+            if (document.getElementById('mkt-promo-text')) {
+                document.getElementById('mkt-promo-text').value = tpl.promoText || '';
+            }
+            if (tpl.mode) {
+                const r = document.querySelector(`input[name="mkt-send-mode"][value="${tpl.mode}"]`);
+                if (r) r.checked = true;
+            }
+            if (typeof onMarketingModeChange === 'function') {
+                onMarketingModeChange(false);
+            }
+            _mktState.photos = Array.isArray(tpl.photoUrls) ? [...tpl.photoUrls] : [];
+            const photoInput = document.getElementById('mkt-photo-urls-input');
+            if (photoInput) {
+                photoInput.value = tpl.rawPhotoUrlsText || (_mktState.photos.length > 0 ? _mktState.photos.join(', ') : '');
+            }
+            if (typeof renderMktPhotosPreview === 'function') {
+                renderMktPhotosPreview();
+            }
+
+            // 4. Actualizar visuales de pestañas, textos y botón de guardado
+            updateMarketingTemplateUI(targetKey);
+
+            // 5. Sincronizar el selector de cartera si fue invocado directamente desde las pestañas de plantilla
+            const originSelect = document.getElementById('mkt-origin-filter');
+            if (originSelect) {
+                if (targetKey === 'sellers' && originSelect.value !== 'sellers_only') {
+                    originSelect.value = 'sellers_only';
+                    if (typeof setMarketingSegment === 'function') {
+                        setMarketingSegment('all', false);
+                    }
+                } else if (targetKey === 'clients' && originSelect.value === 'sellers_only') {
+                    originSelect.value = 'direct';
+                    if (typeof setMarketingSegment === 'function') {
+                        setMarketingSegment(_mktState.currentSegment || 'active', false);
+                    }
+                }
+            }
+        };
+
+        // Actualiza las etiquetas e indicadores visuales de qué plantilla se está editando
+        function updateMarketingTemplateUI(targetKey) {
+            const isSeller = (targetKey === 'sellers');
+
+            // Pestañas superiores de edición
+            const tabClients = document.getElementById('mkt-tab-tpl-clients');
+            const tabSellers = document.getElementById('mkt-tab-tpl-sellers');
+            if (tabClients && tabSellers) {
+                if (isSeller) {
+                    tabClients.style.background = 'transparent';
+                    tabClients.style.borderColor = 'transparent';
+                    tabClients.style.color = '#aaa';
+
+                    tabSellers.style.background = 'rgba(196, 141, 252, 0.22)';
+                    tabSellers.style.borderColor = '#c48dfc';
+                    tabSellers.style.color = '#c48dfc';
+                } else {
+                    tabClients.style.background = 'rgba(0, 210, 211, 0.2)';
+                    tabClients.style.borderColor = '#00d2d3';
+                    tabClients.style.color = '#00d2d3';
+
+                    tabSellers.style.background = 'transparent';
+                    tabSellers.style.borderColor = 'transparent';
+                    tabSellers.style.color = '#aaa';
+                }
+            }
+
+            // Etiqueta del mensaje Gancho
+            const hookLabel = document.getElementById('mkt-hook-text-label');
+            if (hookLabel) {
+                if (isSeller) {
+                    hookLabel.innerHTML = '<i class="fa-solid fa-hand-holding-hand" style="color:#c48dfc;"></i> Mensaje de Gancho para VENDEDORES (Lo primero que recibe el vendedor):';
+                } else {
+                    hookLabel.innerHTML = '<i class="fa-solid fa-hand-holding-hand" style="color:#00d2d3;"></i> Mensaje de Apertura / Gancho (Lo primero que recibe el cliente):';
+                }
+            }
+
+            // Etiqueta del mensaje promocional principal
+            const promoLabel = document.getElementById('mkt-main-text-label');
+            if (promoLabel) {
+                const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
+                if (isSeller) {
+                    promoLabel.innerHTML = (mode === 'interactive')
+                        ? '<i class="fa-solid fa-envelope-open-text" style="color:#c48dfc;"></i> Mensaje / Comunicado para VENDEDORES (Al responder el vendedor):'
+                        : '<i class="fa-solid fa-envelope-open-text" style="color:#c48dfc;"></i> Mensaje / Comunicado Directo para VENDEDORES (Texto Completo):';
+                } else {
+                    promoLabel.innerHTML = (mode === 'interactive')
+                        ? '<i class="fa-solid fa-envelope-open-text" style="color:#00d2d3;"></i> Mensaje de Entrega / Auto-Respuesta (Al responder el cliente):'
+                        : '<i class="fa-solid fa-envelope-open-text" style="color:#00d2d3;"></i> Mensaje Promocional Directo (Texto Completo):';
+                }
+            }
+
+            // Botón de guardar plantilla
+            const saveBtnLabel = document.getElementById('mkt-save-btn-label');
+            if (saveBtnLabel) {
+                saveBtnLabel.innerText = isSeller ? 'Guardar Plantilla Vendedores' : 'Guardar Plantilla Clientes';
+            }
+
+            // Botón de iniciar campaña
+            const destLabel = document.getElementById('mkt-btn-dest-label');
+            if (destLabel) {
+                const originFilter = document.getElementById('mkt-origin-filter')?.value || 'direct';
+                destLabel.innerText = (originFilter === 'sellers_only') ? 'VENDEDORES' : 'CLIENTES';
+            }
+        }
+
         // Función para resolver y parsear spintax {Hola|Buenas|Hola qué tal}
         function parseSpintax(text) {
             if (!text) return "";
             return text.replace(/\{([^{}]+)\}/g, (match, choices) => {
                 const lower = choices.toLowerCase().trim();
                 // Si es una variable del sistema, no es spintax
-                if (['cliente', 'nombre', 'pantallas', 'pantalla', 'telefono', 'celular'].includes(lower)) {
+                if (['cliente', 'nombre', 'vendedor', 'pantallas', 'pantalla', 'telefono', 'celular'].includes(lower)) {
                     return match;
                 }
                 if (choices.includes('|')) {
@@ -10335,6 +10505,11 @@
                     hint.innerHTML = '🔒 <em>Por defecto se excluyen clientes de vendedores para no invadir su cartera privada.</em>';
                 }
             }
+
+            // Cambiar automáticamente la plantilla activa (guardando borrador actual del usuario)
+            const targetTpl = (originFilter === 'sellers_only') ? 'sellers' : 'clients';
+            switchMarketingTemplate(targetTpl, true);
+
             const targetSeg = (originFilter === 'sellers_only') ? 'all' : (_mktState.currentSegment || 'active');
             setMarketingSegment(targetSeg, false);
         };
@@ -10513,6 +10688,7 @@
             // Actualizar etiquetas visuales de tarjetas según origen (Clientes vs Vendedores)
             const originFilter = document.getElementById('mkt-origin-filter')?.value || 'direct';
             updateMarketingSegmentLabels(originFilter);
+            updateMarketingTemplateUI(_mktState.activeTemplateKey || (originFilter === 'sellers_only' ? 'sellers' : 'clients'));
 
             // Siempre recargar la audiencia fresca
             _mktState.allAudience = getMarketingAudience();
@@ -10875,6 +11051,7 @@
         window.saveMarketingSettings = function () {
             syncMktPhotoUrls();
 
+            const currentKey = _mktState.activeTemplateKey || 'clients';
             const mode = document.querySelector('input[name="mkt-send-mode"]:checked')?.value || 'interactive';
             const hookText = document.getElementById('mkt-hook-text')?.value || '';
             const promoText = document.getElementById('mkt-promo-text')?.value || '';
@@ -10885,17 +11062,36 @@
             const dailyLimit = parseInt(document.getElementById('mkt-daily-limit')?.value) || 40;
             const rawPhotoUrlsText = document.getElementById('mkt-photo-urls-input')?.value || '';
 
-            const settings = {
+            // Asegurar templates inicializados
+            if (!_mktState.templates) _mktState.templates = {};
+            if (!_mktState.templates.clients) _mktState.templates.clients = { ...defaultClientsTemplate };
+            if (!_mktState.templates.sellers) _mktState.templates.sellers = { ...defaultSellersTemplate };
+
+            // Guardar en memoria la plantilla activa
+            _mktState.templates[currentKey] = {
                 mode,
                 hookText,
                 promoText,
+                photoUrls: _mktState.photos ? [..._mktState.photos] : [],
+                rawPhotoUrlsText
+            };
+
+            const settings = {
                 batchSize,
                 pauseBatch,
                 delaySeconds,
                 randomJitter,
                 dailyLimit,
-                photoUrls: _mktState.photos.filter(p => p.startsWith('http')),
-                rawPhotoUrlsText
+                templates: {
+                    clients: _mktState.templates.clients,
+                    sellers: _mktState.templates.sellers
+                },
+                // Compatibilidad retroactiva con estructura anterior
+                mode: _mktState.templates.clients.mode,
+                hookText: _mktState.templates.clients.hookText,
+                promoText: _mktState.templates.clients.promoText,
+                photoUrls: _mktState.templates.clients.photoUrls,
+                rawPhotoUrlsText: _mktState.templates.clients.rawPhotoUrlsText
             };
 
             // 1. Guardar en localStorage
@@ -10910,7 +11106,8 @@
                 });
             }
 
-            alert('✅ Plantilla, enlaces de fotos y configuración guardadas correctamente.');
+            const labelName = (currentKey === 'sellers') ? 'VENDEDORES' : 'CLIENTES DIRECTOS';
+            alert(`✅ Plantilla para ${labelName} y configuración guardadas correctamente.`);
         };
 
         window.loadMarketingSettings = function () {
@@ -10923,54 +11120,54 @@
                     if (localRaw) saved = JSON.parse(localRaw);
                 }
 
-                if (!saved) {
-                    // Valores iniciales recomendados
-                    if (document.getElementById('mkt-hook-text')) {
-                        document.getElementById('mkt-hook-text').value = "¡Hola {cliente}! 👋 Tenemos un beneficio y promoción exclusiva para ti hoy en pantallas de streaming 🎬. ¿Te gustaría conocerla? Responde 'SÍ' o '1' para enviarte los detalles y fotos 👇";
+                _mktState.templates = {
+                    clients: { ...defaultClientsTemplate },
+                    sellers: { ...defaultSellersTemplate }
+                };
+
+                if (saved) {
+                    if (saved.templates) {
+                        if (saved.templates.clients) {
+                            _mktState.templates.clients = { ...defaultClientsTemplate, ...saved.templates.clients };
+                        }
+                        if (saved.templates.sellers) {
+                            _mktState.templates.sellers = { ...defaultSellersTemplate, ...saved.templates.sellers };
+                        }
+                    } else {
+                        // Migración desde estructura anterior
+                        _mktState.templates.clients = {
+                            mode: saved.mode || 'interactive',
+                            hookText: saved.hookText || defaultClientsTemplate.hookText,
+                            promoText: saved.promoText || defaultClientsTemplate.promoText,
+                            photoUrls: Array.isArray(saved.photoUrls) ? saved.photoUrls : [],
+                            rawPhotoUrlsText: saved.rawPhotoUrlsText || ''
+                        };
                     }
-                    if (document.getElementById('mkt-promo-text')) {
-                        document.getElementById('mkt-promo-text').value = "¡Hola {cliente}! 🎉 Mira estas súper promociones para tus pantallas favoritas:\n\n🔥 Netflix 1 Pantalla: $16.000 (¡Promo 3 Meses x $42.000!)\n🎬 Max Premium 4K: $12.000\n🍿 Disney+ Premium: $14.000\n\n📌 Cuentas originales y estables con garantía total.\n¿Cuál deseas disfrutar hoy?";
+
+                    if (saved.batchSize && document.getElementById('mkt-batch-size')) {
+                        document.getElementById('mkt-batch-size').value = saved.batchSize;
                     }
-                    return;
+                    if (saved.pauseBatch !== undefined && document.getElementById('mkt-pause-batch')) {
+                        document.getElementById('mkt-pause-batch').checked = saved.pauseBatch;
+                    }
+                    if (saved.delaySeconds && document.getElementById('mkt-delay-seconds')) {
+                        document.getElementById('mkt-delay-seconds').value = saved.delaySeconds;
+                    }
+                    if (saved.randomJitter !== undefined && document.getElementById('mkt-random-jitter')) {
+                        document.getElementById('mkt-random-jitter').checked = saved.randomJitter;
+                    }
+                    if (saved.dailyLimit) {
+                        if (document.getElementById('mkt-daily-limit')) document.getElementById('mkt-daily-limit').value = saved.dailyLimit;
+                        if (document.getElementById('mkt-daily-limit-header')) document.getElementById('mkt-daily-limit-header').value = saved.dailyLimit;
+                        updateMktDailyLimitDisplay();
+                    }
                 }
 
-                const s = saved;
-                if (s.mode) {
-                    const r = document.querySelector(`input[name="mkt-send-mode"][value="${s.mode}"]`);
-                    if (r) r.checked = true;
-                    onMarketingModeChange();
-                }
-                if (s.hookText && document.getElementById('mkt-hook-text')) {
-                    document.getElementById('mkt-hook-text').value = s.hookText;
-                }
-                if (s.promoText && document.getElementById('mkt-promo-text')) {
-                    document.getElementById('mkt-promo-text').value = s.promoText;
-                }
-                if (s.batchSize && document.getElementById('mkt-batch-size')) {
-                    document.getElementById('mkt-batch-size').value = s.batchSize;
-                }
-                if (s.pauseBatch !== undefined && document.getElementById('mkt-pause-batch')) {
-                    document.getElementById('mkt-pause-batch').checked = s.pauseBatch;
-                }
-                if (s.delaySeconds && document.getElementById('mkt-delay-seconds')) {
-                    document.getElementById('mkt-delay-seconds').value = s.delaySeconds;
-                }
-                if (s.randomJitter !== undefined && document.getElementById('mkt-random-jitter')) {
-                    document.getElementById('mkt-random-jitter').checked = s.randomJitter;
-                }
-                if (s.dailyLimit) {
-                    if (document.getElementById('mkt-daily-limit')) document.getElementById('mkt-daily-limit').value = s.dailyLimit;
-                    if (document.getElementById('mkt-daily-limit-header')) document.getElementById('mkt-daily-limit-header').value = s.dailyLimit;
-                    updateMktDailyLimitDisplay();
-                }
-                if (Array.isArray(s.photoUrls)) {
-                    _mktState.photos = [...s.photoUrls];
-                    renderMktPhotosPreview();
-                }
-                const photoInput = document.getElementById('mkt-photo-urls-input');
-                if (photoInput) {
-                    photoInput.value = s.rawPhotoUrlsText || (Array.isArray(s.photoUrls) ? s.photoUrls.join(', ') : '');
-                }
+                // Cargar en pantalla según la selección actual
+                const originFilter = document.getElementById('mkt-origin-filter')?.value || 'direct';
+                const initialKey = (originFilter === 'sellers_only') ? 'sellers' : 'clients';
+                switchMarketingTemplate(initialKey, false);
+
             } catch (err) {
                 console.warn('Error loading marketing settings:', err);
             }
