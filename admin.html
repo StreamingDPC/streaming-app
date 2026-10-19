@@ -12443,7 +12443,8 @@
                 const clientGroups = {};
                 excelRecords.forEach(r => {
                     const normName = normalizeClientNameKey(r.clientName);
-                    const groupKey = r.phone + '__' + (normName || 'cliente');
+                    const expKey = r.expMs ? new Date(r.expMs).toISOString().split('T')[0] : (r.fin || 'nodate');
+                    const groupKey = r.phone + '__' + (normName || 'cliente') + '__' + expKey;
                     if (!clientGroups[groupKey]) clientGroups[groupKey] = [];
                     clientGroups[groupKey].push(r);
                 });
@@ -12452,13 +12453,15 @@
                 let updatedClientsCount = 0;
                 let updatedScreensCount = 0;
                 const nowMs = Date.now();
+                const matchedSaleKeysInThisRun = new Set();
 
                 for (const groupKey of Object.keys(clientGroups)) {
                     const phoneRecs = clientGroups[groupKey];
                     const firstRec = phoneRecs[0];
                     const phone = firstRec.phone;
                     const groupClientName = (firstRec.clientName || '').trim();
-                    const slugName = normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente';
+                    const expKey = firstRec.expMs ? new Date(firstRec.expMs).toISOString().split('T')[0] : (firstRec.fin || 'nodate');
+                    const slugName = (normalizeClientNameKey(groupClientName).replace(/\s+/g, '_') || 'cliente') + '_' + (expKey.replace(/[^a-zA-Z0-9]/g, ''));
                     const existingProf = (window.allClientProfiles && window.allClientProfiles[phone]) || {};
 
                     if (!existingProf.name || existingProf.name === 'Cliente' || existingProf.name === 'Sin Nombre') {
@@ -12518,15 +12521,95 @@
                         return sheetMeta.matchKeys.some(k => pLow.includes(k));
                     };
 
-                    const matchingSaleKey = existingSaleKeys.find(k => {
+                    const excelEmails = phoneRecs.map(r => (r.email || '').trim().toLowerCase()).filter(Boolean);
+                    const allOtherExcelEmails = new Set(
+                        excelRecords
+                            .filter(r => !phoneRecs.includes(r))
+                            .map(r => (r.email || '').trim().toLowerCase())
+                            .filter(Boolean)
+                    );
+                    const allActiveExcelEmailsForClient = new Set(
+                        excelRecords
+                            .filter(r => (window.sanitizePhone ? window.sanitizePhone(r.phone) : (r.phone || '').replace(/\D/g, '')) === phone && clientNamesMatch(r.clientName, groupClientName))
+                            .map(r => (r.email || '').trim().toLowerCase())
+                            .filter(Boolean)
+                    );
+
+                    const getSaleEmails = (s) => {
+                        if (!s) return [];
+                        const sItems = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                        return [
+                            s.email,
+                            ...sItems.flatMap(it => {
+                                const specs = Array.isArray(it?.specificEmails) ? it.specificEmails : Object.values(it?.specificEmails || {});
+                                return [it?.email, ...specs.map(sp => sp?.email)];
+                            })
+                        ].filter(Boolean).map(e => String(e).trim().toLowerCase());
+                    };
+
+                    const saleHasMatchingPlatform = (s) => {
+                        if (!s) return false;
+                        const sItems = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                        return phoneRecs.some(rec => {
+                            return sItems.some(it => {
+                                const itPlat = it?.name || '';
+                                const specs = Array.isArray(it?.specificEmails) ? it.specificEmails : Object.values(it?.specificEmails || {});
+                                return platMatches(itPlat, rec.sheetMeta) || specs.some(sp => platMatches(sp?.platform, rec.sheetMeta));
+                            });
+                        });
+                    };
+
+                    const candidateKeys = existingSaleKeys.filter(k => {
+                        if (matchedSaleKeysInThisRun.has(k)) return false;
                         const s = targetSales[k];
                         if (!s) return false;
-                        const sDate = s.date || s.fechaCompraOriginal;
-                        return sameDate(sDate, excelStartMs);
+                        const sMainEmail = (s.email || '').trim().toLowerCase();
+                        if (sMainEmail && allOtherExcelEmails.has(sMainEmail) && !excelEmails.includes(sMainEmail)) {
+                            return false;
+                        }
+                        return true;
                     });
 
+                    let matchingSaleKey = candidateKeys.find(k => {
+                        const s = targetSales[k];
+                        const sMainEmail = (s.email || '').trim().toLowerCase();
+                        return sMainEmail && excelEmails.includes(sMainEmail);
+                    });
+
+                    if (!matchingSaleKey) {
+                        matchingSaleKey = candidateKeys.find(k => {
+                            const s = targetSales[k];
+                            const sEmails = getSaleEmails(s);
+                            return excelEmails.some(ee => sEmails.includes(ee)) && saleHasMatchingPlatform(s);
+                        });
+                    }
+
+                    if (!matchingSaleKey) {
+                        matchingSaleKey = candidateKeys.find(k => {
+                            const s = targetSales[k];
+                            const sDate = s.date || s.fechaCompraOriginal;
+                            return sameDate(sDate, excelStartMs) && saleHasMatchingPlatform(s);
+                        });
+                    }
+
+                    if (!matchingSaleKey) {
+                        matchingSaleKey = candidateKeys.find(k => {
+                            const s = targetSales[k];
+                            return sameDate(s.expirationDate, excelExpMs) && saleHasMatchingPlatform(s);
+                        });
+                    }
+
+                    if (!matchingSaleKey) {
+                        matchingSaleKey = candidateKeys.find(k => {
+                            const s = targetSales[k];
+                            const sDate = s.date || s.fechaCompraOriginal;
+                            return sameDate(sDate, excelStartMs);
+                        });
+                    }
+
                     if (matchingSaleKey) {
-                        // CASO 1: Coincide fecha de inicio -> Sobreescribir
+                        matchedSaleKeysInThisRun.add(matchingSaleKey);
+                        // CASO 1: Coincide venta previa -> Actualizar y preservar
                         const targetSale = targetSales[matchingSaleKey];
                         const prevExpMs = Number(targetSale.expirationDate) || 0;
                         if (prevExpMs > 0 && excelExpMs > prevExpMs + 5 * 86400000) {
@@ -12542,6 +12625,17 @@
                         let itemsArr = targetSale.items
                             ? (Array.isArray(targetSale.items) ? targetSale.items : Object.values(targetSale.items))
                             : [];
+
+                        // Retirar pantallas que pertenezcan a otros registros del Excel
+                        itemsArr = itemsArr.filter(it => {
+                            if (!it) return false;
+                            const specs = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
+                            const allEmails = [it.email, ...specs.map(sp => sp?.email)].filter(Boolean).map(e => String(e).trim().toLowerCase());
+                            const belongsToOther = allEmails.some(e => allOtherExcelEmails.has(e));
+                            const belongsToThis = phoneRecs.some(r => allEmails.includes((r.email || '').trim().toLowerCase()));
+                            if (belongsToOther && !belongsToThis) return false;
+                            return true;
+                        });
 
                         const usedIndices = new Set();
                         phoneRecs.forEach(rec => {
@@ -12582,11 +12676,16 @@
 
                         updates[`${storePrefix}/${matchingSaleKey}`] = targetSale;
 
-                        // Enviar otras ventas al historial o limpiar fantasmas
+                        // Enviar otras ventas al historial o limpiar fantasmas (protegiendo las de otros grupos activos)
                         existingSaleKeys.forEach(otherKey => {
                             if (otherKey === matchingSaleKey) return;
+                            if (matchedSaleKeysInThisRun.has(otherKey)) return;
                             const other = targetSales[otherKey];
                             if (!other) return;
+                            const otherEmails = getSaleEmails(other);
+                            if (otherEmails.some(e => allActiveExcelEmailsForClient.has(e))) {
+                                return; // Pertenece a otro grupo activo del cliente. No tocar!
+                            }
                             if (otherKey.startsWith('excel_') && (other.total === 0 || !other.total)) {
                                 updates[`${storePrefix}/${otherKey}`] = null;
                             } else if ((Number(other.expirationDate) || 0) >= nowMs) {
@@ -12595,10 +12694,15 @@
                             }
                         });
                     } else {
-                        // CASO 2: No coincide fecha de inicio -> ventas anteriores a historial y crear registro verificado
+                        // CASO 2: No coincide venta previa -> ventas anteriores a historial y crear registro verificado
                         existingSaleKeys.forEach(oldKey => {
+                            if (matchedSaleKeysInThisRun.has(oldKey)) return;
                             const oldSale = targetSales[oldKey];
                             if (!oldSale) return;
+                            const oldEmails = getSaleEmails(oldSale);
+                            if (oldEmails.some(e => allActiveExcelEmailsForClient.has(e))) {
+                                return; // Pertenece a otro grupo activo del cliente. No tocar!
+                            }
                             if (oldKey.startsWith('excel_') && (oldSale.total === 0 || !oldSale.total)) {
                                 updates[`${storePrefix}/${oldKey}`] = null;
                             } else if ((Number(oldSale.expirationDate) || 0) >= nowMs) {
@@ -12608,6 +12712,7 @@
                         });
 
                         const verifiedKey = 'excel_' + phone + '_' + slugName;
+                        matchedSaleKeysInThisRun.add(verifiedKey);
                         const newSaleObj = {
                             clientName: firstRec.clientName,
                             clientPhone: phone,
