@@ -327,6 +327,47 @@ function platformMatches(slotPlat, excelSheetObj) {
     return excelSheetObj.matchKeys.some(k => pLow.includes(k));
 }
 
+function codeMatchesPlatform(code, platName) {
+    if (!code || !platName) return false;
+    const c = String(code).toUpperCase().trim();
+    const p = String(platName).toLowerCase().trim();
+
+    if (p.includes('netflix')) {
+        return /\b(no|nopv|npv|netflix)\b/i.test(c) || c.includes('NO') || c.includes('NETFLIX');
+    }
+    if (p.includes('disney') || p.includes('dixney')) {
+        return /\b(do|dopv|dpv|disney)\b/i.test(c) || c.includes('DO') || c.includes('DISNEY');
+    }
+    if (p.includes('max') || p.includes('hbo')) {
+        return /\b(mo|max|hbo)\b/i.test(c) || c.includes('MO') || c.includes('MAX');
+    }
+    if (p.includes('prime') || p.includes('amazon')) {
+        return /\b(po|prime)\b/i.test(c) || c.includes('PO') || c.includes('PRIME');
+    }
+    if (p.includes('paramount')) {
+        return /\b(pa|paramount)\b/i.test(c) || c.includes('PA');
+    }
+    if (p.includes('crunchy')) {
+        return /\b(c|crunchy)\b/i.test(c) || c.includes('C');
+    }
+    if (p.includes('vix')) {
+        return /\b(v|vix)\b/i.test(c) || c.includes('V');
+    }
+    if (p.includes('iptv') || p.includes('magis') || p.includes('flujo') || p.includes('tele')) {
+        return /\b(i|iptv)\b/i.test(c) || c.includes('I');
+    }
+    if (p.includes('apple')) {
+        return c.includes('APPLE');
+    }
+    if (p.includes('spotify')) {
+        return c.includes('SP');
+    }
+    if (p.includes('youtube')) {
+        return c.includes('YOUTUBE') || c.includes('YT');
+    }
+    return false;
+}
+
 /**
  * Lee el archivo Excel desde buffer en memoria (sin bloquear el archivo en Windows)
  * y extrae todas las pantallas activas de las 11 pestañas.
@@ -774,9 +815,17 @@ async function syncExcelToFirebase(customBuffer = null) {
                     platformMatches(itPlat, otherRec.sheetMeta) || specs.some(sp => platformMatches(sp?.platform, otherRec.sheetMeta))
                 );
                 const belongsToThisPurchase = phoneRecs.some(rec => 
-                    platformMatches(itPlat, rec.sheetMeta) || specs.some(sp => platformMatches(sp?.platform, rec.sheetMeta))
+                    platformMatches(itPlat, rec.sheetMeta) || 
+                    specs.some(sp => platformMatches(sp?.platform, rec.sheetMeta)) ||
+                    codeMatchesPlatform(rec.pantallasCode, itPlat) ||
+                    specs.some(sp => codeMatchesPlatform(rec.pantallasCode, sp?.platform))
                 );
                 if (belongsToOtherPurchase && !belongsToThisPurchase) {
+                    return false;
+                }
+
+                // 3. Si el item NO coincide con ninguna de las plataformas u hojas de esta compra en el Excel
+                if (!belongsToThisPurchase) {
                     return false;
                 }
 
@@ -943,7 +992,13 @@ async function syncExcelToFirebase(customBuffer = null) {
                     sale.total > sumFinalPrices ||
                     (dedupedItems.every(it => getScreenCount(it.category, it.name) === 1) && Math.abs(sale.total - sumFinalPrices) > 5000)
                 ) {
-                    sale.total = sumFinalPrices;
+                    if (!isSellerSale && dedupedItems.length === 2 && phoneRecs.some(r => /dopo/i.test(r.pantallasCode))) {
+                        sale.total = 20000;
+                    } else if (isSellerSale && dedupedItems.length === 2 && phoneRecs.some(r => /dopo/i.test(r.pantallasCode))) {
+                        sale.total = 16000;
+                    } else {
+                        sale.total = sumFinalPrices;
+                    }
                 }
             }
 
