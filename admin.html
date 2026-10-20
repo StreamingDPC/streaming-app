@@ -12785,35 +12785,74 @@
             const origHtml = btnEl ? btnEl.innerHTML : '';
             if (btnEl) {
                 btnEl.disabled = true;
-                btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando Excel...';
+                btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sincronizando con Excel...';
             }
 
             try {
-                // 1. Intentar sincronizar directo desde el servicio local en la PC (lee D:\Varios\Netflix\Netflix clientes.xlsx directo)
-                const resp = await fetch('http://localhost:3099/api/sync-excel', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await resp.json();
-                if (data && data.success) {
-                    showDbToast(`✅ Excel sincronizado: ${data.updatedScreensCount} pantallas en ${data.updatedClientsCount} clientes`);
-                    renderDatabaseTab();
-                    if (btnEl) {
-                        btnEl.disabled = false;
-                        btnEl.innerHTML = origHtml;
+                // 1. Obtener URL del bot: probar localhost:3099 y la URL pública HTTPS de ngrok registrada en Firebase
+                let endpoints = ['http://localhost:3099'];
+                try {
+                    const snap = await db.ref('config/botUrl').once('value');
+                    const publicBotUrl = snap.val();
+                    if (publicBotUrl) {
+                        // Si la página corre en HTTPS, priorizar la URL pública HTTPS de ngrok para evitar bloqueo de contenido mixto
+                        if (window.location.protocol === 'https:') {
+                            endpoints = [publicBotUrl, 'http://localhost:3099'];
+                        } else {
+                            endpoints = ['http://localhost:3099', publicBotUrl];
+                        }
                     }
-                    return;
+                } catch (_) {}
+
+                for (const base of endpoints) {
+                    try {
+                        const cleanBase = String(base || '').replace(/\/+$/, '');
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout para procesar hojas completas
+                        const resp = await fetch(`${cleanBase}/api/sync-excel`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'ngrok-skip-browser-warning': 'true'
+                            },
+                            signal: controller.signal
+                        });
+                        clearTimeout(timeoutId);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data && data.success) {
+                                showDbToast(`✅ Excel sincronizado: ${data.updatedScreensCount} pantallas en ${data.updatedClientsCount} clientes`);
+                                if (typeof renderDatabaseTab === 'function') renderDatabaseTab();
+                                if (btnEl) {
+                                    btnEl.disabled = false;
+                                    btnEl.innerHTML = origHtml;
+                                }
+                                return;
+                            }
+                        }
+                    } catch (netErr) {
+                        console.warn(`[EXCEL-SYNC] Falló intento en ${base}:`, netErr.message);
+                    }
                 }
             } catch (e) {
-                // Si no responde en localhost:3099, abrir selector de archivo .xlsx del navegador
+                console.error('[EXCEL-SYNC] Error general:', e);
             }
 
             if (btnEl) {
                 btnEl.disabled = false;
                 btnEl.innerHTML = origHtml;
             }
-            const fileInput = document.getElementById('db-excel-file-input');
-            if (fileInput) fileInput.click();
+
+            // Si el bot local no respondió, avisar al usuario antes de abrir el explorador de archivos
+            const useManual = confirm(
+                '⚠️ El servicio local del Bot en tu PC no respondió para leer "D:\\Varios\\Netflix\\Netflix clientes.xlsx" automáticamente.\n\n' +
+                'Verifica que el Bot local (local-bot.js) esté encendido en tu PC.\n\n' +
+                '¿Deseas seleccionar el archivo Excel (.xlsx) manualmente para sincronizarlo ahora?'
+            );
+            if (useManual) {
+                const fileInput = document.getElementById('db-excel-file-input');
+                if (fileInput) fileInput.click();
+            }
         };
 
         window.handleDbExcelFileUpload = async function (inputEl) {
