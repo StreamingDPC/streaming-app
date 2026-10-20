@@ -2263,9 +2263,25 @@
                                     <option value="crunchyroll">Crunchyroll</option>
                                 </select>
                                 <input type="text" id="admin-client-phone-reset"
+                                    oninput="updateAdminResetClientNamesList()"
+                                    onchange="updateAdminResetClientNamesList()"
                                     placeholder="Número de celular del cliente (Ej: 3105551234)"
                                     style="flex:2; min-width:180px; padding:11px 14px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem;">
                             </div>
+                            <!-- SELECCIÓN DE CLIENTE PARA VENDEDORES CON CELULAR COMPARTIDO -->
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+                                <div style="flex:1; min-width:240px;">
+                                    <select id="admin-client-name-reset"
+                                        onchange="onAdminResetClientNameChange()"
+                                        style="width:100%; padding:11px 14px; border-radius:8px; border:1px solid rgba(52,152,219,0.5); background:rgba(0,0,0,0.6); color:white; font-size:0.9rem;">
+                                        <option value="">👤 (Todos los clientes de este celular)</option>
+                                    </select>
+                                </div>
+                                <input type="text" id="admin-client-custom-name"
+                                    placeholder="Escribir nombre del cliente manualmente..."
+                                    style="display:none; flex:1; min-width:220px; padding:11px 14px; border-radius:8px; border:1px solid rgba(46,204,113,0.5); background:rgba(0,0,0,0.6); color:white; font-size:0.9rem;">
+                            </div>
+                            <div id="admin-client-name-reset-info" style="display:none; font-size:0.8rem; margin-bottom:10px; padding:6px 10px; border-radius:6px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08);"></div>
                             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                                 <button type="button"
                                     onclick="resetClientCodeAttempt(document.getElementById('admin-client-phone-reset').value.trim())"
@@ -4120,19 +4136,204 @@
         // =====================================================
         // BOTÓN EXCLUSIVO ADMIN: Habilitar nuevo intento de código
         // =====================================================
-        window.resetClientCodeAttempt = async function (clientPhone) {
-            if (!clientPhone) return alert('Número de cliente no válido.');
+                // =====================================================
+        // SELECTOR DE CLIENTE DE VENDEDOR (CELULAR COMPARTIDO)
+        // =====================================================
+        window.onAdminResetClientNameChange = function () {
+            const sel = document.getElementById('admin-client-name-reset');
+            const custom = document.getElementById('admin-client-custom-name');
+            if (!sel || !custom) return;
+            if (sel.value === '__CUSTOM__') {
+                custom.style.display = 'block';
+                custom.focus();
+            } else {
+                custom.style.display = 'none';
+            }
+        };
 
-            const platform = document.getElementById('admin-platform-reset').value;
+        window.updateAdminResetClientNamesList = async function () {
+            const phoneInput = document.getElementById('admin-client-phone-reset');
+            const nameSelect = document.getElementById('admin-client-name-reset');
+            const infoDiv = document.getElementById('admin-client-name-reset-info');
+            if (!phoneInput || !nameSelect) return;
+
+            const rawPhone = phoneInput.value.trim();
+            const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^57/, '');
+
+            if (!cleanPhone || cleanPhone.length < 5) {
+                nameSelect.innerHTML = '<option value="">👤 (Todos los clientes de este celular)</option>';
+                if (infoDiv) infoDiv.style.display = 'none';
+                return;
+            }
+
+            const phonesToMatch = Array.from(new Set([rawPhone, cleanPhone, `57${cleanPhone}`])).filter(Boolean);
+            const clientsFound = new Map();
+
+            // 1. Buscar en window.allClientSalesMap
+            const cMap = window.allClientSalesMap || {};
+            phonesToMatch.forEach(p => {
+                const sales = cMap[p] || {};
+                const list = Array.isArray(sales) ? sales : Object.values(sales);
+                list.forEach(s => {
+                    if (!s) return;
+                    const cName = (s.clientName || s.name || '').trim();
+                    if (cName) {
+                        if (!clientsFound.has(cName)) {
+                            clientsFound.set(cName, { name: cName, seller: s.sellerName || '', products: new Set() });
+                        }
+                        const rec = clientsFound.get(cName);
+                        if (s.sellerName && !rec.seller) rec.seller = s.sellerName;
+                        if (Array.isArray(s.items)) {
+                            s.items.forEach(it => { if (it && it.name) rec.products.add(it.name); });
+                        } else if (s.product) {
+                            rec.products.add(s.product);
+                        }
+                    }
+                });
+            });
+
+            // 2. Buscar en globalSellerSalesDataStore
+            const sMap = window.globalSellerSalesDataStore || {};
+            Object.entries(sMap).forEach(([sellerName, sales]) => {
+                if (!sales) return;
+                const list = Array.isArray(sales) ? sales : Object.values(sales);
+                list.forEach(s => {
+                    if (!s) return;
+                    const sPhone = String(s.clientPhone || '').replace(/\D/g, '').replace(/^57/, '');
+                    if (sPhone && sPhone === cleanPhone) {
+                        const cName = (s.clientName || s.name || '').trim();
+                        if (cName) {
+                            if (!clientsFound.has(cName)) {
+                                clientsFound.set(cName, { name: cName, seller: sellerName, products: new Set() });
+                            }
+                            const rec = clientsFound.get(cName);
+                            if (!rec.seller) rec.seller = sellerName;
+                            if (Array.isArray(s.items)) {
+                                s.items.forEach(it => { if (it && it.name) rec.products.add(it.name); });
+                            } else if (s.product) {
+                                rec.products.add(s.product);
+                            }
+                        }
+                    }
+                });
+            });
+
+            // 3. Buscar en clientProfiles por si hay slugs en clientAttempts o profile.name
+            const pMap = window.allClientProfiles || {};
+            phonesToMatch.forEach(p => {
+                const prof = pMap[p];
+                if (prof) {
+                    if (prof.name && !clientsFound.has(prof.name)) {
+                        clientsFound.set(prof.name, { name: prof.name, seller: prof.sellerName || '', products: new Set() });
+                    }
+                    if (prof.clientAttempts && typeof prof.clientAttempts === 'object') {
+                        Object.keys(prof.clientAttempts).forEach(slug => {
+                            const formatted = slug.replace(/_/g, ' ');
+                            let exists = false;
+                            for (const k of clientsFound.keys()) {
+                                if (k.toLowerCase().replace(/[^a-z0-9]/g, '_') === slug) { exists = true; break; }
+                            }
+                            if (!exists) {
+                                clientsFound.set(formatted, { name: formatted, seller: '', products: new Set() });
+                            }
+                        });
+                    }
+                }
+            });
+
+            // 4. Si aún no hay perfiles en memoria local, hacer consulta directa a Firebase
+            if (clientsFound.size === 0 && typeof db !== 'undefined') {
+                try {
+                    const snap = await db.ref(`clientSales/${cleanPhone}`).once('value');
+                    const data = snap.val();
+                    if (data) {
+                        Object.values(data).forEach(s => {
+                            const cName = (s.clientName || s.name || '').trim();
+                            if (cName && !clientsFound.has(cName)) {
+                                clientsFound.set(cName, { name: cName, seller: s.sellerName || '', products: new Set() });
+                            }
+                        });
+                    }
+                } catch (_) {}
+            }
+
+            // Armar las opciones en el selector
+            let opts = '<option value="">👤 (Todos los clientes de este celular)</option>';
+            const clientsArr = Array.from(clientsFound.values());
+
+            if (clientsArr.length > 0) {
+                clientsArr.forEach(c => {
+                    const prods = Array.from(c.products).slice(0, 2).join(', ');
+                    const details = [
+                        c.seller ? `Vendedor: ${c.seller}` : '',
+                        prods ? prods : ''
+                    ].filter(Boolean).join(' • ');
+                    const label = details ? `👤 ${c.name} (${details})` : `👤 ${c.name}`;
+                    opts += `<option value="${c.name}">${label}</option>`;
+                });
+                opts += '<option value="__CUSTOM__">✍️ Escribir otro nombre de cliente manualmente...</option>';
+                if (infoDiv) {
+                    infoDiv.style.display = 'block';
+                    if (clientsArr.length > 1) {
+                        infoDiv.innerHTML = `<span style="color:#f39c12;"><i class="fa-solid fa-users"></i> <strong>Celular Compartido de Vendedor:</strong> Se detectaron <strong>${clientsArr.length} clientes</strong> asociados a este número. Puedes elegir a cuál habilitar/deshabilitar o dejar en "Todos".</span>`;
+                    } else {
+                        infoDiv.innerHTML = `<span style="color:#2ecc71;"><i class="fa-solid fa-user-check"></i> Cliente identificado: <strong>${clientsArr[0].name}</strong></span>`;
+                    }
+                }
+            } else {
+                opts += '<option value="__CUSTOM__">✍️ Escribir nombre de cliente manualmente...</option>';
+                if (infoDiv) {
+                    infoDiv.style.display = 'block';
+                    infoDiv.innerHTML = `<span style="color:#888;"><i class="fa-solid fa-info-circle"></i> Celular sin sub-clientes detectados en caché (la acción se aplicará al celular completo).</span>`;
+                }
+            }
+            nameSelect.innerHTML = opts;
+            window.onAdminResetClientNameChange();
+        };
+
+        // =====================================================
+        // BOTÓN EXCLUSIVO ADMIN: Habilitar nuevo intento de código
+        // =====================================================
+        window.resetClientCodeAttempt = async function (clientPhone, optClientName) {
+            if (!clientPhone) {
+                clientPhone = (document.getElementById('admin-client-phone-reset')?.value || '').trim();
+            }
+            if (!clientPhone) return alert('Por favor ingresa el número de celular del cliente.');
+
+            let targetClientName = optClientName;
+            if (targetClientName === undefined || targetClientName === null) {
+                const nameSelect = document.getElementById('admin-client-name-reset');
+                const customNameInput = document.getElementById('admin-client-custom-name');
+                targetClientName = (nameSelect && nameSelect.value) ? nameSelect.value.trim() : '';
+                if (targetClientName === '__CUSTOM__' && customNameInput) {
+                    targetClientName = customNameInput.value.trim();
+                }
+            }
+            const nameSlug = targetClientName ? targetClientName.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
+            const clientLabel = targetClientName ? `"${targetClientName}" (${clientPhone})` : clientPhone;
+
+            const platformSelect = document.getElementById('admin-platform-reset');
+            const platform = platformSelect ? platformSelect.value : 'all';
             const platLabel = platform === 'all' ? 'TODAS LAS PANTALLAS' : platform.toUpperCase();
+
+            const rawPhone = String(clientPhone).trim();
+            const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
+            const phonesToClean = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
 
             // Consultar historial previo y estado de intentos
             const profileSnap = await db.ref(`clientProfiles/${clientPhone}`).once('value');
             const profileData = profileSnap.val() || {};
             const history = profileData.codeHistory;
-            const usedData = profileData.codeAttemptUsed;
+            
+            // Si eligió un cliente específico de vendedor, verificar su estado en clientAttempts
+            let usedData = null;
+            if (nameSlug && profileData.clientAttempts && profileData.clientAttempts[nameSlug] !== undefined) {
+                usedData = profileData.clientAttempts[nameSlug];
+            } else {
+                usedData = profileData.codeAttemptUsed;
+            }
 
-            let msg = `¿Deseas habilitar un NUEVO INTENTO en [${platLabel}] para el cliente ${clientPhone}?\n\n`;
+            let msg = `¿Deseas habilitar un NUEVO INTENTO en [${platLabel}] para el cliente ${clientLabel}?\n\n`;
 
             if (Object.keys(profileData).length === 0) {
                 alert(`❌ No existe ningún perfil con el número ${clientPhone}. El cliente aún no ha iniciado sesión ni una vez.`);
@@ -4182,7 +4383,7 @@
                 const last = entries[entries.length - 1];
                 if (last) {
                     const fecha = new Date(last.timestamp).toLocaleString('es-CO');
-                    msg += `⚠️ HISTORIAL: Ya solicitó un código anteriomente.\n Correo: ${last.email}\n Plataforma: ${last.platform || 'Desconocida'}\n Fecha: ${fecha}\n\n`;
+                    msg += `⚠️ HISTORIAL: Ya solicitó un código anteriormente.\n Correo: ${last.email}\n Plataforma: ${last.platform || 'Desconocida'}\n Fecha: ${fecha}\n\n`;
                 }
             } else {
                 msg += 'ℹ️ Sin historial previo de códigos para este cliente.\n\n';
@@ -4190,11 +4391,7 @@
             msg += '¿Confirmas que el código NO fue usado exitosamente y se debe habilitar otro intento?';
 
             if (confirm(msg)) {
-                const rawPhone = String(clientPhone).trim();
-                const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
-                const phonesToClean = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
-
-                // Obtener todos los slugs de clientAttempts (por si el teléfono es compartido por varios clientes de vendedor)
+                // Obtener todos los slugs de clientAttempts
                 let existingSlugs = [];
                 if (profileData && profileData.clientAttempts && typeof profileData.clientAttempts === 'object') {
                     existingSlugs = Object.keys(profileData.clientAttempts);
@@ -4217,28 +4414,55 @@
 
                 const updates = {};
                 for (const p of phonesToClean) {
-                    if (platformsToRemove === null) {
-                        updates[`clientProfiles/${p}/codeAttemptUsed`] = null;
-                        updates[`clientProfiles/${p}/clientAttempts`] = null;
+                    if (nameSlug) {
+                        // Reseteo granular PARA UN CLIENTE ESPECÍFICO DE VENDEDOR
+                        if (platformsToRemove === null) {
+                            updates[`clientProfiles/${p}/clientAttempts/${nameSlug}`] = null;
+                        } else {
+                            for (const plat of platformsToRemove) {
+                                updates[`clientProfiles/${p}/clientAttempts/${nameSlug}/${plat}`] = null;
+                            }
+                        }
                     } else {
-                        for (const plat of platformsToRemove) {
-                            updates[`clientProfiles/${p}/codeAttemptUsed/${plat}`] = null;
-                            existingSlugs.forEach(slug => {
-                                updates[`clientProfiles/${p}/clientAttempts/${slug}/${plat}`] = null;
-                            });
+                        // Reseteo para TODOS los clientes del número
+                        if (platformsToRemove === null) {
+                            updates[`clientProfiles/${p}/codeAttemptUsed`] = null;
+                            updates[`clientProfiles/${p}/clientAttempts`] = null;
+                        } else {
+                            for (const plat of platformsToRemove) {
+                                updates[`clientProfiles/${p}/codeAttemptUsed/${plat}`] = null;
+                                existingSlugs.forEach(slug => {
+                                    updates[`clientProfiles/${p}/clientAttempts/${slug}/${plat}`] = null;
+                                });
+                            }
                         }
                     }
                 }
                 await db.ref('/').update(updates);
-                alert(`✅ Intento de ${platLabel} habilitado correctamente para ${clientPhone}. El cliente ya puede solicitar su código nuevamente.`);
+                alert(`✅ Intento de ${platLabel} habilitado correctamente para ${clientLabel}. El cliente ya puede solicitar su código nuevamente.`);
             }
         };
 
         // =====================================================
         // BOTÓN EXCLUSIVO ADMIN: Deshabilitar / Quitar intento de código
         // =====================================================
-        window.disableClientCodeAttempt = async function (clientPhone) {
+        window.disableClientCodeAttempt = async function (clientPhone, optClientName) {
+            if (!clientPhone) {
+                clientPhone = (document.getElementById('admin-client-phone-reset')?.value || '').trim();
+            }
             if (!clientPhone) return alert('Por favor ingresa el número de celular del cliente.');
+
+            let targetClientName = optClientName;
+            if (targetClientName === undefined || targetClientName === null) {
+                const nameSelect = document.getElementById('admin-client-name-reset');
+                const customNameInput = document.getElementById('admin-client-custom-name');
+                targetClientName = (nameSelect && nameSelect.value) ? nameSelect.value.trim() : '';
+                if (targetClientName === '__CUSTOM__' && customNameInput) {
+                    targetClientName = customNameInput.value.trim();
+                }
+            }
+            const nameSlug = targetClientName ? targetClientName.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
+            const clientLabel = targetClientName ? `"${targetClientName}" (${clientPhone})` : clientPhone;
 
             const platformSelect = document.getElementById('admin-platform-reset');
             const platform = platformSelect ? platformSelect.value : 'all';
@@ -4248,7 +4472,7 @@
             const cleanP = rawPhone.replace(/\D/g, '').replace(/^57/, '');
             if (!cleanP) return alert('Número de celular no válido.');
 
-            let confirmMsg = `¿Estás seguro de que deseas DESHABILITAR / QUITAR el intento en [${platLabel}] para el cliente ${clientPhone}?\n\n`;
+            let confirmMsg = `¿Estás seguro de que deseas DESHABILITAR / QUITAR el intento en [${platLabel}] para el cliente ${clientLabel}?\n\n`;
             confirmMsg += `⚠️ Esta acción marcará el intento como YA UTILIZADO en el portal del cliente, bloqueándole el botón para que no pueda pedir más códigos a menos que tú se lo vuelvas a habilitar.`;
 
             if (!confirm(confirmMsg)) return;
@@ -4270,10 +4494,14 @@
                 const updates = {};
                 phonesToUpdate.forEach(p => {
                     const setVal = (key, val) => {
-                        updates[`clientProfiles/${p}/codeAttemptUsed/${key}`] = val;
-                        existingSlugs.forEach(slug => {
-                            updates[`clientProfiles/${p}/clientAttempts/${slug}/${key}`] = val;
-                        });
+                        if (nameSlug) {
+                            updates[`clientProfiles/${p}/clientAttempts/${nameSlug}/${key}`] = val;
+                        } else {
+                            updates[`clientProfiles/${p}/codeAttemptUsed/${key}`] = val;
+                            existingSlugs.forEach(slug => {
+                                updates[`clientProfiles/${p}/clientAttempts/${slug}/${key}`] = val;
+                            });
+                        }
                     };
 
                     if (platform === 'all') {
@@ -4290,7 +4518,7 @@
                 });
 
                 await db.ref().update(updates);
-                alert(`🚫 Intento de [${platLabel}] DESHABILITADO con éxito para ${clientPhone}.\nEl cliente ya verá el botón bloqueado en su portal.`);
+                alert(`🚫 Intento de [${platLabel}] DESHABILITADO con éxito para ${clientLabel}.\nEl cliente ya verá el botón bloqueado en su portal.`);
             } catch (err) {
                 alert('Error al deshabilitar el intento: ' + err.message);
                 console.error(err);
