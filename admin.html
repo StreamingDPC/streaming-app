@@ -2269,9 +2269,13 @@
                                     style="flex:2; min-width:180px; padding:11px 14px; border-radius:8px; border:1px solid rgba(243,156,18,0.5); background:rgba(0,0,0,0.5); color:white; font-size:0.9rem;">
                             </div>
                             <!-- SELECCIÓN DE CLIENTE PARA VENDEDORES CON CELULAR COMPARTIDO -->
-                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
-                                <div style="flex:1; min-width:240px;">
-                                    <select id="admin-client-name-reset"
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:0.8rem; color:#60a5fa; font-weight:600; display:flex; align-items:center; gap:6px; margin-bottom:5px;">
+                                    <i class="fa-solid fa-user-tag"></i> Cliente específico (para vendedores como Katherin con celular compartido):
+                                </label>
+                                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                    <div style="flex:1; min-width:240px;">
+                                        <select id="admin-client-name-reset"
                                         onchange="onAdminResetClientNameChange()"
                                         style="width:100%; padding:11px 14px; border-radius:8px; border:1px solid rgba(52,152,219,0.5); background:rgba(0,0,0,0.6); color:white; font-size:0.9rem;">
                                         <option value="">👤 (Todos los clientes de este celular)</option>
@@ -4244,15 +4248,30 @@
             // 4. Si aún no hay perfiles en memoria local, hacer consulta directa a Firebase
             if (clientsFound.size === 0 && typeof db !== 'undefined') {
                 try {
-                    const snap = await db.ref(`clientSales/${cleanPhone}`).once('value');
-                    const data = snap.val();
-                    if (data) {
-                        Object.values(data).forEach(s => {
-                            const cName = (s.clientName || s.name || '').trim();
-                            if (cName && !clientsFound.has(cName)) {
-                                clientsFound.set(cName, { name: cName, seller: s.sellerName || '', products: new Set() });
+                    for (const p of phonesToMatch) {
+                        const snap = await db.ref(`clientSales/${p}`).once('value');
+                        const data = snap.val();
+                        if (data) {
+                            Object.values(data).forEach(s => {
+                                const cName = (s.clientName || s.name || '').trim();
+                                if (cName && !clientsFound.has(cName)) {
+                                    clientsFound.set(cName, { name: cName, seller: s.sellerName || '', products: new Set() });
+                                }
+                            });
+                        }
+                        const pSnap = await db.ref(`clientProfiles/${p}`).once('value');
+                        const pData = pSnap.val();
+                        if (pData) {
+                            if (pData.name && !clientsFound.has(pData.name)) {
+                                clientsFound.set(pData.name, { name: pData.name, seller: pData.sellerName || '', products: new Set() });
                             }
-                        });
+                            if (pData.clientAttempts && typeof pData.clientAttempts === 'object') {
+                                Object.keys(pData.clientAttempts).forEach(slug => {
+                                    const formatted = slug.replace(/_/g, ' ');
+                                    clientsFound.set(formatted, { name: formatted, seller: pData.sellerName || '', products: new Set() });
+                                });
+                            }
+                        }
                     }
                 } catch (_) {}
             }
@@ -4321,8 +4340,16 @@
             const phonesToClean = Array.from(new Set([rawPhone, cleanP, `57${cleanP}`])).filter(Boolean);
 
             // Consultar historial previo y estado de intentos
-            const profileSnap = await db.ref(`clientProfiles/${clientPhone}`).once('value');
-            const profileData = profileSnap.val() || {};
+            let profileData = {};
+            for (const p of phonesToClean) {
+                try {
+                    const snap = await db.ref(`clientProfiles/${p}`).once('value');
+                    if (snap.exists() && snap.val()) {
+                        profileData = snap.val();
+                        break;
+                    }
+                } catch (_) {}
+            }
             const history = profileData.codeHistory;
             
             // Si eligió un cliente específico de vendedor, verificar su estado en clientAttempts
