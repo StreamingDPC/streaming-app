@@ -1311,7 +1311,7 @@ async function syncExcelToFirebase(customBuffer = null) {
             lastExcelSync: syncTimestamp,
             lastExcelSyncScreens: updatedScreensCount,
             lastExcelSyncClients: updatedClientsCount
-        })
+        }).catch(() => {})
     ]);
 
     return {
