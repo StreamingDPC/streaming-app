@@ -2167,31 +2167,59 @@ async function doActivateDisneyTv(email, tvCode) {
             await sleep(4000);
         }
 
-        // 4. Pantalla de Contraseña o Código de Acceso Único
-        console.log('[BOT-DISNEY] 🔐 Verificando método de acceso (contraseña vs código único)...');
+        // 4. Determinar pantalla de autenticación y solicitar código o contraseña
+        console.log('[BOT-DISNEY] 🔐 Verificando método de acceso...');
         let needsOtpFlow = false;
-        let passInpFound = false;
 
+        let screenType = 'unknown'; // 'identity_confirm' | 'password' | 'otp_ready'
         for (let wait = 0; wait < 10; wait++) {
-            const passEl = await page.$('input[type="password"]');
-            if (passEl) {
-                passInpFound = true;
-                break;
-            }
-
-            const isOtpScreen = await page.evaluate(() => {
-                const txt = (document.body.innerText || '').toLowerCase();
-                return txt.includes('código de acceso único') || txt.includes('codigo de acceso unico') ||
-                    txt.includes('revisa tu correo') || txt.includes('confirmar tu identidad');
+            const detection = await page.evaluate(() => {
+                const txt = (document.body.innerText || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                if (txt.includes('confirmar tu identidad') || txt.includes('enviar correo')) {
+                    return 'identity_confirm';
+                }
+                if (document.querySelector('input[type="password"]')) {
+                    return 'password';
+                }
+                if (document.querySelector('input[name="otp"], input[name="passcode"]') || txt.includes('codigo de acceso unico')) {
+                    return 'otp_ready';
+                }
+                return null;
             });
-            if (isOtpScreen) {
-                needsOtpFlow = true;
+
+            if (detection) {
+                screenType = detection;
                 break;
             }
             await sleep(1000);
         }
 
-        if (passInpFound) {
+        console.log(`[BOT-DISNEY] ℹ️ Tipo de pantalla detectada: ${screenType}`);
+
+        if (screenType === 'identity_confirm') {
+            console.log('[BOT-DISNEY] 🔘 Pantalla "Confirmar tu identidad" detectada. Haciendo clic en "Enviar correo"...');
+            const clickedSend = await page.evaluate(() => {
+                const elements = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+                for (const el of elements) {
+                    const txt = (el.innerText || el.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (txt.includes('enviar correo') || txt.includes('send email')) {
+                        el.click();
+                        return true;
+                    }
+                }
+                // Si no se encontró por texto, hacer clic en el botón primario
+                const primaryBtn = document.querySelector('button[type="submit"]') || document.querySelector('button');
+                if (primaryBtn) {
+                    primaryBtn.click();
+                    return true;
+                }
+                return false;
+            });
+            console.log(`[BOT-DISNEY] ✅ Clic en "Enviar correo": ${clickedSend}`);
+            needsOtpFlow = true;
+            await sleep(4000);
+
+        } else if (screenType === 'password') {
             console.log(`[BOT-DISNEY] 🔑 Pantalla de contraseña detectada. Buscando contraseña para ${email}...`);
             const foundPassword = await findPlatformPassword(email, ['disney', 'dixney', 'star', 'mydisney'], 'DO', 'BOT-DISNEY');
             let passwordWorked = false;
@@ -2229,7 +2257,6 @@ async function doActivateDisneyTv(email, tvCode) {
             }
 
             if (!passwordWorked) {
-                // Si la contraseña no funcionó o Disney pide verificación o no había pass:
                 console.log('[BOT-DISNEY] 🔘 Buscando opción "Continuar con código de acceso único"...');
                 const clickedOtp = await page.evaluate(() => {
                     const elements = Array.from(document.querySelectorAll('a, button, [role="button"], span'));
@@ -2244,24 +2271,23 @@ async function doActivateDisneyTv(email, tvCode) {
                 });
                 console.log(`[BOT-DISNEY] Click en código de acceso único: ${clickedOtp}`);
                 needsOtpFlow = true;
-                await sleep(3500);
+                await sleep(4000);
             }
-        } else if (!needsOtpFlow) {
-            // Verificar si hay botón "Enviar correo" o confirmación de identidad
-            console.log('[BOT-DISNEY] 🔘 Buscando opción "Enviar correo"...');
+        } else {
+            // screenType === 'otp_ready' o cualquier otro estado
+            needsOtpFlow = true;
+            // Intentar hacer clic en Enviar correo si aún estuviera en pantalla
             await page.evaluate(() => {
                 const elements = Array.from(document.querySelectorAll('button, a, [role="button"]'));
                 for (const el of elements) {
                     const txt = (el.innerText || el.textContent || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    if (txt.includes('enviar correo') || txt.includes('send email') || txt.includes('codigo de acceso')) {
+                    if (txt.includes('enviar correo') || txt.includes('send email')) {
                         el.click();
-                        return true;
+                        return;
                     }
                 }
-                return false;
             });
-            needsOtpFlow = true;
-            await sleep(3500);
+            await sleep(3000);
         }
 
         // 5. Flujo de lectura e ingreso de código OTP (si se requirió)
