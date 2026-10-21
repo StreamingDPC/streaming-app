@@ -2035,12 +2035,12 @@ async function doActivateDisneyTv(email, tvCode) {
         const page = pages[0] || await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
 
-        // Limpiar sesión residual al inicio para garantizar proceso limpio e independiente
+        // Limpiar únicamente cookies al inicio para empezar sin sesión previa,
+        // pero PRESERVAR la caché de scripts para que Disney+ cargue rápido y no se quede en negro.
         try {
             const client = await page.target().createCDPSession();
             await client.send('Network.clearBrowserCookies');
-            await client.send('Network.clearBrowserCache');
-            console.log('[BOT-DISNEY] 🧹 Navegador inicializado en limpio (cookies y caché borrados).');
+            console.log('[BOT-DISNEY] 🧹 Sesión anterior limpiada (cookies borradas, caché preservada).');
         } catch (e) { }
 
         // 1. Navegar a https://www.disneyplus.com/es-419/begin?cid=DSS-OFFDEVICE-LP
@@ -2060,16 +2060,20 @@ async function doActivateDisneyTv(email, tvCode) {
         console.log(`[BOT-DISNEY] 🔢 Ingresando código de TV (8 dígitos): ${cleanTvCode}`);
 
         let codeInputFound = false;
-        for (let wait = 0; wait < 15; wait++) {
-            const curText = await page.evaluate(() => document.body.innerText || '');
-            if (!curText.includes('Content is loading')) {
-                const inp = await page.$('input[name="otp"], input[type="text"]');
-                if (inp) {
-                    codeInputFound = true;
-                    await inp.click();
-                    break;
-                }
+        for (let wait = 0; wait < 30; wait++) {
+            const inp = await page.$('input[name="otp"], input[name="passcode"], input[data-testid*="code"], input[type="text"], input[type="tel"]');
+            if (inp) {
+                codeInputFound = true;
+                await inp.click();
+                break;
             }
+
+            // Si Disney sigue con el spinner negro después de 10s, forzar recarga
+            if (wait === 10) {
+                console.log('[BOT-DISNEY] 🔄 Disney tardó en cargar bundles, recargando página...');
+                await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+            }
+
             await sleep(1000);
         }
 
@@ -2415,8 +2419,7 @@ async function doActivateDisneyTv(email, tvCode) {
         try {
             const client = await page.target().createCDPSession();
             await client.send('Network.clearBrowserCookies');
-            await client.send('Network.clearBrowserCache');
-            console.log('[BOT-DISNEY] 🧼 Cookies y caché limpiados vía CDP.');
+            console.log('[BOT-DISNEY] 🧼 Cookies limpiadas vía CDP.');
         } catch (e) { }
 
         try {
