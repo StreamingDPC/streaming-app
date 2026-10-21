@@ -850,6 +850,20 @@ async function syncExcelToFirebase(customBuffer = null) {
             });
             if (matchingSaleKey) break;
 
+            // 2.1 Coincidencia por fecha de inicio Y fin Y conteo exacto de pantallas en Excel
+            matchingSaleKey = candidateKeys.find(k => {
+                const s = targetStore[k];
+                const sDate = s.date || s.fechaCompraOriginal;
+                const sExp = s.expirationDate;
+                if (sameDate(sDate, excelStartMs) && sameDate(sExp, excelExpMs) && saleHasMatchingPlatform(s)) {
+                    const sItems = Array.isArray(s.items) ? s.items : Object.values(s.items || {});
+                    const totalScreens = sItems.reduce((acc, it) => acc + ((it.specificEmails && it.specificEmails.length) || 1), 0);
+                    return totalScreens === phoneRecs.length;
+                }
+                return false;
+            });
+            if (matchingSaleKey) break;
+
             // 3. Coincidencia por fecha de inicio Y plataforma
             matchingSaleKey = candidateKeys.find(k => {
                 const s = targetStore[k];
@@ -1128,10 +1142,44 @@ async function syncExcelToFirebase(customBuffer = null) {
                             }]
                         };
                         itemsArr.push(newItem);
+                        assignedSlotKeys.add(`${itemsArr.length - 1}_0`);
                     }
                 }
                 updatedScreensCount++;
             }
+
+            // ── LIMPIEZA ESTRICTA: Retirar slots de combo o items individuales no asignados en este grupo de Excel ──
+            const cleanedItems = [];
+            for (let itIdx = 0; itIdx < itemsArr.length; itIdx++) {
+                const it = itemsArr[itIdx];
+                if (!it) continue;
+
+                if (Array.isArray(it.specificEmails) && it.specificEmails.length > 0) {
+                    // Filtrar únicamente los slots que fueron efectivamente asignados a un registro de este grupo de Excel
+                    it.specificEmails = it.specificEmails.filter((sp, sIdx) => {
+                        const slotKey = `${itIdx}_${sIdx}`;
+                        return assignedSlotKeys.has(slotKey);
+                    });
+
+                    // Si al item no le quedó ningún slot asignado, se descarta por completo
+                    if (it.specificEmails.length === 0) {
+                        continue;
+                    }
+
+                    // Si era un combo pero ahora solo le queda 1 pantalla, convertir a individual
+                    if (it.specificEmails.length === 1 && (it.category === 'promociones' || (it.category && it.category.includes('combo')))) {
+                        it.category = 'individual';
+                        it.name = cleanPlatformName(it.specificEmails[0].platform);
+                        const pInfo = getPlatformPriceInfo(it.name, isSellerSale);
+                        it.id = pInfo.id;
+                        it.finalPrice = pInfo.price;
+                    }
+                } else {
+                    continue;
+                }
+                cleanedItems.push(it);
+            }
+            itemsArr = cleanedItems;
 
             // Deduplicar items que tengan exactamente el mismo correo de cuenta en la misma familia de plataforma
             // (incluyendo pantallas ya contenidas dentro de un combo)
@@ -1208,6 +1256,16 @@ async function syncExcelToFirebase(customBuffer = null) {
                 if (matchedSaleKeysInThisRun.has(otherKey)) continue;
                 const otherSale = targetStore[otherKey];
                 if (!otherSale) continue;
+
+                // Eliminar venta duplicada del mismo cliente con el mismo rango de fechas
+                const oStart = otherSale.date || otherSale.fechaCompraOriginal;
+                const oExp = otherSale.expirationDate;
+                if (sameDate(oStart, excelStartMs) && sameDate(oExp, excelExpMs)) {
+                    console.log(`[EXCEL-SYNC] 🗑️ Eliminando venta duplicada para ${groupClientName} (${otherKey})`);
+                    delete targetStore[otherKey];
+                    continue;
+                }
+
                 const otherEmails = getSaleEmails(otherSale);
                 if (otherEmails.some(e => allActiveExcelEmailsForClient.has(e))) {
                     continue; // Pertenece a otro grupo activo del Excel para este cliente. No tocar ni expirar!
