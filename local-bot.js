@@ -2291,12 +2291,35 @@ async function doActivateDisneyTv(email, tvCode) {
         }
 
         // 5. Flujo de lectura e ingreso de código OTP (si se requirió)
+        let alreadyLoggedIn = await page.evaluate(() => {
+            const u = window.location.href.toLowerCase();
+            const txt = (document.body.innerText || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return u.includes('select-profile') || u.includes('/home') || txt.includes('quien anda ahi') || txt.includes('todo listo') || txt.includes('dispositivo activado');
+        });
+
+        if (alreadyLoggedIn) {
+            console.log('[BOT-DISNEY] 🎉 ¡Disney+ ya está en la pantalla de perfiles (select-profile)! TV activada.');
+            needsOtpFlow = false;
+        }
+
         if (needsOtpFlow) {
             console.log('[BOT-DISNEY] 📨 Solicitando al backend el código de acceso Disney (6 dígitos)...');
             let loginCode = null;
             const BACKEND_URL = 'https://streaming-backend-ce1u.onrender.com';
 
             for (let attempt = 1; attempt <= 12; attempt++) {
+                // Verificar en cada iteración si Disney ya ingresó directamente a perfiles o activó la TV
+                const autoDone = await page.evaluate(() => {
+                    const u = window.location.href.toLowerCase();
+                    const txt = (document.body.innerText || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return u.includes('select-profile') || u.includes('/home') || txt.includes('quien anda ahi') || txt.includes('todo listo') || txt.includes('dispositivo activado');
+                });
+                if (autoDone) {
+                    console.log('[BOT-DISNEY] 🎉 ¡Activación detectada en pantalla (select-profile / éxito)! TV vinculada.');
+                    alreadyLoggedIn = true;
+                    break;
+                }
+
                 try {
                     console.log(`[BOT-DISNEY] 🔍 Intento ${attempt}/12 de lectura del correo (${email})...`);
                     const codeResp = await axios.post(`${BACKEND_URL}/api/get-code`, {
@@ -2320,7 +2343,7 @@ async function doActivateDisneyTv(email, tvCode) {
                 }
             }
 
-            if (!loginCode) {
+            if (!loginCode && !alreadyLoggedIn) {
                 const ss = await page.screenshot({ encoding: 'base64' });
                 await browser.disconnect();
                 if (chromeProc) { try { chromeProc.kill(); } catch (e) { } }
@@ -2331,58 +2354,60 @@ async function doActivateDisneyTv(email, tvCode) {
                 };
             }
 
-            // 6. Pantalla "Escribe tu código de acceso único": Ingresar código OTP de 6 dígitos
-            console.log(`[BOT-DISNEY] ⌨️ Ingresando código OTP en las casillas: ${loginCode}`);
-            let otpInputReady = false;
-            for (let wait = 0; wait < 12; wait++) {
-                otpInputReady = await page.evaluate(() => {
-                    const inp = document.querySelector('input[name="otp"], input[name="passcode"], input[type="text"], input[type="tel"]');
-                    if (inp) {
-                        inp.focus();
+            if (!alreadyLoggedIn) {
+                // 6. Pantalla "Escribe tu código de acceso único": Ingresar código OTP de 6 dígitos
+                console.log(`[BOT-DISNEY] ⌨️ Ingresando código OTP en las casillas: ${loginCode}`);
+                let otpInputReady = false;
+                for (let wait = 0; wait < 12; wait++) {
+                    otpInputReady = await page.evaluate(() => {
+                        const inp = document.querySelector('input[name="otp"], input[name="passcode"], input[type="text"], input[type="tel"]');
+                        if (inp) {
+                            inp.focus();
+                            return true;
+                        }
+                        return false;
+                    });
+                    if (otpInputReady) break;
+                    await sleep(1000);
+                }
+
+                // Escribir en inputs individuales si existen (por ejemplo 6 casillas), o en input general
+                await page.evaluate((code) => {
+                    const inputs = Array.from(document.querySelectorAll('input')).filter(i => {
+                        const t = (i.type || '').toLowerCase();
+                        return (t === 'text' || t === 'tel' || t === 'number') && !i.disabled && i.offsetParent !== null;
+                    });
+                    if (inputs.length >= 6) {
+                        for (let i = 0; i < 6; i++) {
+                            inputs[i].focus();
+                            inputs[i].value = code[i] || '';
+                            inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+                            inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                }, loginCode);
+
+                try {
+                    await page.keyboard.type(loginCode, { delay: 90 });
+                } catch (e) { }
+                await sleep(800);
+
+                // Clic en Continuar final tras ingresar OTP
+                console.log('[BOT-DISNEY] 🚀 Clic en Continuar final...');
+                const clickedContinue3 = await page.evaluate(() => {
+                    const btn = document.querySelector('button[data-testid="continue-btn"], button[type="submit"]') ||
+                        Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').toLowerCase().includes('continu'));
+                    if (btn) {
+                        btn.click();
                         return true;
                     }
                     return false;
                 });
-                if (otpInputReady) break;
-                await sleep(1000);
-            }
-
-            // Escribir en inputs individuales si existen (por ejemplo 6 casillas), o en input general
-            await page.evaluate((code) => {
-                const inputs = Array.from(document.querySelectorAll('input')).filter(i => {
-                    const t = (i.type || '').toLowerCase();
-                    return (t === 'text' || t === 'tel' || t === 'number') && !i.disabled && i.offsetParent !== null;
-                });
-                if (inputs.length >= 6) {
-                    for (let i = 0; i < 6; i++) {
-                        inputs[i].focus();
-                        inputs[i].value = code[i] || '';
-                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                        inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
-                    }
+                if (!clickedContinue3) {
+                    await page.keyboard.press('Enter');
                 }
-            }, loginCode);
-
-            try {
-                await page.keyboard.type(loginCode, { delay: 90 });
-            } catch (e) { }
-            await sleep(800);
-
-            // Clic en Continuar final tras ingresar OTP
-            console.log('[BOT-DISNEY] 🚀 Clic en Continuar final...');
-            const clickedContinue3 = await page.evaluate(() => {
-                const btn = document.querySelector('button[data-testid="continue-btn"], button[type="submit"]') ||
-                    Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').toLowerCase().includes('continu'));
-                if (btn) {
-                    btn.click();
-                    return true;
-                }
-                return false;
-            });
-            if (!clickedContinue3) {
-                await page.keyboard.press('Enter');
+                await sleep(5000);
             }
-            await sleep(5000);
         }
 
         // 7. Cerrar sesión y limpiar cookies (como solicitado: "listo queda activado y cerrar sesion")
