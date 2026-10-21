@@ -9305,7 +9305,11 @@
 
         function logout() {
             localStorage.removeItem('adminLoggedIn');
-            window.location.href = 'login.html';
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                firebase.auth().signOut().finally(() => { window.location.href = 'login.html'; });
+            } else {
+                window.location.href = 'login.html';
+            }
         }
 
         // No manually calling init() here anymore, it's called by Firebase observer.
