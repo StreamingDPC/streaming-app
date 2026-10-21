@@ -296,6 +296,116 @@ function formatComboNameFromSlots(specificEmails) {
     }).join(' ');
 }
 
+const COMBO_PRICE_CATALOG = [
+    // Combos de 6 plataformas
+    { keys: ['netflix', 'disney', 'max', 'paramount', 'prime', 'vix'], client: 57000, seller: 45000 },
+    { keys: ['netflix', 'disney', 'max', 'paramount', 'prime', 'crunchy'], client: 66000, seller: 48000 },
+    // Combos de 5 plataformas
+    { keys: ['netflix', 'disney', 'max', 'paramount', 'prime'], client: 49000, seller: 42000 },
+    { keys: ['netflix', 'disney', 'prime', 'vix', 'iptv'], client: 60000, seller: 50000 },
+    { keys: ['netflix', 'disney', 'max', 'vix', 'prime'], client: 55000, seller: 45000 },
+    { keys: ['netflix', 'disney', 'paramount', 'vix', 'prime'], client: 57000, seller: 47000 },
+    // Combos de 4 plataformas
+    { keys: ['netflix', 'disney', 'max', 'prime'], client: 43000, seller: 35000 },
+    { keys: ['netflix', 'disney', 'paramount', 'prime'], client: 49000, seller: 41000 },
+    { keys: ['netflix', 'disney', 'max', 'paramount'], client: 43000, seller: 37000 },
+    { keys: ['netflix', 'disney', 'max', 'crunchy'], client: 50000, seller: 42000 },
+    { keys: ['netflix', 'disney', 'paramount', 'crunchy'], client: 52000, seller: 44000 },
+    { keys: ['disney', 'max', 'paramount', 'prime'], client: 38000, seller: 30000 },
+    // Combos de 3 plataformas
+    { keys: ['netflix', 'disney', 'prime'], client: 32000, seller: 25000 },
+    { keys: ['netflix', 'disney', 'max'], client: 37000, seller: 31000 },
+    { keys: ['netflix', 'disney', 'paramount'], client: 33000, seller: 27000 },
+    { keys: ['netflix', 'disney', 'crunchy'], client: 29000, seller: 26000 },
+    { keys: ['netflix', 'max', 'prime'], client: 35000, seller: 29000 },
+    { keys: ['netflix', 'paramount', 'prime'], client: 37000, seller: 31000 },
+    { keys: ['netflix', 'vix', 'prime'], client: 31000, seller: 25000 },
+    { keys: ['disney', 'max', 'prime'], client: 32000, seller: 26000 },
+    { keys: ['disney', 'paramount', 'prime'], client: 26000, seller: 20000 },
+    // Combos de 2 plataformas
+    { keys: ['netflix', 'disney'], client: 25000, seller: 21000 },
+    { keys: ['netflix', 'max'], client: 25000, seller: 21000 },
+    { keys: ['netflix', 'prime'], client: 23000, seller: 17000 },
+    { keys: ['netflix', 'paramount'], client: 29000, seller: 24000 },
+    { keys: ['netflix', 'vix'], client: 23000, seller: 19000 },
+    { keys: ['netflix', 'crunchy'], client: 26000, seller: 22000 },
+    { keys: ['disney', 'prime'], client: 20000, seller: 16000 },
+    { keys: ['disney', 'max'], client: 24000, seller: 20000 },
+    { keys: ['disney', 'paramount'], client: 26000, seller: 22000 },
+    { keys: ['disney', 'crunchy'], client: 17000, seller: 13000 },
+    { keys: ['disney', 'vix'], client: 20000, seller: 16000 },
+    { keys: ['max', 'prime'], client: 20000, seller: 16000 },
+    { keys: ['max', 'vix'], client: 20000, seller: 16000 },
+    { keys: ['max', 'paramount'], client: 26000, seller: 22000 },
+    { keys: ['prime', 'paramount'], client: 22000, seller: 18000 },
+    { keys: ['prime', 'crunchy'], client: 19000, seller: 15000 },
+    { keys: ['prime', 'vix'], client: 16000, seller: 12000 }
+];
+
+function getPlatformKey(pName) {
+    const s = String(pName || '').toLowerCase();
+    if (s.includes('netflix') || s.includes('netflx')) return 'netflix';
+    if (s.includes('disney') || s.includes('dixney')) return 'disney';
+    if (s.includes('max') || s.includes('hbo')) return 'max';
+    if (s.includes('prime') || s.includes('amazon')) return 'prime';
+    if (s.includes('paramount')) return 'paramount';
+    if (s.includes('vix') || s.includes('vux')) return 'vix';
+    if (s.includes('crunchy')) return 'crunchy';
+    if (s.includes('iptv') || s.includes('magis') || s.includes('flujo')) return 'iptv';
+    if (s.includes('apple')) return 'apple';
+    if (s.includes('spotify') || s.includes('sp')) return 'spotify';
+    if (s.includes('youtube')) return 'youtube';
+    return 'other';
+}
+
+function calculateScreensPrice(screens, isSeller) {
+    if (!screens || screens.length === 0) return 0;
+    if (screens.length === 1) {
+        const p = screens[0].platform || screens[0].name || screens[0];
+        return getPlatformPriceInfo(p, isSeller).price;
+    }
+
+    const counts = {};
+    const platformList = [];
+    screens.forEach(sc => {
+        const rawPlat = sc.platform || sc.name || sc;
+        const k = getPlatformKey(rawPlat);
+        counts[k] = (counts[k] || 0) + 1;
+        platformList.push({ key: k, raw: rawPlat });
+    });
+
+    let bestCombo = null;
+    for (const combo of COMBO_PRICE_CATALOG) {
+        if (combo.keys.every(k => (counts[k] || 0) >= 1)) {
+            bestCombo = combo;
+            break;
+        }
+    }
+
+    let total = 0;
+    if (bestCombo) {
+        total += isSeller ? bestCombo.seller : bestCombo.client;
+        const remainingCounts = { ...counts };
+        bestCombo.keys.forEach(k => {
+            remainingCounts[k]--;
+        });
+        for (const [k, count] of Object.entries(remainingCounts)) {
+            if (count > 0) {
+                const sampleRaw = platformList.find(p => p.key === k)?.raw || k;
+                const pInfo = getPlatformPriceInfo(sampleRaw, isSeller);
+                total += count * (pInfo.price || (isSeller ? 10000 : 13000));
+            }
+        }
+    } else {
+        platformList.forEach(p => {
+            const pInfo = getPlatformPriceInfo(p.raw, isSeller);
+            total += (pInfo.price || 0);
+        });
+    }
+
+    return total;
+}
+
 function getScreenCount(category, name) {
     const cat = (category || '').toLowerCase().trim();
     const n = (name || '').toLowerCase().trim();
@@ -905,6 +1015,8 @@ async function syncExcelToFirebase(customBuffer = null) {
                     }
 
                     // Buscar pantalla NO asignada que coincida con rec.sheetMeta
+                    // Prioridad 1: Coincidencia exacta de correo o de perfil en esta plataforma
+                    let targetSlotIdx = -1;
                     for (let sIdx = 0; sIdx < it.specificEmails.length; sIdx++) {
                         const slotKey = `${itIdx}_${sIdx}`;
                         if (assignedSlotKeys.has(slotKey)) continue;
@@ -912,37 +1024,63 @@ async function syncExcelToFirebase(customBuffer = null) {
                         const sp = it.specificEmails[sIdx];
                         const spPlat = sp.platform || guesses[sIdx] || it.name;
                         if (platformMatches(spPlat, rec.sheetMeta)) {
-                            if (rec.sheetMeta.key === 'NO' && (rec.platform === 'Netflix Privada' || /privad/i.test(spPlat) || /nopv|npv/i.test(rec.pantallasCode))) {
-                                sp.platform = 'Netflix Privada';
-                                if (screenCount === 1) {
-                                    it.name = 'Netflix Privada';
-                                    it.id = pInfo.id;
+                            const emailMatches = rec.email && sp.email && sp.email.trim().toLowerCase() === rec.email.trim().toLowerCase();
+                            const profMatches = rec.profile && sp.profile && sp.profile.trim().toLowerCase() === rec.profile.trim().toLowerCase();
+                            if (emailMatches || profMatches) {
+                                targetSlotIdx = sIdx;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Prioridad 2: Primer slot libre que coincida por plataforma
+                    if (targetSlotIdx === -1) {
+                        for (let sIdx = 0; sIdx < it.specificEmails.length; sIdx++) {
+                            const slotKey = `${itIdx}_${sIdx}`;
+                            if (assignedSlotKeys.has(slotKey)) continue;
+
+                            const sp = it.specificEmails[sIdx];
+                            const spPlat = sp.platform || guesses[sIdx] || it.name;
+                            if (platformMatches(spPlat, rec.sheetMeta)) {
+                                targetSlotIdx = sIdx;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (targetSlotIdx !== -1) {
+                        const slotKey = `${itIdx}_${targetSlotIdx}`;
+                        const sp = it.specificEmails[targetSlotIdx];
+                        const spPlat = sp.platform || guesses[targetSlotIdx] || it.name;
+                        if (rec.sheetMeta.key === 'NO' && (rec.platform === 'Netflix Privada' || /privad/i.test(spPlat) || /nopv|npv/i.test(rec.pantallasCode))) {
+                            sp.platform = 'Netflix Privada';
+                            if (screenCount === 1) {
+                                it.name = 'Netflix Privada';
+                                it.id = pInfo.id;
+                                it.finalPrice = pInfo.price;
+                            }
+                        } else if (rec.sheetMeta.key === 'DO' && (rec.platform === 'Disney Privada' || /privad/i.test(spPlat) || /dopv|dpv/i.test(rec.pantallasCode))) {
+                            sp.platform = 'Disney Privada';
+                            if (screenCount === 1) {
+                                it.name = 'Disney Privada';
+                                it.id = pInfo.id;
+                                it.finalPrice = pInfo.price;
+                            }
+                        } else {
+                            sp.platform = cleanPlatformName(rec.platform);
+                            if (screenCount === 1) {
+                                it.name = cleanPlatformName(rec.platform);
+                                if (!it.finalPrice || it.finalPrice === 0) {
                                     it.finalPrice = pInfo.price;
-                                }
-                            } else if (rec.sheetMeta.key === 'DO' && (rec.platform === 'Disney Privada' || /privad/i.test(spPlat) || /dopv|dpv/i.test(rec.pantallasCode))) {
-                                sp.platform = 'Disney Privada';
-                                if (screenCount === 1) {
-                                    it.name = 'Disney Privada';
-                                    it.id = pInfo.id;
-                                    it.finalPrice = pInfo.price;
-                                }
-                            } else {
-                                sp.platform = cleanPlatformName(rec.platform);
-                                if (screenCount === 1) {
-                                    it.name = cleanPlatformName(rec.platform);
-                                    if (!it.finalPrice || it.finalPrice === 0) {
-                                        it.finalPrice = pInfo.price;
-                                    }
                                 }
                             }
-                            sp.email = rec.email || sp.email || '';
-                            sp.pass = rec.password || sp.pass || '';
-                            sp.profile = rec.profile || sp.profile || '';
-                            sp.pin = rec.profilePin || sp.pin || '';
-                            assignedSlotKeys.add(slotKey);
-                            assigned = true;
-                            break;
                         }
+                        sp.email = rec.email || sp.email || '';
+                        sp.pass = rec.password || sp.pass || '';
+                        sp.profile = rec.profile || sp.profile || '';
+                        sp.pin = rec.profilePin || sp.pin || '';
+                        assignedSlotKeys.add(slotKey);
+                        assigned = true;
                     }
 
                     // Si es un combo y todos los slots existentes para esta plataforma ya fueron asignados,
@@ -958,7 +1096,6 @@ async function syncExcelToFirebase(customBuffer = null) {
                         };
                         it.specificEmails.push(newSlot);
                         assignedSlotKeys.add(`${itIdx}_${it.specificEmails.length - 1}`);
-                        it.name = formatComboNameFromSlots(it.specificEmails);
                         assigned = true;
                     }
 
@@ -1011,10 +1148,22 @@ async function syncExcelToFirebase(customBuffer = null) {
                 return (platStr || '').toLowerCase().trim();
             };
 
-            // Actualizar nombre de combos según sus pantallas asignadas
+            // Actualizar nombre y precio de combos según sus pantallas asignadas
+            const platformOrder = { 'Netflix': 1, 'Netflix Privada': 1, 'Disney': 2, 'Disney Privada': 2, 'Max (HBO)': 3, 'Prime Video': 4, 'Paramount': 5, 'Crunchyroll': 6, 'Vix': 7, 'IPTV': 8 };
             itemsArr.forEach(it => {
                 if (it && Array.isArray(it.specificEmails) && it.specificEmails.length > 1) {
+                    it.specificEmails.sort((a, b) => {
+                        const oA = platformOrder[a.platform] || 99;
+                        const oB = platformOrder[b.platform] || 99;
+                        if (oA !== oB) return oA - oB;
+                        const aLead = /^\d+/.test(a.profile || '');
+                        const bLead = /^\d+/.test(b.profile || '');
+                        if (!aLead && bLead) return -1;
+                        if (aLead && !bLead) return 1;
+                        return (a.profile || '').localeCompare(b.profile || '');
+                    });
                     it.name = formatComboNameFromSlots(it.specificEmails);
+                    it.finalPrice = calculateScreensPrice(it.specificEmails, isSellerSale);
                 }
             });
 
@@ -1042,21 +1191,7 @@ async function syncExcelToFirebase(customBuffer = null) {
             // Asegurar que el total de la venta esté correctamente registrado según precios de cliente/vendedor
             const sumFinalPrices = dedupedItems.reduce((acc, it) => acc + (Number(it.finalPrice) || 0), 0);
             if (sumFinalPrices > 0) {
-                if (
-                    !sale.total ||
-                    sale.total === 0 ||
-                    dedupedItems.length === 1 ||
-                    sale.total > sumFinalPrices ||
-                    (dedupedItems.every(it => getScreenCount(it.category, it.name) === 1) && Math.abs(sale.total - sumFinalPrices) > 5000)
-                ) {
-                    if (!isSellerSale && dedupedItems.length === 2 && phoneRecs.some(r => /dopo/i.test(r.pantallasCode))) {
-                        sale.total = 20000;
-                    } else if (isSellerSale && dedupedItems.length === 2 && phoneRecs.some(r => /dopo/i.test(r.pantallasCode))) {
-                        sale.total = 16000;
-                    } else {
-                        sale.total = sumFinalPrices;
-                    }
-                }
+                sale.total = sumFinalPrices;
             }
 
             // Credenciales principales de la venta
@@ -1110,7 +1245,7 @@ async function syncExcelToFirebase(customBuffer = null) {
             let newItems = [];
             if (phoneRecs.length > 1) {
                 const comboName = formatComboNameFromSlots(phoneRecs);
-                const comboTotal = phoneRecs.reduce((acc, r) => acc + (getPlatformPriceInfo(r.platform, isSellerSale).price || 0), 0);
+                const comboTotal = calculateScreensPrice(phoneRecs, isSellerSale);
                 newItems = [{
                     id: 'excel_combo_' + Date.now(),
                     name: comboName,
@@ -1268,6 +1403,9 @@ if (require.main === module) {
 module.exports = {
     EXCEL_FILE_PATH,
     PLATFORM_PRICE_CATALOG,
+    COMBO_PRICE_CATALOG,
+    calculateScreensPrice,
+    formatComboNameFromSlots,
     getPlatformPriceInfo,
     parseWorkbookFromBuffer,
     syncExcelToFirebase,
