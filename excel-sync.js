@@ -278,11 +278,34 @@ function restoreBrandPluses(str) {
     return cleanPlatformName(str);
 }
 
+function formatComboNameFromSlots(specificEmails) {
+    if (!specificEmails || specificEmails.length === 0) return 'Combo Streaming';
+    const counts = {};
+    const order = [];
+    specificEmails.forEach(sp => {
+        const plat = cleanPlatformName(sp.platform || 'Streaming');
+        if (!counts[plat]) {
+            counts[plat] = 0;
+            order.push(plat);
+        }
+        counts[plat]++;
+    });
+    return order.map(plat => {
+        const c = counts[plat];
+        return c > 1 ? `${c} ${plat}` : plat;
+    }).join(' ');
+}
+
 function getScreenCount(category, name) {
     const cat = (category || '').toLowerCase().trim();
     const n = (name || '').toLowerCase().trim();
+    const prefixNumMatch = n.match(/^(\d+)\s+/);
+    const leadingCount = prefixNumMatch ? parseInt(prefixNumMatch[1], 10) : 0;
     const detected = extractPlatformsFromName(name);
-    if (detected.length > 1) return detected.length;
+    if (detected.length > 1) {
+        if (leadingCount > 1) return detected.length + (leadingCount - 1);
+        return detected.length;
+    }
 
     if (cat.includes('combo2') || cat.includes('combos2') || (cat.includes('combo') && cat.includes('2')) || n.includes('duo') || n.includes('combo 2')) return 2;
     if (cat.includes('combo3') || cat.includes('combos3') || (cat.includes('combo') && cat.includes('3')) || n.includes('trio') || n.includes('triple') || n.includes('combo 3')) return 3;
@@ -849,13 +872,18 @@ async function syncExcelToFirebase(customBuffer = null) {
                 }
             });
 
+            // Seguimiento de slots asignados en esta pasada para no sobreescribir pantallas repetidas (ej. 2 Netflix)
+            const assignedSlotKeys = new Set();
+
             for (const rec of phoneRecs) {
                 let assigned = false;
                 const pInfo = getPlatformPriceInfo(rec.platform, isSellerSale);
 
                 // 1. Buscar en items existentes: si el item es combo o individual que coincida con rec.sheetMeta
-                for (let it of itemsArr) {
-                    const screenCount = getScreenCount(it.category, it.name);
+                for (let itIdx = 0; itIdx < itemsArr.length; itIdx++) {
+                    const it = itemsArr[itIdx];
+                    const isCombo = it.category === 'promociones' || (it.category && it.category.includes('combo')) || (it.name && extractPlatformsFromName(it.name).length > 1) || (it.specificEmails && it.specificEmails.length > 1);
+                    const screenCount = (it.specificEmails && it.specificEmails.length > 0) ? it.specificEmails.length : getScreenCount(it.category, it.name);
                     const guesses = guessPlatforms(it.name, screenCount);
 
                     if (!Array.isArray(it.specificEmails)) {
@@ -876,8 +904,11 @@ async function syncExcelToFirebase(customBuffer = null) {
                         });
                     }
 
-                    // Buscar pantalla que coincida con rec.sheetMeta
+                    // Buscar pantalla NO asignada que coincida con rec.sheetMeta
                     for (let sIdx = 0; sIdx < it.specificEmails.length; sIdx++) {
+                        const slotKey = `${itIdx}_${sIdx}`;
+                        if (assignedSlotKeys.has(slotKey)) continue;
+
                         const sp = it.specificEmails[sIdx];
                         const spPlat = sp.platform || guesses[sIdx] || it.name;
                         if (platformMatches(spPlat, rec.sheetMeta)) {
@@ -908,10 +939,29 @@ async function syncExcelToFirebase(customBuffer = null) {
                             sp.pass = rec.password || sp.pass || '';
                             sp.profile = rec.profile || sp.profile || '';
                             sp.pin = rec.profilePin || sp.pin || '';
+                            assignedSlotKeys.add(slotKey);
                             assigned = true;
                             break;
                         }
                     }
+
+                    // Si es un combo y todos los slots existentes para esta plataforma ya fueron asignados,
+                    // pero el cliente compró una pantalla adicional de la misma plataforma (ej: 2do Netflix),
+                    // agregar la pantalla adicional directamente al combo!
+                    if (!assigned && isCombo) {
+                        const newSlot = {
+                            platform: cleanPlatformName(rec.platform),
+                            email: rec.email || '',
+                            pass: rec.password || '',
+                            profile: rec.profile || '',
+                            pin: rec.profilePin || ''
+                        };
+                        it.specificEmails.push(newSlot);
+                        assignedSlotKeys.add(`${itIdx}_${it.specificEmails.length - 1}`);
+                        it.name = formatComboNameFromSlots(it.specificEmails);
+                        assigned = true;
+                    }
+
                     if (assigned) break;
                 }
 
@@ -961,9 +1011,16 @@ async function syncExcelToFirebase(customBuffer = null) {
                 return (platStr || '').toLowerCase().trim();
             };
 
+            // Actualizar nombre de combos según sus pantallas asignadas
+            itemsArr.forEach(it => {
+                if (it && Array.isArray(it.specificEmails) && it.specificEmails.length > 1) {
+                    it.name = formatComboNameFromSlots(it.specificEmails);
+                }
+            });
+
             for (const it of itemsArr) {
                 if (!it) continue;
-                const scCount = getScreenCount(it.category, it.name);
+                const scCount = (it.specificEmails && it.specificEmails.length > 0) ? it.specificEmails.length : getScreenCount(it.category, it.name);
                 const specs = Array.isArray(it.specificEmails) ? it.specificEmails : Object.values(it.specificEmails || {});
                 if (scCount > 1) {
                     specs.forEach(sp => {
@@ -1050,22 +1107,41 @@ async function syncExcelToFirebase(customBuffer = null) {
             // Crear el registro verificado del Excel con clave estable y única para este cliente
             const verifiedSaleKey = 'excel_' + phone + '_' + slugName;
             matchedSaleKeysInThisRun.add(verifiedSaleKey);
-            const newItems = phoneRecs.map((rec, idx) => {
-                const pInfo = getPlatformPriceInfo(rec.platform, isSellerSale);
-                return {
-                    id: pInfo.id || ('excel_item_' + idx),
-                    name: cleanPlatformName(rec.platform),
-                    category: 'individual',
-                    finalPrice: pInfo.price,
-                    specificEmails: [{
+            let newItems = [];
+            if (phoneRecs.length > 1) {
+                const comboName = formatComboNameFromSlots(phoneRecs);
+                const comboTotal = phoneRecs.reduce((acc, r) => acc + (getPlatformPriceInfo(r.platform, isSellerSale).price || 0), 0);
+                newItems = [{
+                    id: 'excel_combo_' + Date.now(),
+                    name: comboName,
+                    category: 'promociones',
+                    finalPrice: comboTotal,
+                    specificEmails: phoneRecs.map(rec => ({
                         platform: cleanPlatformName(rec.platform),
                         email: rec.email || '',
                         pass: rec.password || '',
                         profile: rec.profile || '',
                         pin: rec.profilePin || ''
-                    }]
-                };
-            });
+                    }))
+                }];
+            } else {
+                newItems = phoneRecs.map((rec, idx) => {
+                    const pInfo = getPlatformPriceInfo(rec.platform, isSellerSale);
+                    return {
+                        id: pInfo.id || ('excel_item_' + idx),
+                        name: cleanPlatformName(rec.platform),
+                        category: 'individual',
+                        finalPrice: pInfo.price,
+                        specificEmails: [{
+                            platform: cleanPlatformName(rec.platform),
+                            email: rec.email || '',
+                            pass: rec.password || '',
+                            profile: rec.profile || '',
+                            pin: rec.profilePin || ''
+                        }]
+                    };
+                });
+            }
             const calculatedTotal = newItems.reduce((acc, it) => acc + (Number(it.finalPrice) || 0), 0);
 
             targetStore[verifiedSaleKey] = {
